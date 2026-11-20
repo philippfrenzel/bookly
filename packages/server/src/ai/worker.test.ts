@@ -342,4 +342,19 @@ describe('character check worker', () => {
     expect(s.ai.calls).toBe(1);
     await s.app.close();
   });
+  test('a poll after start reclaims a check that went stale while the worker ran', async () => {
+    const s = await setup();
+    const w = createCheckWorker({ db: s.app.db, ai: s.ai, log: silent, quietMs: 0, pollMs: 10 });
+    w.start();
+    // Simulates a check orphaned by a previous process: running, claimed long ago.
+    await s.app.db.insert(characterChecks).values({
+      storylineId: s.storylineId, status: 'running', requestedAt: new Date(Date.now() - 600_000), startedAt: new Date(Date.now() - 600_000),
+    });
+    const deadline = Date.now() + 3000;
+    while ((await checkRow(s))?.status !== 'done' && Date.now() < deadline) await new Promise((r) => setTimeout(r, 20));
+    await w.stop();
+    expect((await checkRow(s))?.status).toBe('done');
+    expect(s.ai.calls).toBe(1);
+    await s.app.close();
+  });
 });

@@ -156,9 +156,23 @@ export function createCheckWorker(opts: CheckWorkerOptions): CheckWorker {
     return (await claim(free)).map(launch);
   }
 
-  /** One poll: claim and launch without waiting for the jobs. */
+  /**
+   * Sets `running` checks claimed more than 5 min ago back to pending: their process died (restart,
+   * deploy, crash). The 60 s AI timeout makes a live job that old impossible, and the claim guard
+   * discards a late result anyway.
+   */
+  async function resetStale(): Promise<void> {
+    await db
+      .execute(sql`
+        UPDATE character_checks SET status = 'pending'
+        WHERE status = 'running' AND started_at < now() - make_interval(secs => ${STALE_SECS}::double precision)`)
+      .catch((err: unknown) => log.error({ err }, 'could not reset stale character checks'));
+  }
+
+  /** One poll: reset stale checks, then claim and launch without waiting for the jobs. */
   async function tick(): Promise<void> {
     try {
+      await resetStale();
       await claimAndLaunch();
     } catch (err) {
       log.error({ err }, 'character check poll failed');
@@ -178,13 +192,7 @@ export function createCheckWorker(opts: CheckWorkerOptions): CheckWorker {
     start() {
       if (running) return;
       running = true;
-      ticking = db
-        .execute(sql`
-          UPDATE character_checks SET status = 'pending'
-          WHERE status = 'running' AND started_at < now() - make_interval(secs => ${STALE_SECS}::double precision)`)
-        .catch((err: unknown) => log.error({ err }, 'could not reset stale character checks'))
-        .then(tick)
-        .finally(schedule);
+      ticking = tick().finally(schedule);
     },
     async stop() {
       running = false;
