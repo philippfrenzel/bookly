@@ -38,6 +38,50 @@ describe('characters', () => {
     await app.close();
   });
 
+  test('creates an empty character', async () => {
+    const app = await testApp();
+    const { cookie } = await registeredAgent(app);
+    const bookId = await createBook(app, cookie);
+    const res = await app.inject({ method: 'POST', url: `/api/books/${bookId}/characters`, headers: { cookie }, payload: {} });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().book.characters).toEqual([
+      expect.objectContaining({ name: null, description: null, behavior: null, intentions: null }),
+    ]);
+    await app.close();
+  });
+
+  test('patches behaviour only', async () => {
+    const app = await testApp();
+    const { cookie } = await registeredAgent(app);
+    const bookId = await createBook(app, cookie);
+    const created = await app.inject({
+      method: 'POST', url: `/api/books/${bookId}/characters`, headers: { cookie },
+      payload: { name: 'Anna', description: 'Heldin', intentions: 'Rache' },
+    });
+    const id = created.json().book.characters[0].id;
+    const res = await app.inject({
+      method: 'PATCH', url: `/api/books/${bookId}/characters/${id}`, headers: { cookie }, payload: { behavior: 'mutig' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().book.characters[0]).toMatchObject({
+      name: 'Anna', description: 'Heldin', behavior: 'mutig', intentions: 'Rache',
+    });
+    await app.close();
+  });
+
+  test('empty name clears the name instead of failing', async () => {
+    const app = await testApp();
+    const { cookie } = await registeredAgent(app);
+    const bookId = await createBook(app, cookie);
+    const id = await seedCharacter(app, bookId, 'Anna');
+    const res = await app.inject({
+      method: 'PATCH', url: `/api/books/${bookId}/characters/${id}`, headers: { cookie }, payload: { name: '' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().book.characters[0].name).toBeNull();
+    await app.close();
+  });
+
   test('character of another book is 404 even for the owner of both', async () => {
     const app = await testApp();
     const { cookie } = await registeredAgent(app);

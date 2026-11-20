@@ -1,23 +1,39 @@
 /** Storyline routes: create, update (with main-to-side section conversion), delete. */
 import { randomUUID } from 'node:crypto';
-import { asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { KIND_DEFAULT_COLOR, characterLabel, StorylineCreateBody, StorylinePatchBody } from '@bookly/shared';
 import type { Id } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
 import type { Tx } from '../db/loadBook.js';
 import { mutateBook } from '../db/mutate.js';
-import { characters, sectionCharacters, sections, storylineCharacters, storylines, timePoints } from '../db/schema.js';
+import { characterWarningAcks, characters, sectionCharacters, sections, storylineCharacters, storylines, timePoints } from '../db/schema.js';
 import { NotFoundError } from '../errors.js';
 import { assertInBook, assertKnownRefs } from './childId.js';
 import { bookGuard } from './guard.js';
 
-/** Replaces the character set of a storyline. */
+/**
+ * Makes the storyline's character set equal to `characterIds`. New links are inserted, removed links
+ * are deleted together with their warning acknowledgements; retained links keep their additions.
+ */
 async function setCharacters(tx: Tx, storylineId: Id, characterIds: Id[]): Promise<void> {
-  await tx.delete(storylineCharacters).where(eq(storylineCharacters.storylineId, storylineId));
-  const unique = [...new Set(characterIds)];
-  if (unique.length > 0) {
-    await tx.insert(storylineCharacters).values(unique.map((characterId) => ({ storylineId, characterId })));
+  const wanted = new Set(characterIds);
+  const existing = (
+    await tx.select({ id: storylineCharacters.characterId }).from(storylineCharacters).where(eq(storylineCharacters.storylineId, storylineId))
+  ).map((r) => r.id);
+  const removed = existing.filter((id) => !wanted.has(id));
+  if (removed.length > 0) {
+    await tx
+      .delete(storylineCharacters)
+      .where(and(eq(storylineCharacters.storylineId, storylineId), inArray(storylineCharacters.characterId, removed)));
+    await tx
+      .delete(characterWarningAcks)
+      .where(and(eq(characterWarningAcks.storylineId, storylineId), inArray(characterWarningAcks.characterId, removed)));
+  }
+  const have = new Set(existing);
+  const added = [...wanted].filter((id) => !have.has(id));
+  if (added.length > 0) {
+    await tx.insert(storylineCharacters).values(added.map((characterId) => ({ storylineId, characterId })));
   }
 }
 

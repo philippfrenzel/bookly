@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, test } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { registeredAgent, testApp } from '../test/helpers.js';
+import { and, eq } from 'drizzle-orm';
+import { characterWarningAcks, storylineCharacters } from '../db/schema.js';
 import { seedCharacter, seedConnection, seedStoryline, seedTimePoints } from '../test/fixtures.js';
 
 /** Creates a book through the API and returns its id. */
@@ -162,6 +164,25 @@ describe('storylines', () => {
       const res = await app.inject({ method: 'PATCH', url: `${base}/storylines/${id}`, headers: { cookie }, payload: { title: 'x' } });
       expect(res.statusCode).toBe(404);
     }
+    await app.close();
+  });
+
+  test('keeps additions of retained characters', async () => {
+    const { app, tps, bookId, post, patch } = await setup();
+    const [a, b, c] = [await seedCharacter(app, bookId, 'A'), await seedCharacter(app, bookId, 'B'), await seedCharacter(app, bookId, 'C')];
+    const created = await post('/storylines', { title: 'S', kind: 'side', range: { startId: tps[0], endId: tps[1] }, characterIds: [a, b] });
+    const sid = created.json().book.storylines[0].id;
+    await app.db.update(storylineCharacters).set({ behavior: 'ruhig' })
+      .where(and(eq(storylineCharacters.storylineId, sid), eq(storylineCharacters.characterId, a)));
+    await app.db.insert(characterWarningAcks).values({ storylineId: sid, characterId: b, criterion: 'behavior_change' });
+    const first = await patch(`/storylines/${sid}`, { characterIds: [a] });
+    expect(first.statusCode).toBe(200);
+    expect(await app.db.select().from(characterWarningAcks).where(eq(characterWarningAcks.storylineId, sid))).toEqual([]);
+    const second = await patch(`/storylines/${sid}`, { characterIds: [a, c] });
+    const line = second.json().book.storylines[0];
+    expect([...line.characterIds].sort()).toEqual([a, c].sort());
+    expect(line.additions).toEqual(expect.arrayContaining([expect.objectContaining({ characterId: a, behavior: 'ruhig' })]));
+    expect(line.additions.find((x: { characterId: string }) => x.characterId === b)).toBeUndefined();
     await app.close();
   });
 });

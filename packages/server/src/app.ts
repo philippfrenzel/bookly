@@ -1,6 +1,7 @@
 /** Fastify application factory. */
 import cookie from '@fastify/cookie';
 import Fastify, { type FastifyInstance } from 'fastify';
+import { additionRoutes } from './books/additions.js';
 import { authRoutes } from './auth/routes.js';
 import { bookRoutes } from './books/routes.js';
 import { characterRoutes } from './books/characters.js';
@@ -42,6 +43,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   await app.register(timePointRoutes);
   await app.register(characterRoutes);
   await app.register(storylineRoutes);
+  await app.register(additionRoutes);
   await app.register(sectionRoutes);
   await app.register(connectionRoutes);
   await app.register(acknowledgementRoutes);
