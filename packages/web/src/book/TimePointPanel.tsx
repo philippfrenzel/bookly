@@ -9,7 +9,7 @@ import { IssueList } from './IssueList';
 /** Renders the usages that block deleting a time point. */
 function UsageList({ usages }: { usages: TimePointUsage[] }) {
   return (
-    <div className="issues">
+    <div className="issues" role="alert">
       <p className="error">Dieser Zeitpunkt wird noch verwendet:</p>
       <ul>
         {usages.map((u) => (
@@ -24,6 +24,7 @@ function UsageList({ usages }: { usages: TimePointUsage[] }) {
 export function TimePointPanel({ book }: { book: Book }) {
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
   const [usages, setUsages] = useState<TimePointUsage[]>([]);
+  const [resetKey, setResetKey] = useState(0);
   const [dragId, setDragId] = useState<Id | null>(null);
   const points = [...book.timePoints].sort((a, b) => a.position - b.position);
 
@@ -36,6 +37,7 @@ export function TimePointPanel({ book }: { book: Book }) {
     const body = e.body as { issues?: ValidationIssue[]; usages?: TimePointUsage[] } | undefined;
     if (e.status === 422 && body?.issues) setIssues(body.issues);
     if (e.status === 409 && body?.usages) setUsages(body.usages);
+    setResetKey((k) => k + 1);
   };
 
   const create = useBookMutation<{ afterId: Id | null }>(book.id, 'POST', () => `/api/books/${book.id}/timepoints`, (v) => ({
@@ -96,7 +98,7 @@ export function TimePointPanel({ book }: { book: Book }) {
             <input
               aria-label={`Name Zeitpunkt ${p.name}`}
               defaultValue={p.name}
-              key={p.name}
+              key={`${p.name}-${resetKey}`}
               onBlur={(e) => {
                 const name = e.target.value.trim();
                 if (name === '') e.target.value = p.name;

@@ -85,4 +85,49 @@ describe('CharacterPanel', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Figur „Mira“ löschen' }));
     expect(deletes).toBe(0);
   });
+
+  it('keeps focus and typed text when the PATCH response returns the updated book', async () => {
+    const stored = sampleBook();
+    server.use(
+      meOk,
+      http.get('/api/books/b1', () => HttpResponse.json({ book: stored, hints: [] })),
+      http.patch('/api/books/b1/characters/c2', async ({ request }) => {
+        const body = (await request.json()) as { name: string; description: string };
+        stored.characters[1] = { id: 'c2', name: body.name, description: body.description };
+        return HttpResponse.json({ book: stored, hints: [] });
+      }),
+    );
+    await openPanel();
+    const name = screen.getByLabelText('Name Figur Jon');
+    await userEvent.clear(name);
+    await userEvent.type(name, 'Jonas');
+    await userEvent.tab();
+    const description = screen.getByLabelText(/^Beschreibung Figur Jon/);
+    expect(description).toHaveFocus();
+    await userEvent.type(description, 'Schmied');
+    expect(await screen.findByLabelText('Name Figur Jonas')).toHaveValue('Jonas');
+    const after = screen.getByLabelText('Beschreibung Figur Jonas');
+    expect(after).toHaveFocus();
+    expect(after).toHaveValue('Schmied');
+  });
+
+  it('renders server issues from a 422', async () => {
+    server.use(
+      meOk,
+      bookOk(sampleBook()),
+      http.patch('/api/books/b1/characters/c2', () =>
+        HttpResponse.json(
+          { issues: [{ code: 'empty_title', elementId: 'c2', message: 'Figur: Name fehlt.' }] },
+          { status: 422 },
+        ),
+      ),
+    );
+    await openPanel();
+    const name = screen.getByLabelText('Name Figur Jon');
+    await userEvent.clear(name);
+    await userEvent.type(name, 'X');
+    await userEvent.tab();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Figur: Name fehlt.');
+    expect(screen.getByLabelText('Name Figur Jon')).toHaveValue('Jon');
+  });
 });
