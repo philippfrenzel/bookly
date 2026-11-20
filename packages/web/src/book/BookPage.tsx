@@ -1,6 +1,8 @@
 /** Book page: header, storyline map slot and the side area with time point and character panels. */
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useBook } from '../api/hooks';
+import { StorylineMap } from '../map/StorylineMap';
 import { CharacterPanel } from './CharacterPanel';
 import { SidePanel } from './SidePanel';
 import { TimePointPanel } from './TimePointPanel';
@@ -10,6 +12,7 @@ export function BookPage() {
   const { bookId = '' } = useParams();
   const query = useBook(bookId);
   const book = query.data?.book;
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   return (
     <div className="book-page">
       <header className="page-header">
@@ -21,7 +24,14 @@ export function BookPage() {
       {book && (
         <div className="book-layout">
           <main>
-            <section aria-label="Storyline-Karte" />
+            <section aria-label="Storyline-Karte">
+              <StorylineMap
+                book={book}
+                hints={query.data?.hints ?? []}
+                selectedId={selectedId}
+                onSelectStoryline={setSelectedId}
+              />
+            </section>
           </main>
           <SidePanel
             tabs={[
