@@ -1,5 +1,5 @@
 /** Checkbox list for assigning book characters to a storyline or section; storylines add per-character editors. */
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { characterLabel, type Character, type Id, type Storyline } from '@bookly/shared';
 import { AdditionEditor } from './AdditionEditor';
 
@@ -18,12 +18,15 @@ interface Props {
 /** One checkbox per character; toggling adds or removes the id, unchecking asks first when an addition has text. */
 export function CharacterChecks({ characters, value, onChange, storyline, bookId, aiEnabled = false, suggestTick = 0 }: Props) {
   const [open, setOpen] = useState<Id[]>([]);
+  /** Getters for the live (possibly unsaved) text of open addition editors. */
+  const live = useRef<Record<Id, (() => { behavior: string; intentions: string }) | null>>({});
+  const registerFor = useCallback((id: Id) => (g: (() => { behavior: string; intentions: string }) | null) => { live.current[id] = g; }, []);
   if (characters.length === 0) return <p className="muted">Noch keine Figuren.</p>;
 
   const additionOf = (id: Id) => storyline?.additions.find((a) => a.characterId === id);
   const toggle = (c: Character, checked: boolean) => {
     if (checked) return onChange([...value, c.id]);
-    const a = additionOf(c.id);
+    const a = live.current[c.id]?.() ?? additionOf(c.id);
     if (a && ((a.behavior ?? '').trim() || (a.intentions ?? '').trim()) && !window.confirm(`Ergänzung für ${characterLabel(c)} geht verloren. Entfernen?`)) return;
     onChange(value.filter((id) => id !== c.id));
   };
@@ -60,6 +63,7 @@ export function CharacterChecks({ characters, value, onChange, storyline, bookId
                 addition={additionOf(c.id)}
                 aiEnabled={aiEnabled}
                 suggestTick={suggestTick}
+                registerLive={registerFor(c.id)}
               />
             )}
           </div>

@@ -16,10 +16,12 @@ interface Props {
   aiEnabled: boolean;
   /** Increases whenever a storyline text changed and was saved; a change requests a new suggestion. */
   suggestTick: number;
+  /** Registers a getter for the live textarea values (null on unmount), so the parent sees unsaved text. */
+  registerLive?: (getter: (() => { behavior: string; intentions: string }) | null) => void;
 }
 
 /** Two textareas saved on blur (PUT addition), the greyed base profile and the suggestion UI. */
-export function AdditionEditor({ bookId, storylineId, character: c, addition, aiEnabled, suggestTick }: Props) {
+export function AdditionEditor({ bookId, storylineId, character: c, addition, aiEnabled, suggestTick, registerLive }: Props) {
   const label = characterLabel(c);
   const base = `/api/books/${bookId}/storylines/${storylineId}/characters/${c.id}`;
   const fb = useSaveFeedback();
@@ -34,6 +36,11 @@ export function AdditionEditor({ bookId, storylineId, character: c, addition, ai
     seen.current = suggestTick;
     if (aiEnabled) request({});
   }, [suggestTick, aiEnabled, request]);
+
+  useEffect(() => {
+    registerLive?.(() => ({ behavior: areas.current.behavior?.value ?? '', intentions: areas.current.intentions?.value ?? '' }));
+    return () => registerLive?.(null);
+  }, [registerLive]);
 
   const stored = (field: Field) => addition?.[field] ?? '';
   const write = (field: Field, value: string) => {

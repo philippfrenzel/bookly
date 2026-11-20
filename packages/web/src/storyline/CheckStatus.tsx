@@ -1,4 +1,5 @@
 /** Status line and trigger for a storyline's AI character check. */
+import { useState } from 'react';
 import type { CharacterCheck, Id } from '@bookly/shared';
 import { useBookMutation } from '../api/hooks';
 
@@ -19,7 +20,8 @@ function agoText(finishedAt: string | null): string {
 /** Shows the check state above the character list and lets the author start a check. */
 export function CheckStatus({ bookId, storylineId, check, aiEnabled }: Props) {
   const run = useBookMutation<void>(bookId, 'POST', () => `/api/books/${bookId}/storylines/${storylineId}/character-check`);
-  const start = () => run.mutate();
+  const [failed, setFailed] = useState(false);
+  const start = () => run.mutate(undefined, { onError: () => setFailed(true), onSuccess: () => setFailed(false) });
   let status: React.ReactNode = null;
   if (!aiEnabled) status = 'KI nicht eingerichtet';
   else if (check?.status === 'pending' || check?.status === 'running') status = 'Prüfe Figuren…';
@@ -28,7 +30,7 @@ export function CheckStatus({ bookId, storylineId, check, aiEnabled }: Props) {
     status = (
       <>
         Prüfung fehlgeschlagen –{' '}
-        <button type="button" className="link-button" onClick={start}>erneut versuchen</button>
+        <button type="button" className="link-button" disabled={run.isPending} onClick={start}>erneut versuchen</button>
       </>
     );
   }
@@ -36,6 +38,7 @@ export function CheckStatus({ bookId, storylineId, check, aiEnabled }: Props) {
     <div className="check-status">
       {status && <span className="muted" role="status">{status}</span>}
       <button type="button" disabled={!aiEnabled || run.isPending} onClick={start}>Figuren prüfen</button>
+      {failed && <span className="error" role="alert">Prüfung konnte nicht gestartet werden.</span>}
     </div>
   );
 }

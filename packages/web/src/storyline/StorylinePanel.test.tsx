@@ -408,6 +408,27 @@ describe('StorylinePanel', () => {
       expect(patches).toBe(0);
     });
 
+    it('asks before unchecking when the addition text is typed but not yet saved', async () => {
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      let patches = 0;
+      server.use(
+        meOk,
+        bookOk(sampleBook()),
+        http.put('/api/books/b1/storylines/s1/characters/c1/addition', () => HttpResponse.json(bookResponse(sampleBook()))),
+        http.patch('/api/books/b1/storylines/s1', () => {
+          patches += 1;
+          return HttpResponse.json(bookResponse(sampleBook()));
+        }),
+      );
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      await userEvent.click(await screen.findByRole('button', { name: toggleName }));
+      await userEvent.type(screen.getByLabelText('Verhalten Ergänzung Mira'), 'ungespeichert');
+      await userEvent.click(await miraCheckbox());
+      expect(confirm).toHaveBeenCalledWith('Ergänzung für Mira geht verloren. Entfernen?');
+      expect(patches).toBe(0);
+    });
+
     it('unchecks without asking when the addition is empty', async () => {
       const confirm = vi.spyOn(window, 'confirm');
       const bodies: unknown[] = [];
