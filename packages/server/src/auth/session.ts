@@ -2,19 +2,12 @@
 import { randomBytes } from 'node:crypto';
 import { and, eq, gt } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import type { Id } from '@bookly/shared';
+import type { Id, SessionUser } from '@bookly/shared';
 import type { Db } from '../db/client.js';
 import { sessions, users } from '../db/schema.js';
 
 /** Session lifetime: 30 days. */
 export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
-
-/** The authenticated user attached to a request. */
-export interface SessionUser {
-  id: Id;
-  email: string;
-  displayName: string;
-}
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -22,7 +15,7 @@ declare module 'fastify' {
   }
   interface FastifyInstance {
     db: Db;
-    config: { databaseUrl: string; cookieSecure: boolean };
+    config: { databaseUrl: string; cookieSecure: boolean; logger?: boolean };
   }
 }
 

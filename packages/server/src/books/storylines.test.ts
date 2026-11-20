@@ -105,6 +105,24 @@ describe('storylines', () => {
     await app.close();
   });
 
+  test('main to side keeps section notes and characters in the note text', async () => {
+    const { app, bookId, tps, post, patch } = await setup();
+    const anna = await seedCharacter(app, bookId, 'Anna');
+    const ben = await seedCharacter(app, bookId, 'Ben');
+    const created = await post('/storylines', { title: 'S', range: { startId: tps[0], endId: tps[3] }, kind: 'main' });
+    const id = created.json().book.storylines[0].id;
+    await post(`/storylines/${id}/sections`, {
+      title: 'A', description: 'd', characterIds: [anna, ben], note: 'Sektionsnotiz', range: { startId: tps[0], endId: tps[1] },
+    });
+    const s = (await patch(`/storylines/${id}`, { kind: 'side' })).json().book.storylines[0];
+    const lines = s.note.split('\n');
+    expect(lines.slice(0, 2)).toEqual(['Abschnitt: A (Tag 1 – Tag 2)', 'd']);
+    expect(lines[2]).toMatch(/^Figuren: (Anna, Ben|Ben, Anna)$/);
+    expect(lines[3]).toBe('Sektionsnotiz');
+    expect(s.characterIds).toEqual([]);
+    await app.close();
+  });
+
   test('section on side strand is 422', async () => {
     const { app, tps, post } = await setup();
     const created = await post('/storylines', { title: 'S', range: { startId: tps[0], endId: tps[3] }, kind: 'side' });

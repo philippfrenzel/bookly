@@ -40,6 +40,20 @@ describe('sections', () => {
     await app.close();
   });
 
+  test('concurrent creates are serialized: distinct orders, overlap still rejected', async () => {
+    const { app, cookie, base, tps, req, storylineId } = await setup();
+    const results = await Promise.all([
+      req('POST', `/storylines/${storylineId}/sections`, { title: 'A', range: { startId: tps[0], endId: tps[1] } }),
+      req('POST', `/storylines/${storylineId}/sections`, { title: 'B', range: { startId: tps[2], endId: tps[3] } }),
+      req('POST', `/storylines/${storylineId}/sections`, { title: 'C', range: { startId: tps[0], endId: tps[1] } }),
+    ]);
+    expect(results.map((r) => r.statusCode).sort()).toEqual([201, 201, 422]);
+    const book = await app.inject({ method: 'GET', url: base, headers: { cookie } });
+    const orders = book.json().book.storylines[0].sections.map((x: { order: number }) => x.order).sort();
+    expect(orders).toEqual([0, 1]);
+    await app.close();
+  });
+
   test('overlap and unknown references are 422', async () => {
     const { app, tps, req, storylineId } = await setup();
     await req('POST', `/storylines/${storylineId}/sections`, { title: 'A', range: { startId: tps[0], endId: tps[2] } });

@@ -7,13 +7,20 @@ import { requireUser } from '../auth/session.js';
 import { loadBook, type Tx } from '../db/loadBook.js';
 import { mutateBook } from '../db/mutate.js';
 import { timePoints } from '../db/schema.js';
-import { assertInBook } from './childId.js';
+import { assertInBook, assertKnownRefs } from './childId.js';
 import { bookGuard } from './guard.js';
 
 /** Thrown inside a mutation when a time point to delete is still referenced. */
 class TimePointInUse extends Error {
   constructor(public readonly usages: TimePointUsage[]) {
     super('time point in use');
+  }
+}
+
+/** Thrown inside a reorder when the ids are not a permutation of the book's time points. */
+class InvalidOrder extends Error {
+  constructor() {
+    super('invalid order');
   }
 }
 
@@ -48,7 +55,7 @@ export async function timePointRoutes(app: FastifyInstance): Promise<void> {
       const ids = await orderedIds(tx, bookId);
       let index = 0;
       if (afterId !== null) {
-        await assertInBook(tx, timePoints, afterId, bookId);
+        await assertKnownRefs(tx, bookId, afterId, { timePointIds: [afterId] });
         index = ids.indexOf(afterId) + 1;
       }
       const [created] = await tx
@@ -76,11 +83,18 @@ export async function timePointRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) return reply.code(400).send({ error: 'invalid_body', details: parsed.error.flatten() });
     const { bookId } = request.params as { bookId: string };
     const { ids } = parsed.data;
-    const existing = new Set((await loadBook(app.db, bookId)).timePoints.map((t) => t.id));
-    if (ids.length !== existing.size || new Set(ids).size !== ids.length || !ids.every((i) => existing.has(i))) {
-      return reply.code(400).send({ error: 'invalid_order' });
+    try {
+      return await mutateBook(app.db, bookId, async (tx) => {
+        const existing = new Set(await orderedIds(tx, bookId));
+        if (ids.length !== existing.size || new Set(ids).size !== ids.length || !ids.every((i) => existing.has(i))) {
+          throw new InvalidOrder();
+        }
+        await writePositions(tx, ids);
+      });
+    } catch (error) {
+      if (error instanceof InvalidOrder) return reply.code(400).send({ error: 'invalid_order' });
+      throw error;
     }
-    return mutateBook(app.db, bookId, (tx) => writePositions(tx, ids));
   });
 
   app.delete(`${base}/:id`, guarded, async (request, reply) => {

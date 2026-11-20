@@ -7,7 +7,7 @@ import type { Id } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
 import type { Tx } from '../db/loadBook.js';
 import { mutateBook } from '../db/mutate.js';
-import { sectionCharacters, sections, storylineCharacters, storylines, timePoints } from '../db/schema.js';
+import { characters, sectionCharacters, sections, storylineCharacters, storylines, timePoints } from '../db/schema.js';
 import { NotFoundError } from '../errors.js';
 import { assertInBook, assertKnownRefs } from './childId.js';
 import { bookGuard } from './guard.js';
@@ -33,11 +33,25 @@ async function sectionsToNote(tx: Tx, storylineId: Id, bookId: Id): Promise<stri
       (t) => [t.id, t.name] as const,
     ),
   );
+  const ids = rows.map((s) => s.id);
+  const charNames = new Map(
+    (await tx.select({ id: characters.id, name: characters.name }).from(characters).where(eq(characters.bookId, bookId))).map(
+      (c) => [c.id, c.name] as const,
+    ),
+  );
+  const charsBySection = new Map<Id, Id[]>();
+  for (const l of await tx.select().from(sectionCharacters).where(inArray(sectionCharacters.sectionId, ids))) {
+    charsBySection.set(l.sectionId, [...(charsBySection.get(l.sectionId) ?? []), l.characterId]);
+  }
   const blocks = rows.map((s) => {
     const head = `Abschnitt: ${s.title} (${names.get(s.startId)} – ${names.get(s.endId)})`;
-    return s.description === '' ? head : `${head}\n${s.description}`;
+    const lines = [head];
+    if (s.description !== '') lines.push(s.description);
+    const who = (charsBySection.get(s.id) ?? []).map((c) => charNames.get(c)).filter(Boolean);
+    if (who.length > 0) lines.push(`Figuren: ${who.join(', ')}`);
+    if (s.note) lines.push(s.note);
+    return lines.join('\n');
   });
-  const ids = rows.map((s) => s.id);
   await tx.delete(sectionCharacters).where(inArray(sectionCharacters.sectionId, ids));
   await tx.delete(sections).where(eq(sections.storylineId, storylineId));
   return blocks.join('\n\n');

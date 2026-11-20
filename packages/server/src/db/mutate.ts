@@ -1,24 +1,20 @@
 /** Transactional mutation pipeline: change, reload, validate, prune stale acknowledgements, hint. */
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { checkBook, staleAcknowledgements, validateBook } from '@bookly/shared';
-import type { Book, Hint, Id } from '@bookly/shared';
+import type { BookResponse, Id } from '@bookly/shared';
 import { ValidationError } from '../errors.js';
 import type { Db } from './client.js';
 import { loadBook, type Tx } from './loadBook.js';
 import { acknowledgements } from './schema.js';
 
-/** Response shape of every book-returning endpoint. */
-export interface BookResponse {
-  book: Book;
-  hints: Hint[];
-}
-
 /**
  * Runs `change` in a transaction, reloads the aggregate and validates it. Any validation issue
  * throws ValidationError, rolling everything back. Stale acknowledgements are deleted.
+ * The book row is locked first so concurrent mutations of one book are serialized.
  */
 export async function mutateBook(db: Db, bookId: Id, change: (tx: Tx) => Promise<void>): Promise<BookResponse> {
   return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM books WHERE id = ${bookId} FOR UPDATE`);
     await change(tx);
     let book = await loadBook(tx, bookId);
     const issues = validateBook(book);

@@ -27,7 +27,7 @@ export async function testApp(): Promise<FastifyInstance> {
   } finally {
     await db.$client.end();
   }
-  return buildApp({ databaseUrl: TEST_URL, cookieSecure: false });
+  return buildApp({ databaseUrl: TEST_URL, cookieSecure: false, logger: false });
 }
 
 /** Registers a user and returns the session cookie header value plus the user id. */

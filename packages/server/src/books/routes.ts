@@ -2,9 +2,10 @@
 import { asc, count, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { BookBody, checkBook } from '@bookly/shared';
+import type { BookResponse } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
 import { loadBook } from '../db/loadBook.js';
-import { mutateBook, type BookResponse } from '../db/mutate.js';
+import { mutateBook } from '../db/mutate.js';
 import { books, storylines } from '../db/schema.js';
 import { bookGuard } from './guard.js';
 
@@ -36,8 +37,15 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/api/books/:bookId', guarded, async (request): Promise<BookResponse> => {
-    const book = await loadBook(app.db, (request.params as { bookId: string }).bookId);
-    return { book, hints: checkBook(book) };
+    const { bookId } = request.params as { bookId: string };
+    // One consistent snapshot for the aggregate.
+    return app.db.transaction(
+      async (tx) => {
+        const book = await loadBook(tx, bookId);
+        return { book, hints: checkBook(book) };
+      },
+      { isolationLevel: 'repeatable read', accessMode: 'read only' },
+    );
   });
 
   app.patch('/api/books/:bookId', guarded, async (request, reply) => {

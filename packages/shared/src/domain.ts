@@ -1,4 +1,5 @@
 /** Domain types and visual constants shared by server and web. */
+import type { Hint } from './hints.js';
 
 export type Id = string; // uuid
 export type StorylineKind = 'main' | 'side';
@@ -61,6 +62,15 @@ export interface Book {
   connections: Connection[];
   acknowledgements: Acknowledgement[];
 }
+
+/** Authenticated user as returned by /api/auth/*. */
+export interface SessionUser { id: Id; email: string; displayName: string }
+
+/** Entry of the book list. */
+export interface BookSummary { id: Id; title: string; storylineCount: number }
+
+/** Book aggregate plus current hints, returned by every book endpoint. */
+export interface BookResponse { book: Book; hints: Hint[] }
 
 /** Label, color and symbol used to display each storyline status. */
 export const STATUS_STYLE: Record<StorylineStatus, { label: string; color: string; symbol: string }> = {

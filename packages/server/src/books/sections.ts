@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import { and, asc, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import { ReorderBody, SectionCreateBody, SectionPatchBody } from '@bookly/shared';
+import { ReorderBody, SectionCreateBody, SectionPatchBody, UUID_RE } from '@bookly/shared';
 import type { Id } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
 import type { Db } from '../db/client.js';
@@ -13,7 +13,6 @@ import { NotFoundError } from '../errors.js';
 import { assertInBook, assertKnownRefs } from './childId.js';
 import { bookGuard } from './guard.js';
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Thrown inside a reorder when the ids are not a permutation of the strand's sections. */
 class InvalidOrder extends Error {
@@ -24,7 +23,7 @@ class InvalidOrder extends Error {
 
 /** Throws NotFoundError unless `sectionId` is a well-formed uuid of a section in a storyline of `bookId`. */
 async function assertSectionInBook(db: Db, sectionId: string, bookId: Id): Promise<void> {
-  if (!UUID.test(sectionId)) throw new NotFoundError();
+  if (!UUID_RE.test(sectionId)) throw new NotFoundError();
   const [row] = await db
     .select({ id: sections.id })
     .from(sections)

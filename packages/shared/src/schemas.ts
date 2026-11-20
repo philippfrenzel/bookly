@@ -1,6 +1,9 @@
 /** Zod request-body schemas shared by the server (parsing) and the web client (types). */
 import { z } from 'zod';
 
+/** Matches a canonical uuid string. */
+export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const Id = z.string().uuid();
 const title = z.string().trim().min(1).max(200);
 const description = z.string().trim().max(2000);
@@ -21,14 +24,14 @@ const color = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 
 export const RegisterBody = z.object({
   email: z.string().trim().toLowerCase().email(),
-  password: z.string().min(8),
+  password: z.string().min(8).max(1024),
   displayName: z.string().trim().min(1).max(200),
 });
 export type RegisterBody = z.infer<typeof RegisterBody>;
 
 export const LoginBody = z.object({
   email: z.string().trim().toLowerCase().email(),
-  password: z.string().min(1),
+  password: z.string().min(1).max(1024),
 });
 export type LoginBody = z.infer<typeof LoginBody>;
 

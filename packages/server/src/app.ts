@@ -16,11 +16,13 @@ import { NotFoundError, ValidationError } from './errors.js';
 export interface AppConfig {
   databaseUrl: string;
   cookieSecure: boolean;
+  /** Enables the Fastify logger (default true; tests pass false). */
+  logger?: boolean;
 }
 
 /** Builds the Fastify app (does not listen and does not run migrations). */
 export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
-  const app = Fastify({ logger: false });
+  const app = Fastify({ logger: config.logger ?? true });
   const db = createDb(config.databaseUrl);
   app.decorate('db', db);
   app.decorate('config', config);

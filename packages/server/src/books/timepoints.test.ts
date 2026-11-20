@@ -34,7 +34,7 @@ describe('time points', () => {
     await app.close();
   });
 
-  test('insert after unknown id is 404', async () => {
+  test('insert after unknown id is 422 unknown_time_point', async () => {
     const app = await testApp();
     const { cookie } = await registeredAgent(app);
     const bookId = await createBook(app, cookie);
@@ -42,7 +42,8 @@ describe('time points', () => {
       method: 'POST', url: `/api/books/${bookId}/timepoints`, headers: { cookie },
       payload: { name: 'B', afterId: '00000000-0000-4000-8000-000000000000' },
     });
-    expect(res.statusCode).toBe(404);
+    expect(res.statusCode).toBe(422);
+    expect(res.json().issues[0].code).toBe('unknown_time_point');
     await app.close();
   });
 
