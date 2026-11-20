@@ -26,6 +26,12 @@ function richBook(): Book {
 
 afterEach(() => vi.restoreAllMocks());
 
+/** Mira's checkbox in the storyline form (the section form below has its own). */
+async function miraCheckbox() {
+  const region = await screen.findByRole('region', { name: 'Storyline bearbeiten' });
+  return within(region.querySelector('.storyline-form') as HTMLElement).getByRole('checkbox', { name: 'Mira' });
+}
+
 async function openStoryline(name: string) {
   await userEvent.click(await screen.findByRole('button', { name: `Storyline „${name}“` }));
 }
@@ -316,6 +322,197 @@ describe('StorylinePanel', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Abschnitt hinzufügen' }));
       expect(await screen.findByText('Speichern fehlgeschlagen. Bitte erneut versuchen.')).toBeInTheDocument();
       expect(screen.getByLabelText('Titel neuer Abschnitt')).toHaveValue('Prolog');
+    });
+  });
+  describe('character additions and check status', () => {
+    const toggleName = 'Ergänzung für Mira';
+
+    function additionBook(): Book {
+      const book = sampleBook();
+      book.characters[0]!.behavior = 'ruhig';
+      book.characters[0]!.intentions = 'Heimkehr';
+      return book;
+    }
+
+    it('shows the base profile line when expanded and no toggle when creating', async () => {
+      server.use(meOk, bookOk(additionBook()));
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      const toggle = await screen.findByRole('button', { name: toggleName });
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      await userEvent.click(toggle);
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByText('Grundprofil: ruhig · Heimkehr')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Neue Storyline' }));
+      expect(screen.queryByRole('button', { name: toggleName })).not.toBeInTheDocument();
+    });
+
+    it('omits empty parts of the base profile line', async () => {
+      const book = sampleBook();
+      book.characters[0]!.intentions = 'Heimkehr';
+      server.use(meOk, bookOk(book));
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      await userEvent.click(await screen.findByRole('button', { name: toggleName }));
+      expect(screen.getByText('Grundprofil: Heimkehr')).toBeInTheDocument();
+    });
+
+    it('hides the base profile line when the profile is empty', async () => {
+      server.use(meOk, bookOk(sampleBook()));
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      await userEvent.click(await screen.findByRole('button', { name: toggleName }));
+      expect(screen.queryByText(/Grundprofil/)).not.toBeInTheDocument();
+    });
+
+    it('PUTs the changed addition field on blur', async () => {
+      const bodies: unknown[] = [];
+      server.use(
+        meOk,
+        bookOk(sampleBook()),
+        http.put('/api/books/b1/storylines/s1/characters/c1/addition', async ({ request }) => {
+          bodies.push(await request.json());
+          return HttpResponse.json(bookResponse(sampleBook()));
+        }),
+      );
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      await userEvent.click(await screen.findByRole('button', { name: toggleName }));
+      await userEvent.type(screen.getByLabelText('Verhalten Ergänzung Mira'), 'wird misstrauisch');
+      await userEvent.tab();
+      await vi.waitFor(() => expect(bodies).toEqual([{ behavior: 'wird misstrauisch' }]));
+    });
+
+    function withAddition(): Book {
+      const book = sampleBook();
+      book.storylines[0]!.additions = [{ characterId: 'c1', behavior: 'misstrauisch', intentions: '' }];
+      return book;
+    }
+
+    it('asks before unchecking a character whose addition has text; cancel keeps it', async () => {
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      let patches = 0;
+      server.use(
+        meOk,
+        bookOk(withAddition()),
+        http.patch('/api/books/b1/storylines/s1', () => {
+          patches += 1;
+          return HttpResponse.json(bookResponse(withAddition()));
+        }),
+      );
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      await userEvent.click(await miraCheckbox());
+      expect(confirm).toHaveBeenCalledWith('Ergänzung für Mira geht verloren. Entfernen?');
+      expect((await miraCheckbox())).toBeChecked();
+      expect(patches).toBe(0);
+    });
+
+    it('unchecks without asking when the addition is empty', async () => {
+      const confirm = vi.spyOn(window, 'confirm');
+      const bodies: unknown[] = [];
+      server.use(
+        meOk,
+        bookOk(sampleBook()),
+        http.patch('/api/books/b1/storylines/s1', async ({ request }) => {
+          bodies.push(await request.json());
+          return HttpResponse.json(bookResponse(sampleBook()));
+        }),
+      );
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      await userEvent.click(await miraCheckbox());
+      await vi.waitFor(() => expect(bodies).toEqual([{ characterIds: [] }]));
+      expect(confirm).not.toHaveBeenCalled();
+    });
+
+    it('requests a suggestion for an expanded editor after a description change', async () => {
+      let posts = 0;
+      server.use(
+        meOk,
+        bookOk(sampleBook()),
+        http.patch('/api/books/b1/storylines/s1', () => HttpResponse.json(bookResponse(sampleBook()))),
+        http.post('/api/books/b1/storylines/s1/characters/c1/suggestion', async ({ request }) => {
+          expect(await request.json()).toEqual({});
+          posts += 1;
+          return HttpResponse.json({ behavior: 'vorsichtig', intentions: 'Flucht' });
+        }),
+      );
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      await userEvent.type(await screen.findByLabelText('Kurzbeschreibung'), 'Neu');
+      await userEvent.tab();
+      await new Promise((r) => setTimeout(r, 50));
+      expect(posts).toBe(0);
+      await userEvent.click(screen.getByRole('button', { name: toggleName }));
+      await userEvent.type(screen.getByLabelText('Kurzbeschreibung'), '!');
+      await userEvent.tab();
+      await vi.waitFor(() => expect(posts).toBe(1));
+      expect(await screen.findByText('vorsichtig')).toBeInTheDocument();
+    });
+
+    it.each([
+      ['pending', 'Prüfe Figuren…'],
+      ['running', 'Prüfe Figuren…'],
+      ['failed', 'Prüfung fehlgeschlagen'],
+    ] as const)('shows the %s check status', async (status, text) => {
+      const checks = [{ storylineId: 's1', status, finishedAt: null, error: null }];
+      server.use(meOk, bookOk(sampleBook(), { characterChecks: checks }));
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      expect(await screen.findByText(new RegExp(text))).toBeInTheDocument();
+    });
+
+    it('shows how long ago the check finished', async () => {
+      const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
+      const checks = [{ storylineId: 's1', status: 'done' as const, finishedAt: ago(3 * 60_000 + 5000), error: null }];
+      server.use(meOk, bookOk(sampleBook(), { characterChecks: checks }));
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      expect(await screen.findByText('Geprüft vor 3 min')).toBeInTheDocument();
+    });
+
+    it('says „gerade eben“ for a check under a minute old', async () => {
+      const checks = [{ storylineId: 's1', status: 'done' as const, finishedAt: new Date().toISOString(), error: null }];
+      server.use(meOk, bookOk(sampleBook(), { characterChecks: checks }));
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      expect(await screen.findByText('Geprüft gerade eben')).toBeInTheDocument();
+    });
+
+    it('posts the check route from the button and from the failed link', async () => {
+      let posts = 0;
+      const checks = [{ storylineId: 's1', status: 'failed' as const, finishedAt: null, error: 'x' }];
+      server.use(
+        meOk,
+        bookOk(sampleBook(), { characterChecks: checks }),
+        http.post('/api/books/b1/storylines/s1/character-check', () => {
+          posts += 1;
+          return HttpResponse.json(bookResponse(sampleBook(), { characterChecks: checks }));
+        }),
+      );
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      await userEvent.click(await screen.findByRole('button', { name: 'Figuren prüfen' }));
+      await vi.waitFor(() => expect(posts).toBe(1));
+      await userEvent.click(screen.getByRole('button', { name: 'erneut versuchen' }));
+      await vi.waitFor(() => expect(posts).toBe(2));
+    });
+
+    it('shows only the button when no status row exists, and a disabled one when AI is off', async () => {
+      server.use(meOk, bookOk(sampleBook()));
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      expect(await screen.findByRole('button', { name: 'Figuren prüfen' })).toBeEnabled();
+      expect(screen.queryByText(/Prüfe Figuren|Geprüft/)).not.toBeInTheDocument();
+    });
+
+    it('disables the check when AI is not set up', async () => {
+      server.use(meOk, bookOk(sampleBook(), { ai: { enabled: false } }));
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      expect(await screen.findByText('KI nicht eingerichtet')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Figuren prüfen' })).toBeDisabled();
     });
   });
 });
