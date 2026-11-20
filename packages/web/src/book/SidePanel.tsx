@@ -8,9 +8,14 @@ export interface SideTab {
   content: ReactNode;
 }
 
-/** Renders tab buttons and the content of the selected tab. */
-export function SidePanel({ tabs }: { tabs: SideTab[] }) {
-  const [active, setActive] = useState(tabs[0]?.id);
+/** Renders tab buttons and the content of the selected tab; pass `activeId` to control the selection. */
+export function SidePanel({ tabs, activeId, onActiveChange }: { tabs: SideTab[]; activeId?: string; onActiveChange?: (id: string) => void }) {
+  const [own, setOwn] = useState(tabs[0]?.id);
+  const active = activeId ?? own;
+  const setActive = (id: string) => {
+    setOwn(id);
+    onActiveChange?.(id);
+  };
   const current = tabs.find((t) => t.id === active) ?? tabs[0];
   return (
     <aside className="side-panel" aria-label="Seitenleiste">

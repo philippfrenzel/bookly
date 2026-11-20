@@ -1,8 +1,10 @@
-/** Book page: header, storyline map slot and the side area with time point and character panels. */
+/** Book page: header, storyline map slot and the side area with time point, character and storyline panels. */
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import type { TimeRange } from '@bookly/shared';
 import { useBook } from '../api/hooks';
 import { StorylineMap } from '../map/StorylineMap';
+import { StorylinePanel, type PanelTarget } from '../storyline/StorylinePanel';
 import { CharacterPanel } from './CharacterPanel';
 import { SidePanel } from './SidePanel';
 import { TimePointPanel } from './TimePointPanel';
@@ -12,7 +14,21 @@ export function BookPage() {
   const { bookId = '' } = useParams();
   const query = useBook(bookId);
   const book = query.data?.book;
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [target, setTarget] = useState<PanelTarget>(null);
+  const [tab, setTab] = useState('timepoints');
+  const [nonce, setNonce] = useState(0);
+  const selectedId = target?.mode === 'edit' ? target.id : null;
+
+  /** Shows a storyline target in the storyline tab. */
+  const open = (next: PanelTarget) => {
+    setTarget(next);
+    if (next) setTab('storyline');
+  };
+  const startCreate = (range?: TimeRange) => {
+    setNonce((n) => n + 1);
+    open({ mode: 'create', range, nonce: nonce + 1 });
+  };
+
   return (
     <div className="book-page">
       <header className="page-header">
@@ -24,19 +40,33 @@ export function BookPage() {
       {book && (
         <div className="book-layout">
           <main>
+            <div className="map-toolbar">
+              <button
+                type="button"
+                disabled={book.timePoints.length === 0}
+                title={book.timePoints.length === 0 ? 'Lege zuerst Zeitpunkte an.' : undefined}
+                onClick={() => startCreate()}
+              >
+                Neue Storyline
+              </button>
+            </div>
             <section aria-label="Storyline-Karte">
               <StorylineMap
                 book={book}
                 hints={query.data?.hints ?? []}
                 selectedId={selectedId}
-                onSelectStoryline={setSelectedId}
+                onSelectStoryline={(id) => open({ mode: 'edit', id })}
+                onCreateRange={(range) => startCreate(range)}
               />
             </section>
           </main>
           <SidePanel
+            activeId={tab}
+            onActiveChange={setTab}
             tabs={[
               { id: 'timepoints', label: 'Zeitpunkte', content: <TimePointPanel book={book} /> },
               { id: 'characters', label: 'Figuren', content: <CharacterPanel book={book} /> },
+              { id: 'storyline', label: 'Storyline', content: <StorylinePanel book={book} target={target} onTarget={open} /> },
             ]}
           />
         </div>

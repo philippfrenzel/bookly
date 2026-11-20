@@ -1,7 +1,7 @@
 /** Tests for lane assignment and bar geometry of the storyline map. */
 import { orderIndex, type Storyline, type TimePoint } from '@bookly/shared';
 import { describe, expect, it } from 'vitest';
-import { assignLanes, barGeometry, COLUMN_WIDTH, HEADER_HEIGHT, LANE_HEIGHT } from './layout';
+import { assignLanes, barGeometry, columnAt, COLUMN_WIDTH, HEADER_HEIGHT, LANE_HEIGHT } from './layout';
 
 const timePoints: TimePoint[] = Array.from({ length: 20 }, (_, i) => ({ id: `t${i}`, name: `T${i}`, position: i }));
 const idx = orderIndex(timePoints);
@@ -76,5 +76,15 @@ describe('barGeometry', () => {
     expect(g.x).toBe(2 * COLUMN_WIDTH);
     expect(g.width).toBe(3 * COLUMN_WIDTH);
     expect(g.y).toBe(HEADER_HEIGHT + LANE_HEIGHT * 1.5);
+  });
+});
+
+describe("columnAt", () => {
+  it("maps x to the column index", () => {
+    expect(columnAt(0)).toBe(0);
+    expect(columnAt(COLUMN_WIDTH - 1)).toBe(0);
+    expect(columnAt(COLUMN_WIDTH)).toBe(1);
+    expect(columnAt(COLUMN_WIDTH * 3 + 5)).toBe(3);
+    expect(columnAt(-10)).toBe(-1);
   });
 });

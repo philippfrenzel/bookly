@@ -55,6 +55,11 @@ export function assignLanes(storylines: Storyline[], idx: OrderIndex): LaneLayou
   return { laneOf, laneCount: above + mains.count + Math.floor(sides.count / 2), mainLanes: [mainStart, belowStart - 1] };
 }
 
+/** Index of the time point column under the given x coordinate (may be out of range; callers clamp). */
+export function columnAt(x: number): number {
+  return Math.floor(x / COLUMN_WIDTH);
+}
+
 /** Left edge, vertical centre of the lane and width of a storyline bar (before visual insets). */
 export function barGeometry(s: Storyline, lane: number, idx: OrderIndex): { x: number; y: number; width: number } {
   const [start, end] = bounds(s.range, idx);

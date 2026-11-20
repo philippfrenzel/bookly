@@ -73,7 +73,7 @@ export function StorylineBar({ storyline: s, lane, idx, selected, onSelect }: Pr
         const [a, b] = bounds(sec.range, idx);
         const sx = Math.max(a * COLUMN_WIDTH + SEGMENT_GAP / 2, left);
         const ex = Math.min((b + 1) * COLUMN_WIDTH - SEGMENT_GAP / 2, left + barWidth);
-        const w = ex - sx;
+        const w = Math.max(0, ex - sx);
         return (
           <g key={sec.id}>
             <rect x={sx} y={y - stroke / 2} width={w} height={stroke} rx={3} fill={s.color} />
@@ -88,8 +88,9 @@ export function StorylineBar({ storyline: s, lane, idx, selected, onSelect }: Pr
       <text className="bar-title" x={left + 22} y={y - stroke / 2 - 8}>
         {fit(s.title, barWidth - 22)}
       </text>
-      <circle className="status-ring" cx={left + 8} cy={y - stroke / 2 - 12} r={9} stroke={status.color} />
-      <text className="status-symbol" x={left + 8} y={y - stroke / 2 - 12} fill={status.color}>
+      {/* The marker sits on the bar start, inside the lane, so it never reaches into neighbouring lanes. */}
+      <circle className="status-ring" cx={left + 10} cy={y} r={9} stroke={status.color} />
+      <text className="status-symbol" x={left + 10} y={y} fill={status.color}>
         {status.symbol}
       </text>
     </g>
