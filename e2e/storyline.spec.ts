@@ -18,7 +18,7 @@ test('storyline flow with contradiction hint', async ({ page }) => {
   // Three time points, renamed by position (new points all start as „Neuer Zeitpunkt“).
   const names = page.getByLabel(/^Name Zeitpunkt /);
   for (let i = 1; i <= 3; i++) {
-    await page.getByRole('button', { name: '+ Zeitpunkt' }).click();
+    await page.getByRole('button', { name: 'Zeitpunkt', exact: true }).click();
     await expect(names).toHaveCount(i);
   }
   for (const [i, name] of ['Tag 1', 'Tag 2', 'Tag 3'].entries()) {

@@ -104,7 +104,8 @@ function DialogBody({ book, initial, isNew, onClose }: { book: Book; initial: Co
           if (e.key === 'Escape') onClose();
         }}
       >
-        <p className="muted">
+        <h2 className="modal-title">{isNew ? 'Neue Verbindung' : 'Verbindung bearbeiten'}</h2>
+        <p className="modal-route">
           „{from?.title}“ → „{to?.title}“
         </p>
         <label>
@@ -140,10 +141,11 @@ function DialogBody({ book, initial, isNew, onClose }: { book: Book; initial: Co
         />
         <IssueList issues={error?.issues ?? []} />
         {error?.message && <p className="error" role="alert">{error.message}</p>}
-        <div className="actions">
-          <button type="button" disabled={pending} onClick={save}>Speichern</button>
-          {!isNew && <button type="button" disabled={pending} onClick={confirmDelete}>Löschen</button>}
+        <div className="modal-actions">
+          {!isNew && <button type="button" className="danger-quiet" disabled={pending} onClick={confirmDelete}>Löschen</button>}
+          <span className="header-spacer" />
           <button type="button" onClick={onClose}>Abbrechen</button>
+          <button type="button" className="primary" disabled={pending} onClick={save}>Speichern</button>
         </div>
       </div>
     </div>

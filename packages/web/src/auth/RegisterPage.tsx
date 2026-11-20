@@ -24,6 +24,7 @@ export function RegisterPage() {
 
   return (
     <main className="auth-page">
+      <p className="wordmark auth-wordmark">Bookly</p>
       <form className="card" onSubmit={submit}>
         <h1>Registrieren</h1>
         <label>
@@ -36,7 +37,7 @@ export function RegisterPage() {
         </label>
         <label>
           Passwort
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
+          <input type="password" maxLength={1024} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
         </label>
         {message && (
           <p className="error" role="alert">

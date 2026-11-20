@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 
 export const MIN_ZOOM = 0.1;
 export const MAX_ZOOM = 4;
+/** Largest magnification „Alles einpassen“ applies, so a small plan fills the canvas without turning into a poster. */
+export const MAX_FIT_ZOOM = 1.5;
 const ZOOM_STEP = 1.4;
 /** The automatic first view never shrinks below this, so the map is always legible on load. */
 const INITIAL_MIN_ZOOM = 0.3;
@@ -46,8 +48,8 @@ export function zoomFilter(event: Event, spaceHeld: boolean): boolean {
 }
 
 /**
- * Transform that fits the content into the viewport: scale capped at 1 (never magnifies) and floored at MIN_ZOOM,
- * centred horizontally, top-aligned. Identity when the viewport or content size is unknown.
+ * Transform that fits the content into the viewport: scale capped at MAX_FIT_ZOOM and floored at MIN_ZOOM,
+ * centred horizontally and top-aligned, so the plan reads from its station header down. Identity when the viewport or content size is unknown.
  */
 export function fitTransform(
   viewW: number,
@@ -56,7 +58,7 @@ export function fitTransform(
   minK: number = MIN_ZOOM,
 ): ZoomTransform {
   if (!content || viewW <= 0 || viewH <= 0 || content.width <= 0 || content.height <= 0) return zoomIdentity;
-  const k = Math.max(minK, Math.min(1, viewW / content.width, viewH / content.height));
+  const k = Math.max(minK, Math.min(MAX_FIT_ZOOM, viewW / content.width, viewH / content.height));
   return zoomIdentity.translate((viewW - content.width * k) / 2, 0).scale(k);
 }
 

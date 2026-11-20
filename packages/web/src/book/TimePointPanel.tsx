@@ -5,6 +5,7 @@ import type { Book, Id, TimePointUsage } from '@bookly/shared';
 import { ApiError } from '../api/client';
 import { useBookMutation } from '../api/hooks';
 import { useSaveFeedback } from './saveFeedback';
+import { Icon } from '../ui/Icon';
 
 /** Renders the usages that block deleting a time point. */
 function UsageList({ usages }: { usages: TimePointUsage[] }) {
@@ -80,12 +81,13 @@ export function TimePointPanel({ book }: { book: Book }) {
 
   return (
     <section aria-label="Zeitpunkte">
-      <button type="button" onClick={() => { clear(); create.mutate({ afterId: null }, { onError }); }}>
-        + Zeitpunkt
+      <button type="button" className="with-icon" onClick={() => { clear(); create.mutate({ afterId: null }, { onError }); }}>
+        <Icon name="plus" />
+        Zeitpunkt
       </button>
       {fb.feedback}
       {usages.length > 0 && <UsageList usages={usages} />}
-      <ol className="panel-list">
+      <ol className="panel-list station-list">
         {points.map((p, i) => (
           <li
             key={p.id}
@@ -109,10 +111,10 @@ export function TimePointPanel({ book }: { book: Book }) {
               }}
               onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
             />
-            <button type="button" aria-label={`Zeitpunkt „${p.name}“ nach oben`} disabled={i === 0} onClick={() => move(p.id, i - 1)}>↑</button>
-            <button type="button" aria-label={`Zeitpunkt „${p.name}“ nach unten`} disabled={i === points.length - 1} onClick={() => move(p.id, i + 1)}>↓</button>
-            <button type="button" aria-label={`Zeitpunkt „${p.name}“ danach einfügen`} onClick={() => { clear(); create.mutate({ afterId: p.id }, { onError }); }}>danach einfügen</button>
-            <button type="button" aria-label={`Zeitpunkt „${p.name}“ löschen`} onClick={() => tryDelete(p.id)}>Löschen</button>
+            <button type="button" aria-label={`Zeitpunkt „${p.name}“ nach oben`} disabled={i === 0} title="Nach oben" className="icon-button" onClick={() => move(p.id, i - 1)}><Icon name="up" /></button>
+            <button type="button" aria-label={`Zeitpunkt „${p.name}“ nach unten`} disabled={i === points.length - 1} title="Nach unten" className="icon-button" onClick={() => move(p.id, i + 1)}><Icon name="down" /></button>
+            <button type="button" aria-label={`Zeitpunkt „${p.name}“ danach einfügen`} title="Danach einfügen" className="icon-button" onClick={() => { clear(); create.mutate({ afterId: p.id }, { onError }); }}><Icon name="plus" /></button>
+            <button type="button" aria-label={`Zeitpunkt „${p.name}“ löschen`} title="Löschen" className="icon-button" onClick={() => tryDelete(p.id)}><Icon name="trash" /></button>
           </li>
         ))}
       </ol>
