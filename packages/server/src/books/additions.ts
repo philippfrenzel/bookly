@@ -3,7 +3,6 @@ import { and, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { AdditionBody } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
-import { mutateBook } from '../db/mutate.js';
 import { characters, storylineCharacters, storylines } from '../db/schema.js';
 import { NotFoundError } from '../errors.js';
 import { assertInBook } from './childId.js';
@@ -19,7 +18,7 @@ export async function additionRoutes(app: FastifyInstance): Promise<void> {
     const { bookId, storylineId, characterId } = request.params as { bookId: string; storylineId: string; characterId: string };
     await assertInBook(app.db, storylines, storylineId, bookId);
     await assertInBook(app.db, characters, characterId, bookId);
-    return mutateBook(app.db, bookId, async (tx) => {
+    return app.mutate(bookId, async (tx) => {
       // Omitted fields stay unchanged; null clears.
       const { behavior, intentions } = parsed.data;
       const set = {

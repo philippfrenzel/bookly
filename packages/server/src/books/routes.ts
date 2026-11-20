@@ -6,7 +6,6 @@ import type { BookResponse } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
 import { bookResponse } from '../db/bookResponse.js';
 import { loadBook } from '../db/loadBook.js';
-import { mutateBook } from '../db/mutate.js';
 import { books, storylines } from '../db/schema.js';
 import { bookGuard } from './guard.js';
 
@@ -33,7 +32,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       .values({ userId: request.user!.id, title: parsed.data.title })
       .returning({ id: books.id });
     const book = await loadBook(app.db, created!.id);
-    const body: BookResponse = await bookResponse(app.db, book, false);
+    const body: BookResponse = await bookResponse(app.db, book, app.ai !== null);
     return reply.code(201).send(body);
   });
 
@@ -43,7 +42,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     return app.db.transaction(
       async (tx) => {
         const book = await loadBook(tx, bookId);
-        return bookResponse(tx, book, false);
+        return bookResponse(tx, book, app.ai !== null);
       },
       { isolationLevel: 'repeatable read', accessMode: 'read only' },
     );
@@ -53,7 +52,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     const parsed = BookBody.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: 'invalid_body', details: parsed.error.flatten() });
     const { bookId } = request.params as { bookId: string };
-    return mutateBook(app.db, bookId, async (tx) => {
+    return app.mutate(bookId, async (tx) => {
       await tx.update(books).set({ title: parsed.data.title }).where(eq(books.id, bookId));
     });
   });

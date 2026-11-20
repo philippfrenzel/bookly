@@ -6,7 +6,6 @@ import { KIND_DEFAULT_COLOR, characterLabel, StorylineCreateBody, StorylinePatch
 import type { Id } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
 import type { Tx } from '../db/loadBook.js';
-import { mutateBook } from '../db/mutate.js';
 import { characterWarningAcks, characters, sectionCharacters, sections, storylineCharacters, storylines, timePoints } from '../db/schema.js';
 import { NotFoundError } from '../errors.js';
 import { assertInBook, assertKnownRefs } from './childId.js';
@@ -84,7 +83,7 @@ export async function storylineRoutes(app: FastifyInstance): Promise<void> {
     const { bookId } = request.params as { bookId: string };
     const d = parsed.data;
     const id = randomUUID();
-    const result = await mutateBook(app.db, bookId, async (tx) => {
+    const result = await app.mutate(bookId, async (tx) => {
       await assertKnownRefs(tx, bookId, id, {
         timePointIds: [d.range.startId, d.range.endId],
         characterIds: d.characterIds,
@@ -112,7 +111,7 @@ export async function storylineRoutes(app: FastifyInstance): Promise<void> {
     const { bookId, id } = request.params as { bookId: string; id: string };
     await assertInBook(app.db, storylines, id, bookId);
     const d = parsed.data;
-    return mutateBook(app.db, bookId, async (tx) => {
+    return app.mutate(bookId, async (tx) => {
       const [current] = await tx.select().from(storylines).where(eq(storylines.id, id));
       if (!current) throw new NotFoundError();
       await assertKnownRefs(tx, bookId, id, {
@@ -151,7 +150,7 @@ export async function storylineRoutes(app: FastifyInstance): Promise<void> {
     const { bookId, id } = request.params as { bookId: string; id: string };
     await assertInBook(app.db, storylines, id, bookId);
     // Sections, character links and connections are removed by foreign key cascades.
-    return mutateBook(app.db, bookId, async (tx) => {
+    return app.mutate(bookId, async (tx) => {
       await tx.delete(storylines).where(eq(storylines.id, id));
     });
   });

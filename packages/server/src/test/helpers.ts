@@ -2,6 +2,7 @@
 import { sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import type { Id } from '@bookly/shared';
+import type { AiClient } from '../ai/client.js';
 import { buildApp } from '../app.js';
 import { createDb, runMigrations } from '../db/client.js';
 
@@ -9,8 +10,8 @@ const TEST_URL = process.env.TEST_DATABASE_URL ?? 'postgres://localhost:5432/boo
 let migrated = false;
 let counter = 0;
 
-/** Builds an app against bookly_test; migrates once per process and truncates all tables. */
-export async function testApp(): Promise<FastifyInstance> {
+/** Builds an app against bookly_test; migrates once per process and truncates all tables. AI is off unless `ai` is given. */
+export async function testApp(opts: { ai?: AiClient | null } = {}): Promise<FastifyInstance> {
   const db = createDb(TEST_URL);
   try {
     if (!migrated) {
@@ -27,7 +28,7 @@ export async function testApp(): Promise<FastifyInstance> {
   } finally {
     await db.$client.end();
   }
-  return buildApp({ databaseUrl: TEST_URL, cookieSecure: false, logger: false });
+  return buildApp({ databaseUrl: TEST_URL, cookieSecure: false, logger: false, ai: opts.ai ?? null });
 }
 
 /** Registers a user and returns the session cookie header value plus the user id. */

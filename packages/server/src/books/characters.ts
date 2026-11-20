@@ -3,7 +3,6 @@ import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { CharacterBody } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
-import { mutateBook } from '../db/mutate.js';
 import { characters, sectionCharacters, storylineCharacters } from '../db/schema.js';
 import { assertInBook } from './childId.js';
 import { bookGuard } from './guard.js';
@@ -17,7 +16,7 @@ export async function characterRoutes(app: FastifyInstance): Promise<void> {
     const parsed = CharacterBody.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: 'invalid_body', details: parsed.error.flatten() });
     const { bookId } = request.params as { bookId: string };
-    const result = await mutateBook(app.db, bookId, async (tx) => {
+    const result = await app.mutate(bookId, async (tx) => {
       await tx.insert(characters).values({
         bookId,
         name: parsed.data.name ?? null,
@@ -34,7 +33,7 @@ export async function characterRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) return reply.code(400).send({ error: 'invalid_body', details: parsed.error.flatten() });
     const { bookId, id } = request.params as { bookId: string; id: string };
     await assertInBook(app.db, characters, id, bookId);
-    return mutateBook(app.db, bookId, async (tx) => {
+    return app.mutate(bookId, async (tx) => {
       // Omitted fields stay unchanged; null clears.
       const { name, description, behavior, intentions } = parsed.data;
       const set = {
@@ -51,7 +50,7 @@ export async function characterRoutes(app: FastifyInstance): Promise<void> {
   app.delete(`${base}/:id`, guarded, async (request) => {
     const { bookId, id } = request.params as { bookId: string; id: string };
     await assertInBook(app.db, characters, id, bookId);
-    return mutateBook(app.db, bookId, async (tx) => {
+    return app.mutate(bookId, async (tx) => {
       await tx.delete(storylineCharacters).where(eq(storylineCharacters.characterId, id));
       await tx.delete(sectionCharacters).where(eq(sectionCharacters.characterId, id));
       // connections.character_id is set to null by the foreign key.

@@ -4,7 +4,6 @@ import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { ConnectionCreateBody, ConnectionPatchBody } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
-import { mutateBook } from '../db/mutate.js';
 import { connections } from '../db/schema.js';
 import { assertInBook, assertKnownRefs } from './childId.js';
 import { bookGuard } from './guard.js';
@@ -20,7 +19,7 @@ export async function connectionRoutes(app: FastifyInstance): Promise<void> {
     const { bookId } = request.params as { bookId: string };
     const d = parsed.data;
     const id = randomUUID();
-    const result = await mutateBook(app.db, bookId, async (tx) => {
+    const result = await app.mutate(bookId, async (tx) => {
       await assertKnownRefs(tx, bookId, id, {
         storylineIds: [d.fromId, d.toId],
         characterIds: d.characterId ? [d.characterId] : [],
@@ -44,7 +43,7 @@ export async function connectionRoutes(app: FastifyInstance): Promise<void> {
     const { bookId, id } = request.params as { bookId: string; id: string };
     await assertInBook(app.db, connections, id, bookId);
     const d = parsed.data;
-    return mutateBook(app.db, bookId, async (tx) => {
+    return app.mutate(bookId, async (tx) => {
       await assertKnownRefs(tx, bookId, id, { characterIds: d.characterId ? [d.characterId] : [] });
       const set: Partial<typeof connections.$inferInsert> = {};
       if (d.type !== undefined) set.type = d.type;
@@ -58,7 +57,7 @@ export async function connectionRoutes(app: FastifyInstance): Promise<void> {
     const { bookId, id } = request.params as { bookId: string; id: string };
     await assertInBook(app.db, connections, id, bookId);
     // Acknowledgements are removed by the foreign key cascade.
-    return mutateBook(app.db, bookId, async (tx) => {
+    return app.mutate(bookId, async (tx) => {
       await tx.delete(connections).where(eq(connections.id, id));
     });
   });

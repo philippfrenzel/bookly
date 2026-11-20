@@ -1,5 +1,6 @@
-/** Server entry point: migrates the database, then listens. */
+/** Server entry point: migrates the database, listens, and runs the character check worker when AI is on. */
 import { aiFromEnv } from './ai/client.js';
+import { createCheckWorker } from './ai/worker.js';
 import { buildApp } from './app.js';
 import { createDb, runMigrations } from './db/client.js';
 
@@ -10,4 +11,7 @@ await runMigrations(migrationDb);
 await migrationDb.$client.end();
 
 const app = await buildApp({ databaseUrl, cookieSecure: process.env.NODE_ENV === 'production', ai });
+const worker = app.ai ? createCheckWorker({ db: app.db, ai: app.ai, log: app.log }) : null;
+if (worker) app.addHook('onClose', () => worker.stop());
 await app.listen({ port: Number(process.env.PORT ?? 3000), host: process.env.HOST ?? 'localhost' });
+worker?.start();

@@ -2,6 +2,8 @@
 import cookie from '@fastify/cookie';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { additionRoutes } from './books/additions.js';
+import { aiRoutes } from './books/aiRoutes.js';
+import { decorateMutate } from './books/mutateWithChecks.js';
 import { authRoutes } from './auth/routes.js';
 import { bookRoutes } from './books/routes.js';
 import { characterRoutes } from './books/characters.js';
@@ -31,6 +33,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   app.decorate('db', db);
   app.decorate('config', config);
   app.decorate('ai', config.ai ?? null);
+  decorateMutate(app);
   app.addHook('onClose', async () => {
     await db.$client.end();
   });
@@ -51,5 +54,6 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   await app.register(sectionRoutes);
   await app.register(connectionRoutes);
   await app.register(acknowledgementRoutes);
+  await app.register(aiRoutes);
   return app;
 }

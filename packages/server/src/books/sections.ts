@@ -7,7 +7,6 @@ import type { Id } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
 import type { Db } from '../db/client.js';
 import type { Tx } from '../db/loadBook.js';
-import { mutateBook } from '../db/mutate.js';
 import { sectionCharacters, sections, storylines } from '../db/schema.js';
 import { NotFoundError } from '../errors.js';
 import { assertInBook, assertKnownRefs } from './childId.js';
@@ -53,7 +52,7 @@ export async function sectionRoutes(app: FastifyInstance): Promise<void> {
     await assertInBook(app.db, storylines, storylineId, bookId);
     const d = parsed.data;
     const id = randomUUID();
-    const result = await mutateBook(app.db, bookId, async (tx) => {
+    const result = await app.mutate(bookId, async (tx) => {
       await assertKnownRefs(tx, bookId, id, {
         timePointIds: [d.range.startId, d.range.endId],
         characterIds: d.characterIds,
@@ -81,7 +80,7 @@ export async function sectionRoutes(app: FastifyInstance): Promise<void> {
     const { bookId, sectionId } = request.params as { bookId: string; sectionId: string };
     await assertSectionInBook(app.db, sectionId, bookId);
     const d = parsed.data;
-    return mutateBook(app.db, bookId, async (tx) => {
+    return app.mutate(bookId, async (tx) => {
       await assertKnownRefs(tx, bookId, sectionId, {
         timePointIds: d.range ? [d.range.startId, d.range.endId] : [],
         characterIds: d.characterIds ?? [],
@@ -102,7 +101,7 @@ export async function sectionRoutes(app: FastifyInstance): Promise<void> {
   app.delete(`${base}/sections/:sectionId`, guarded, async (request) => {
     const { bookId, sectionId } = request.params as { bookId: string; sectionId: string };
     await assertSectionInBook(app.db, sectionId, bookId);
-    return mutateBook(app.db, bookId, async (tx) => {
+    return app.mutate(bookId, async (tx) => {
       await tx.delete(sections).where(eq(sections.id, sectionId));
     });
   });
@@ -114,7 +113,7 @@ export async function sectionRoutes(app: FastifyInstance): Promise<void> {
     await assertInBook(app.db, storylines, storylineId, bookId);
     const { ids } = parsed.data;
     try {
-      return await mutateBook(app.db, bookId, async (tx) => {
+      return await app.mutate(bookId, async (tx) => {
         // Lock the strand so concurrent section changes cannot slip between check and write.
         await tx.select({ id: storylines.id }).from(storylines).where(eq(storylines.id, storylineId)).for('update');
         const rows = await tx

@@ -134,7 +134,7 @@ describe('books', () => {
     await app.close();
   });
 
-  test('stale acknowledgement removed after mutation', async () => {
+  test('stale acknowledgement removed after app.mutate', async () => {
     const app = await testApp();
     const { cookie } = await registeredAgent(app);
     const bookId = await createBook(app, cookie);
@@ -149,11 +149,11 @@ describe('books', () => {
       .returning({ id: connections.id });
     await app.db.insert(acknowledgements).values({ connectionId: conn!.id, rule: 'time_jump_order' });
 
-    const before = await mutateBook(app.db, bookId, async () => {});
+    const before = await app.mutate(bookId, async () => {});
     expect(before.hints).toMatchObject([{ rule: 'time_jump_order', acknowledged: true }]);
     expect(before.book.acknowledgements).toHaveLength(1);
 
-    const after = await mutateBook(app.db, bookId, async (tx) => {
+    const after = await app.mutate(bookId, async (tx) => {
       await tx.update(storylines).set({ startId: t2!, endId: t3! }).where(eq(storylines.id, b!.id));
     });
     expect(after.hints).toEqual([]);
