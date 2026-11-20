@@ -131,7 +131,7 @@ function DialogBody({ book, initial, isNew, onClose }: { book: Book; initial: Co
         )}
         <label>
           Beschriftung
-          <input value={label} onChange={(e) => setLabel(e.target.value)} />
+          <input value={label} maxLength={200} onChange={(e) => setLabel(e.target.value)} />
         </label>
         <HintList
           hints={hints}

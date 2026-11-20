@@ -6,6 +6,8 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 export const MIN_ZOOM = 0.1;
 export const MAX_ZOOM = 4;
 const ZOOM_STEP = 1.4;
+/** The automatic first view never shrinks below this, so the map is always legible on load. */
+const INITIAL_MIN_ZOOM = 0.3;
 
 /** Converts a client (screen) position into content coordinates under the given zoom transform. */
 export function toContentPoint(
@@ -47,9 +49,14 @@ export function zoomFilter(event: Event, spaceHeld: boolean): boolean {
  * Transform that fits the content into the viewport: scale capped at 1 (never magnifies) and floored at MIN_ZOOM,
  * centred horizontally, top-aligned. Identity when the viewport or content size is unknown.
  */
-export function fitTransform(viewW: number, viewH: number, content?: { width: number; height: number }): ZoomTransform {
+export function fitTransform(
+  viewW: number,
+  viewH: number,
+  content?: { width: number; height: number },
+  minK: number = MIN_ZOOM,
+): ZoomTransform {
   if (!content || viewW <= 0 || viewH <= 0 || content.width <= 0 || content.height <= 0) return zoomIdentity;
-  const k = Math.max(MIN_ZOOM, Math.min(1, viewW / content.width, viewH / content.height));
+  const k = Math.max(minK, Math.min(1, viewW / content.width, viewH / content.height));
   return zoomIdentity.translate((viewW - content.width * k) / 2, 0).scale(k);
 }
 
@@ -75,8 +82,25 @@ export function useZoom(
     behavior.current = z;
     select(svg).call(z).on('dblclick.zoom', null);
     // Start with everything in view when the content does not fit; small maps stay at 1:1.
-    const initial = fitTransform(svg.clientWidth, svg.clientHeight, size.current);
-    if (initial.k < 1) select(svg).call(z.transform, initial);
+    // The size is only trusted once the svg has been laid out (non-zero), so wait for the first real measurement.
+    let fitted = false;
+    const initialFit = () => {
+      if (fitted || svg.clientWidth <= 0 || svg.clientHeight <= 0) return;
+      fitted = true;
+      const initial = fitTransform(svg.clientWidth, svg.clientHeight, size.current, INITIAL_MIN_ZOOM);
+      if (initial.k < 1) select(svg).call(z.transform, initial);
+    };
+    initialFit();
+    let observer: ResizeObserver | undefined;
+    let raf = 0;
+    if (!fitted) {
+      if (typeof ResizeObserver !== 'undefined') {
+        observer = new ResizeObserver(initialFit);
+        observer.observe(svg);
+      } else if (typeof requestAnimationFrame !== 'undefined') {
+        raf = requestAnimationFrame(initialFit);
+      }
+    }
     let hovering = false;
     const enter = () => (hovering = true);
     const leave = () => (hovering = false);
@@ -103,6 +127,8 @@ export function useZoom(
       window.removeEventListener('keyup', up);
       window.removeEventListener('blur', blur);
       select(svg).on('.zoom', null);
+      observer?.disconnect();
+      if (raf) cancelAnimationFrame(raf);
     };
   }, [svgRef]);
 

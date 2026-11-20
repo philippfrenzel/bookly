@@ -1,15 +1,12 @@
 /** Character management: add, rename, describe, delete with confirmation. */
-import { useState } from 'react';
-import type { Book, Character, Id, ValidationIssue } from '@bookly/shared';
-import type { ApiError } from '../api/client';
+import type { Book, Character, Id } from '@bookly/shared';
 import { useBookMutation } from '../api/hooks';
-import { IssueList } from './IssueList';
+import { useSaveFeedback } from './saveFeedback';
 
 /** Panel for the book's characters. */
 export function CharacterPanel({ book }: { book: Book }) {
-  const [issues, setIssues] = useState<ValidationIssue[]>([]);
-  // Bumped on a failed save so inputs fall back to the stored values.
-  const [resetKey, setResetKey] = useState(0);
+  // Its resetKey is bumped on a failed save so inputs fall back to the stored values.
+  const fb = useSaveFeedback();
   const base = `/api/books/${book.id}/characters`;
   const create = useBookMutation<void>(book.id, 'POST', () => base, () => ({ name: 'Neue Figur', description: '' }));
   const update = useBookMutation<{ id: Id; name: string; description: string }>(
@@ -17,13 +14,9 @@ export function CharacterPanel({ book }: { book: Book }) {
   );
   const remove = useBookMutation<{ id: Id }>(book.id, 'DELETE', (v) => `${base}/${v.id}`);
 
-  const onError = (e: ApiError) => {
-    const body = e.body as { issues?: ValidationIssue[] } | undefined;
-    if (e.status === 422 && body?.issues) setIssues(body.issues);
-    setResetKey((k) => k + 1);
-  };
+  const onError = fb.onError;
   const save = (v: { id: Id; name: string; description: string }) => {
-    setIssues([]);
+    fb.clear();
     update.mutate(v, { onError });
   };
 
@@ -34,13 +27,14 @@ export function CharacterPanel({ book }: { book: Book }) {
   return (
     <section aria-label="Figuren">
       <button type="button" onClick={() => create.mutate(undefined, { onError })}>+ Figur</button>
-      <IssueList issues={issues} />
+      {fb.feedback}
       <ul className="panel-list">
         {book.characters.map((c) => (
           <li key={c.id}>
             <input
               aria-label={`Name Figur ${c.name}`}
-              key={`${c.name}-${resetKey}`}
+              key={`${c.name}-${fb.resetKey}`}
+              maxLength={200}
               defaultValue={c.name}
               onBlur={(e) => {
                 const name = e.target.value.trim();
@@ -50,7 +44,8 @@ export function CharacterPanel({ book }: { book: Book }) {
             />
             <textarea
               aria-label={`Beschreibung Figur ${c.name}`}
-              key={`${c.description ?? ''}-${resetKey}`}
+              key={`${c.description ?? ''}-${fb.resetKey}`}
+              maxLength={2000}
               defaultValue={c.description ?? ''}
               onBlur={(e) => {
                 if (e.target.value !== (c.description ?? '')) save({ id: c.id, name: c.name, description: e.target.value });

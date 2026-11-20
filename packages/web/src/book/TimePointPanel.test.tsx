@@ -137,4 +137,15 @@ describe('TimePointPanel', () => {
     await screen.findByLabelText('Name Zeitpunkt Mitte');
     expect(screen.queryByLabelText('Name Zeitpunkt Ende')).not.toBeInTheDocument();
   });
+
+  it('shows a generic alert when saving fails', async () => {
+    server.use(
+      meOk,
+      bookOk(sampleBook()),
+      http.post('/api/books/b1/timepoints', () => HttpResponse.json({ error: 'internal_error' }, { status: 500 })),
+    );
+    await openPanel();
+    await userEvent.click(screen.getByRole('button', { name: '+ Zeitpunkt' }));
+    expect(await screen.findByText('Speichern fehlgeschlagen. Bitte erneut versuchen.')).toHaveAttribute('role', 'alert');
+  });
 });

@@ -130,4 +130,15 @@ describe('CharacterPanel', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Figur: Name fehlt.');
     expect(screen.getByLabelText('Name Figur Jon')).toHaveValue('Jon');
   });
+
+  it('shows a generic alert when saving fails', async () => {
+    server.use(
+      meOk,
+      bookOk(sampleBook()),
+      http.post('/api/books/b1/characters', () => HttpResponse.json({ error: 'internal_error' }, { status: 500 })),
+    );
+    await openPanel();
+    await userEvent.click(screen.getByRole('button', { name: '+ Figur' }));
+    expect(await screen.findByText('Speichern fehlgeschlagen. Bitte erneut versuchen.')).toHaveAttribute('role', 'alert');
+  });
 });

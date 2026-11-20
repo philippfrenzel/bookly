@@ -28,6 +28,24 @@ interface Props {
   onSelect: (id: string) => void;
 }
 
+/** Horizontal overshoot allowed for backwards connections, in px. */
+const BACKWARD_MARGIN = 40;
+
+/**
+ * Cubic path from (x1,y1) to (x2,y2). Forward connections leave and enter horizontally. Backwards ones
+ * (target left of the source) use an S-curve whose control points stay within min/max x of the endpoints
+ * plus BACKWARD_MARGIN, so the curve never leaves the content area; same-lane backwards curves bulge downwards.
+ */
+export function connectionPathD(x1: number, y1: number, x2: number, y2: number): string {
+  if (x2 >= x1) {
+    const pull = Math.max(40, (x2 - x1) / 2);
+    return `M ${x1} ${y1} C ${x1 + pull} ${y1}, ${x2 - pull} ${y2}, ${x2} ${y2}`;
+  }
+  const bulge = Math.abs(y2 - y1) < 24 ? 24 : 0;
+  const my = (y1 + y2) / 2 + bulge;
+  return `M ${x1} ${y1} C ${x1 + BACKWARD_MARGIN} ${my}, ${x2 - BACKWARD_MARGIN} ${my}, ${x2} ${y2}`;
+}
+
 /** Focusable path with arrowhead, type icon, label and a warning triangle when hints exist. */
 export function ConnectionPath({ connection: c, from, to, fromLane, toLane, idx, hints, laneHeight, onSelect }: Props) {
   const a = barGeometry(from, fromLane, idx, laneHeight);
@@ -36,10 +54,9 @@ export function ConnectionPath({ connection: c, from, to, fromLane, toLane, idx,
   const y1 = a.y;
   const x2 = b.x + INSET;
   const y2 = b.y;
-  const pull = Math.max(40, Math.abs(x2 - x1) / 2);
   const mx = (x1 + x2) / 2;
   const my = (y1 + y2) / 2;
-  const d = `M ${x1} ${y1} C ${x1 + pull} ${y1}, ${x2 - pull} ${y2}, ${x2} ${y2}`;
+  const d = connectionPathD(x1, y1, x2, y2);
   const open = hints.some((h) => !h.acknowledged);
   const warned = hints.length > 0;
 

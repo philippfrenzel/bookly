@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { Book, TimeRange } from '@bookly/shared';
+import { ApiError } from '../api/client';
 import { useBook } from '../api/hooks';
 import { ConnectionDialog, type ConnectionTarget } from '../connection/ConnectionDialog';
 import { FilterBar } from '../map/FilterBar';
@@ -40,7 +41,13 @@ export function BookPage() {
         {book && <h1>{book.title}</h1>}
       </header>
       {query.isPending && <p className="muted">Laden …</p>}
-      {query.isError && <p className="error">Buch nicht gefunden.</p>}
+      {query.isError && (
+        <p className="error" role="alert">
+          {query.error instanceof ApiError && query.error.status === 404
+            ? 'Buch nicht gefunden.'
+            : 'Das Buch konnte nicht geladen werden.'}
+        </p>
+      )}
       {book && (
         <div className="book-layout">
           <main>

@@ -2,7 +2,7 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../test/render';
 import { server } from '../test/setup';
 
@@ -33,6 +33,83 @@ describe('BookListPage', () => {
     await userEvent.type(screen.getByLabelText('Titel'), 'Nebelreich');
     await userEvent.click(screen.getByRole('button', { name: 'Anlegen' }));
     expect(await screen.findByText('Nebelreich')).toBeInTheDocument();
+  });
+
+  it('renames a book inline and saves on blur', async () => {
+    const bodies: unknown[] = [];
+    let title = 'Sturmland';
+    server.use(
+      meOk,
+      http.get('/api/books', () => HttpResponse.json([{ id: 'b1', title, storylineCount: 1 }])),
+      http.patch('/api/books/b1', async ({ request }) => {
+        const body = (await request.json()) as { title: string };
+        bodies.push(body);
+        title = body.title;
+        const book = { id: 'b1', title, timePoints: [], characters: [], storylines: [], connections: [], acknowledgements: [] };
+        return HttpResponse.json({ book, hints: [] });
+      }),
+    );
+    renderApp('/');
+    await userEvent.click(await screen.findByRole('button', { name: 'Buch „Sturmland“ umbenennen' }));
+    const input = screen.getByLabelText('Titel Buch Sturmland');
+    await userEvent.clear(input);
+    await userEvent.type(input, 'Nebelland');
+    await userEvent.tab();
+    await vi.waitFor(() => expect(bodies).toEqual([{ title: 'Nebelland' }]));
+    expect(await screen.findByText('Nebelland')).toBeInTheDocument();
+  });
+
+  it('deletes a book after confirmation', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    let books = [{ id: 'b1', title: 'Sturmland', storylineCount: 2 }];
+    let deletes = 0;
+    server.use(
+      meOk,
+      http.get('/api/books', () => HttpResponse.json(books)),
+      http.delete('/api/books/b1', () => {
+        deletes += 1;
+        books = [];
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    renderApp('/');
+    await userEvent.click(await screen.findByRole('button', { name: 'Buch „Sturmland“ löschen' }));
+    expect(confirm).toHaveBeenCalledWith('Buch „Sturmland“ löschen? Alle Storylines dieses Buchs werden entfernt.');
+    await vi.waitFor(() => expect(deletes).toBe(1));
+    await vi.waitFor(() => expect(screen.queryByText('Sturmland')).not.toBeInTheDocument());
+    confirm.mockRestore();
+  });
+
+  it('does not delete when the confirmation is declined', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    let deletes = 0;
+    server.use(
+      meOk,
+      http.get('/api/books', () => HttpResponse.json([{ id: 'b1', title: 'Sturmland', storylineCount: 2 }])),
+      http.delete('/api/books/b1', () => {
+        deletes += 1;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    renderApp('/');
+    await userEvent.click(await screen.findByRole('button', { name: 'Buch „Sturmland“ löschen' }));
+    expect(deletes).toBe(0);
+    confirm.mockRestore();
+  });
+
+  it('shows a generic alert when renaming fails', async () => {
+    server.use(
+      meOk,
+      http.get('/api/books', () => HttpResponse.json([{ id: 'b1', title: 'Sturmland', storylineCount: 2 }])),
+      http.patch('/api/books/b1', () => HttpResponse.json({ error: 'internal_error' }, { status: 500 })),
+    );
+    renderApp('/');
+    await userEvent.click(await screen.findByRole('button', { name: 'Buch „Sturmland“ umbenennen' }));
+    const input = screen.getByLabelText('Titel Buch Sturmland');
+    await userEvent.clear(input);
+    await userEvent.type(input, 'X');
+    await userEvent.tab();
+    expect(await screen.findByText('Speichern fehlgeschlagen. Bitte erneut versuchen.')).toBeInTheDocument();
   });
 
   it('redirects to login when not authenticated', async () => {

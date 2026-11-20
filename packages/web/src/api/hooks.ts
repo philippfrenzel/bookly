@@ -1,27 +1,7 @@
 /** TanStack Query hooks for auth, book list and the book aggregate. */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Book, Hint, Id } from '@bookly/shared';
+import type { BookResponse, BookSummary, Id, SessionUser as User } from '@bookly/shared';
 import { ApiError, api } from './client';
-
-/** Authenticated user as returned by /api/auth/*. */
-export interface User {
-  id: Id;
-  email: string;
-  displayName: string;
-}
-
-/** Entry of the book list. */
-export interface BookSummary {
-  id: Id;
-  title: string;
-  storylineCount: number;
-}
-
-/** Book aggregate plus current hints, returned by every book mutation. */
-export interface BookResponse {
-  book: Book;
-  hints: Hint[];
-}
 
 /** Current user, or null when not signed in (401 is not an error). */
 export function useMe() {
@@ -102,5 +82,29 @@ export function useBookMutation<V>(
   return useMutation<BookResponse, ApiError, V>({
     mutationFn: (vars) => api<BookResponse>(method, path(vars), body?.(vars)),
     onSuccess: (res) => qc.setQueryData(['book', bookId], res),
+  });
+}
+
+/** Renames a book (PATCH) and refreshes the list and the cached aggregate. */
+export function useRenameBook() {
+  const qc = useQueryClient();
+  return useMutation<BookResponse, ApiError, { id: Id; title: string }>({
+    mutationFn: (v) => api<BookResponse>('PATCH', `/api/books/${v.id}`, { title: v.title }),
+    onSuccess: (res) => {
+      qc.setQueryData(['book', res.book.id], res);
+      return qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}
+
+/** Deletes a book with all its storylines; drops it from the caches. */
+export function useDeleteBook() {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, { id: Id }>({
+    mutationFn: (v) => api<void>('DELETE', `/api/books/${v.id}`),
+    onSuccess: (_res, v) => {
+      qc.removeQueries({ queryKey: ['book', v.id] });
+      return qc.invalidateQueries({ queryKey: ['books'] });
+    },
   });
 }

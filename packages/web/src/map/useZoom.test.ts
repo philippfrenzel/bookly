@@ -30,6 +30,13 @@ describe('fitTransform', () => {
     const t = fitTransform(1000, 300, { width: 2000, height: 600 });
     expect([t.k, t.x, t.y]).toEqual([0.5, 0, 0]);
   });
+  it('is identity when the measured width or height is still zero', () => {
+    expect(fitTransform(0, 600, { width: 800, height: 400 })).toBe(zoomIdentity);
+    expect(fitTransform(1000, 0, { width: 800, height: 400 })).toBe(zoomIdentity);
+  });
+  it('respects a custom lower bound for the initial view', () => {
+    expect(fitTransform(100, 100, { width: 1e6, height: 1e6 }, 0.3).k).toBe(0.3);
+  });
   it('floors at the minimum zoom', () => {
     expect(fitTransform(100, 100, { width: 1e6, height: 1e6 }).k).toBe(0.1);
   });

@@ -1,10 +1,10 @@
 /** Time point management: list, inline rename, insert, reorder (drag & drop or buttons), delete. */
 import { useState } from 'react';
 import { timePointUsages, validateBook } from '@bookly/shared';
-import type { Book, Id, TimePointUsage, ValidationIssue } from '@bookly/shared';
+import type { Book, Id, TimePointUsage } from '@bookly/shared';
 import { ApiError } from '../api/client';
 import { useBookMutation } from '../api/hooks';
-import { IssueList } from './IssueList';
+import { useSaveFeedback } from './saveFeedback';
 
 /** Renders the usages that block deleting a time point. */
 function UsageList({ usages }: { usages: TimePointUsage[] }) {
@@ -22,22 +22,24 @@ function UsageList({ usages }: { usages: TimePointUsage[] }) {
 
 /** Panel for the book's time points. */
 export function TimePointPanel({ book }: { book: Book }) {
-  const [issues, setIssues] = useState<ValidationIssue[]>([]);
+  const fb = useSaveFeedback();
   const [usages, setUsages] = useState<TimePointUsage[]>([]);
-  const [resetKey, setResetKey] = useState(0);
   const [dragId, setDragId] = useState<Id | null>(null);
   const points = [...book.timePoints].sort((a, b) => a.position - b.position);
 
   const clear = () => {
-    setIssues([]);
+    fb.clear();
     setUsages([]);
   };
-  /** Routes a failed mutation to the matching message list. */
-  const onError = (e: ApiError) => {
-    const body = e.body as { issues?: ValidationIssue[]; usages?: TimePointUsage[] } | undefined;
-    if (e.status === 422 && body?.issues) setIssues(body.issues);
-    if (e.status === 409 && body?.usages) setUsages(body.usages);
-    setResetKey((k) => k + 1);
+  /** Routes a failed mutation: 409 shows the usages, 422 the issues, anything else the generic alert. */
+  const onError = (e: unknown) => {
+    const body = e instanceof ApiError ? (e.body as { usages?: TimePointUsage[] } | undefined) : undefined;
+    if (e instanceof ApiError && e.status === 409 && body?.usages) {
+      setUsages(body.usages);
+      fb.reject([]);
+      return;
+    }
+    fb.onError(e);
   };
 
   const create = useBookMutation<{ afterId: Id | null }>(book.id, 'POST', () => `/api/books/${book.id}/timepoints`, (v) => ({
@@ -60,7 +62,7 @@ export function TimePointPanel({ book }: { book: Book }) {
     const draft: Book = { ...book, timePoints: ids.map((tid, position) => ({ ...points.find((p) => p.id === tid)!, position })) };
     const found = validateBook(draft);
     if (found.length > 0) {
-      setIssues(found);
+      fb.reject(found);
       return;
     }
     reorder.mutate({ ids }, { onError });
@@ -81,7 +83,7 @@ export function TimePointPanel({ book }: { book: Book }) {
       <button type="button" onClick={() => { clear(); create.mutate({ afterId: null }, { onError }); }}>
         + Zeitpunkt
       </button>
-      <IssueList issues={issues} />
+      {fb.feedback}
       {usages.length > 0 && <UsageList usages={usages} />}
       <ol className="panel-list">
         {points.map((p, i) => (
@@ -98,7 +100,8 @@ export function TimePointPanel({ book }: { book: Book }) {
             <input
               aria-label={`Name Zeitpunkt ${p.name}`}
               defaultValue={p.name}
-              key={`${p.name}-${resetKey}`}
+              key={`${p.name}-${fb.resetKey}`}
+              maxLength={200}
               onBlur={(e) => {
                 const name = e.target.value.trim();
                 if (name === '') e.target.value = p.name;

@@ -1,14 +1,14 @@
-/** Side panel form for creating and editing a storyline (explicit „Speichern“), with its sections. */
+/** Side panel form for creating and editing a storyline (direct saves; „Anlegen“ when creating), with its sections. */
 import { useState } from 'react';
 import {
   KIND_DEFAULT_COLOR, STATUS_STYLE, type Book, type Id, type Storyline, type StorylineKind, type StorylineStatus,
-  type TimeRange, type ValidationIssue,
+  type TimeRange, type BookResponse,
 } from '@bookly/shared';
-import type { ApiError } from '../api/client';
-import { useBookMutation, type BookResponse } from '../api/hooks';
-import { IssueList } from '../book/IssueList';
+import { useBookMutation } from '../api/hooks';
+import { useSaveFeedback } from '../book/saveFeedback';
 import { CharacterChecks } from './CharacterChecks';
 import { noteOrNull, validateWithStoryline } from './draft';
+import { ColorInput, TextInput } from './fields';
 import { RangePicker } from './RangePicker';
 import { SectionList } from './SectionList';
 
@@ -27,7 +27,7 @@ interface Props {
   onConnect?: (fromId: Id, toId: Id) => void;
 }
 
-/** Local, unsaved form state. */
+/** Form values: the local draft when creating, a view of the stored storyline when editing. */
 interface Draft {
   title: string;
   description: string;
@@ -70,101 +70,135 @@ interface FormProps {
   onConnect?: (fromId: Id, toId: Id) => void;
 }
 
-/** The form itself; remounted (by key) whenever the target changes. */
+/** The form itself; remounted (by key) whenever the target changes. Create: local draft + „Anlegen“. Edit: direct saves. */
 function StorylineForm({ book, initial, storyline, onTarget, onConnect }: FormProps) {
   const [draft, setDraft] = useState(initial);
-  const [issues, setIssues] = useState<ValidationIssue[]>([]);
+  const fb = useSaveFeedback();
   const base = `/api/books/${book.id}/storylines`;
-  const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
+  const editing = storyline !== null;
+  // Edit forms always show the stored values, so a rejected change falls back by itself.
+  const v: Draft = storyline ? draftOf(storyline) : draft;
 
-  const create = useBookMutation<Record<string, unknown>>(book.id, 'POST', () => base, (v) => v);
-  const update = useBookMutation<Record<string, unknown>>(book.id, 'PATCH', () => `${base}/${storyline?.id}`, (v) => v);
+  const create = useBookMutation<Record<string, unknown>>(book.id, 'POST', () => base, (x) => x);
+  const update = useBookMutation<Record<string, unknown>>(book.id, 'PATCH', () => `${base}/${storyline?.id}`, (x) => x);
   const remove = useBookMutation<void>(book.id, 'DELETE', () => `${base}/${storyline?.id}`);
 
-  const onError = (e: ApiError) => {
-    const body = e.body as { issues?: ValidationIssue[] } | undefined;
-    if (e.status === 422 && body?.issues) setIssues(body.issues);
+  /** Request body fields for a partial change. */
+  const bodyOf = (patch: Partial<Draft>): Record<string, unknown> => {
+    const body: Record<string, unknown> = { ...patch };
+    if (patch.title !== undefined) body.title = patch.title.trim();
+    if (patch.note !== undefined) body.note = noteOrNull(patch.note);
+    return body;
   };
 
+  /** Edit mode: validates the changed field locally, then PATCHes just that field. */
+  const saveField = (patch: Partial<Draft>) => {
+    if (!storyline) return;
+    if (patch.title !== undefined && patch.title.trim() === '') {
+      fb.reject([]);
+      return;
+    }
+    const next = { ...draftOf(storyline), ...patch };
+    const candidate: Storyline = {
+      ...storyline, title: next.title.trim(), description: next.description, characterIds: next.characterIds, range: next.range,
+      kind: next.kind, status: next.status, color: next.color, note: noteOrNull(next.note),
+      sections: next.kind === 'main' ? storyline.sections : [],
+    };
+    const found = validateWithStoryline(book, candidate);
+    if (found.length > 0) {
+      fb.reject(found);
+      return;
+    }
+    fb.clear();
+    update.mutate(bodyOf(patch), { onError: fb.onError });
+  };
+
+  /** Create mode edits the draft; edit mode saves directly. */
+  const commit = (patch: Partial<Draft>) => (editing ? saveField(patch) : setDraft((d) => ({ ...d, ...patch })));
+
   const changeKind = (kind: StorylineKind) => {
-    if (kind === draft.kind) return;
+    if (kind === v.kind) return;
     const count = storyline?.sections.length ?? 0;
-    if (storyline && draft.kind === 'main' && kind === 'side' && count > 0) {
+    if (storyline && v.kind === 'main' && kind === 'side' && count > 0) {
       const ok = window.confirm(
         `Dieser Hauptstrang hat ${count} Abschnitte. Sie werden in die Notiz übernommen und entfernt. Fortfahren?`,
       );
       if (!ok) return;
     }
+    if (editing) {
+      saveField({ kind });
+      return;
+    }
     // A colour still at the old default follows the kind.
-    set({ kind, color: draft.color === KIND_DEFAULT_COLOR[draft.kind] ? KIND_DEFAULT_COLOR[kind] : draft.color });
+    setDraft((d) => ({ ...d, kind, color: d.color === KIND_DEFAULT_COLOR[d.kind] ? KIND_DEFAULT_COLOR[kind] : d.color }));
   };
 
-  const save = () => {
+  /** Create mode: validates the draft locally and POSTs it. */
+  const submitCreate = () => {
     const title = draft.title.trim();
     const candidate: Storyline = {
-      id: storyline?.id ?? DRAFT_ID, title, description: draft.description, characterIds: draft.characterIds, range: draft.range,
-      kind: draft.kind, status: draft.status, color: draft.color, note: noteOrNull(draft.note),
-      sections: draft.kind === 'main' ? (storyline?.sections ?? []) : [],
+      id: DRAFT_ID, title, description: draft.description, characterIds: draft.characterIds, range: draft.range,
+      kind: draft.kind, status: draft.status, color: draft.color, note: noteOrNull(draft.note), sections: [],
     };
     const found = validateWithStoryline(book, candidate);
-    setIssues(found);
-    if (found.length > 0) return;
+    if (found.length > 0) {
+      fb.reject(found);
+      return;
+    }
+    fb.clear();
     const common = {
       title, description: draft.description, characterIds: draft.characterIds, range: draft.range, kind: draft.kind,
       note: candidate.note,
     };
-    if (!storyline) {
-      const body = draft.color === KIND_DEFAULT_COLOR[draft.kind] ? common : { ...common, color: draft.color };
-      create.mutate(body, {
-        onError,
-        onSuccess: (res: BookResponse) => {
-          const known = new Set(book.storylines.map((s) => s.id));
-          const created = res.book.storylines.find((s) => !known.has(s.id));
-          if (created) onTarget({ mode: 'edit', id: created.id });
-        },
-      });
-    } else {
-      const body = { ...common, status: draft.status, ...(draft.color !== storyline.color ? { color: draft.color } : {}) };
-      update.mutate(body, { onError });
-    }
+    const body = draft.color === KIND_DEFAULT_COLOR[draft.kind] ? common : { ...common, color: draft.color };
+    create.mutate(body, {
+      onError: fb.onError,
+      onSuccess: (res: BookResponse) => {
+        const known = new Set(book.storylines.map((s) => s.id));
+        const created = res.book.storylines.find((s) => !known.has(s.id));
+        if (created) onTarget({ mode: 'edit', id: created.id });
+      },
+    });
   };
 
   const confirmDelete = () => {
     if (!storyline) return;
     const connections = book.connections.filter((c) => c.fromId === storyline.id || c.toId === storyline.id).length;
     if (window.confirm(`Storyline „${storyline.title}“ löschen? ${connections} Verbindungen werden ebenfalls entfernt.`)) {
-      remove.mutate(undefined, { onError, onSuccess: () => onTarget(null) });
+      fb.clear();
+      remove.mutate(undefined, { onError: fb.onError, onSuccess: () => onTarget(null) });
     }
   };
 
+  const text = { live: !editing, resetKey: fb.resetKey };
   return (
     <section aria-label="Storyline bearbeiten">
       <div className="storyline-form">
         <label>
           Titel
-          <input value={draft.title} onChange={(e) => set({ title: e.target.value })} />
+          <TextInput {...text} value={v.title} maxLength={200} onCommit={(title) => commit({ title })} />
         </label>
         <label>
           Kurzbeschreibung
-          <textarea value={draft.description} onChange={(e) => set({ description: e.target.value })} />
+          <TextInput {...text} multiline value={v.description} maxLength={2000} onCommit={(description) => commit({ description })} />
         </label>
         <fieldset>
           <legend>Art</legend>
           <div className="inline">
             <label className="inline">
-              <input type="radio" name="kind" checked={draft.kind === 'main'} onChange={() => changeKind('main')} />
+              <input type="radio" name="kind" checked={v.kind === 'main'} onChange={() => changeKind('main')} />
               Hauptstrang
             </label>
             <label className="inline">
-              <input type="radio" name="kind" checked={draft.kind === 'side'} onChange={() => changeKind('side')} />
+              <input type="radio" name="kind" checked={v.kind === 'side'} onChange={() => changeKind('side')} />
               Nebenstrang
             </label>
           </div>
         </fieldset>
-        {storyline && (
+        {editing && (
           <label>
             Status
-            <select value={draft.status} onChange={(e) => set({ status: e.target.value as StorylineStatus })}>
+            <select value={v.status} onChange={(e) => commit({ status: e.target.value as StorylineStatus })}>
               {(Object.keys(STATUS_STYLE) as StorylineStatus[]).map((st) => (
                 <option key={st} value={st}>{STATUS_STYLE[st].label}</option>
               ))}
@@ -173,30 +207,41 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect }: FormPr
         )}
         <label>
           Farbe
-          <input type="color" value={draft.color} onChange={(e) => set({ color: e.target.value })} />
+          <ColorInput {...text} value={v.color} onCommit={(color) => commit({ color })} />
         </label>
         <div className="field">
           <span>Zeitraum</span>
-          <RangePicker label="Zeitraum" timePoints={book.timePoints} value={draft.range} onChange={(range) => set({ range })} />
+          <RangePicker label="Zeitraum" timePoints={book.timePoints} value={v.range} onChange={(range) => commit({ range })} />
         </div>
         <fieldset>
           <legend>Figuren</legend>
-          <CharacterChecks characters={book.characters} value={draft.characterIds} onChange={(characterIds) => set({ characterIds })} />
+          <CharacterChecks characters={book.characters} value={v.characterIds} onChange={(characterIds) => commit({ characterIds })} />
         </fieldset>
         <label>
           Notiz
-          <textarea value={draft.note} onChange={(e) => set({ note: e.target.value })} />
+          <TextInput {...text} multiline value={v.note} maxLength={10000} onCommit={(note) => commit({ note })} />
         </label>
-        <IssueList issues={issues} />
+        {fb.feedback}
         <div className="actions">
-          <button type="button" onClick={save}>Speichern</button>
-          {storyline && <button type="button" onClick={confirmDelete}>Löschen</button>}
+          {editing ? (
+            <button type="button" onClick={confirmDelete}>Löschen</button>
+          ) : (
+            <button type="button" onClick={submitCreate}>Anlegen</button>
+          )}
         </div>
       </div>
       {storyline && onConnect && <ConnectPicker book={book} fromId={storyline.id} onConnect={onConnect} />}
       {storyline && storyline.kind === 'main' && <SectionList book={book} storyline={storyline} />}
     </section>
   );
+}
+
+/** Form values of a stored storyline. */
+function draftOf(s: Storyline): Draft {
+  return {
+    title: s.title, description: s.description, kind: s.kind, status: s.status, color: s.color, range: s.range,
+    characterIds: s.characterIds, note: s.note ?? '',
+  };
 }
 
 /** Accessible alternative to dragging a bar handle: pick the target strand and open the connection dialog. */

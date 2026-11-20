@@ -1,7 +1,9 @@
-/** Book list page: shows the user's books and creates new ones. */
+/** Book list page: shows the user's books; creates, renames (inline) and deletes them. */
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useBooks, useCreateBook, useLogout, useMe } from '../api/hooks';
+import type { BookSummary } from '@bookly/shared';
+import { useBooks, useCreateBook, useDeleteBook, useLogout, useMe, useRenameBook } from '../api/hooks';
+import { useSaveFeedback } from '../book/saveFeedback';
 
 /** Landing page after sign-in. */
 export function BookListPage() {
@@ -12,6 +14,9 @@ export function BookListPage() {
   const logout = useLogout();
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
+  const rename = useRenameBook();
+  const remove = useDeleteBook();
+  const fb = useSaveFeedback();
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -62,19 +67,81 @@ export function BookListPage() {
         </p>
       )}
 
+      {fb.feedback}
       {books.isPending && <p className="muted">Laden …</p>}
       {books.isError && <p className="error">Bücher konnten nicht geladen werden.</p>}
       {books.data && books.data.length === 0 && <p className="muted">Noch keine Bücher. Lege dein erstes an.</p>}
       <ul className="book-list">
         {books.data?.map((b) => (
-          <li key={b.id}>
-            <Link to={`/books/${b.id}`}>{b.title}</Link>
-            <span className="muted">
-              {b.storylineCount} {b.storylineCount === 1 ? 'Handlungsstrang' : 'Handlungsstränge'}
-            </span>
-          </li>
+          <BookRow
+            key={b.id}
+            book={b}
+            resetKey={fb.resetKey}
+            onRename={(id, next) => {
+              fb.clear();
+              rename.mutate({ id, title: next }, { onError: fb.onError });
+            }}
+            onDelete={(id) => {
+              fb.clear();
+              remove.mutate({ id }, { onError: fb.onError });
+            }}
+          />
         ))}
       </ul>
     </main>
+  );
+}
+
+interface RowProps {
+  book: BookSummary;
+  resetKey: number;
+  onRename: (id: string, title: string) => void;
+  onDelete: (id: string) => void;
+}
+
+/** One list entry: link, inline rename (saves on blur, Enter confirms, Escape cancels) and delete with confirmation. */
+function BookRow({ book, resetKey, onRename, onDelete }: RowProps) {
+  const [editing, setEditing] = useState(false);
+  return (
+    <li>
+      {editing ? (
+        <input
+          aria-label={`Titel Buch ${book.title}`}
+          defaultValue={book.title}
+          key={resetKey}
+          maxLength={200}
+          autoFocus
+          onBlur={(e) => {
+            const next = e.target.value.trim();
+            setEditing(false);
+            if (next !== '' && next !== book.title) onRename(book.id, next);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur();
+            if (e.key === 'Escape') {
+              e.currentTarget.value = book.title;
+              e.currentTarget.blur();
+            }
+          }}
+        />
+      ) : (
+        <Link to={`/books/${book.id}`}>{book.title}</Link>
+      )}
+      <span className="muted">
+        {book.storylineCount} {book.storylineCount === 1 ? 'Handlungsstrang' : 'Handlungsstränge'}
+      </span>
+      <button type="button" aria-label={`Buch „${book.title}“ umbenennen`} onClick={() => setEditing(true)}>
+        Umbenennen
+      </button>
+      <button
+        type="button"
+        aria-label={`Buch „${book.title}“ löschen`}
+        onClick={() => {
+          if (window.confirm(`Buch „${book.title}“ löschen? Alle Storylines dieses Buchs werden entfernt.`)) onDelete(book.id);
+        }}
+      >
+        Löschen
+      </button>
+    </li>
   );
 }

@@ -36,7 +36,7 @@ test('storyline flow with contradiction hint', async ({ page }) => {
   await panel.getByLabel('Hauptstrang').check();
   await panel.getByLabel('Zeitraum Start').selectOption({ label: 'Tag 2' });
   await panel.getByLabel('Zeitraum Ende').selectOption({ label: 'Tag 3' });
-  await panel.getByRole('button', { name: 'Speichern' }).click();
+  await panel.getByRole('button', { name: 'Anlegen' }).click();
   await expect(page.getByRole('button', { name: 'Storyline „Annas Flucht“' })).toBeVisible();
 
   // Side strand „Der Brief“, Tag 1 – Tag 1.
@@ -45,7 +45,7 @@ test('storyline flow with contradiction hint', async ({ page }) => {
   await panel.getByLabel('Nebenstrang').check();
   await panel.getByLabel('Zeitraum Start').selectOption({ label: 'Tag 1' });
   await panel.getByLabel('Zeitraum Ende').selectOption({ label: 'Tag 1' });
-  await panel.getByRole('button', { name: 'Speichern' }).click();
+  await panel.getByRole('button', { name: 'Anlegen' }).click();
   await expect(page.getByRole('button', { name: 'Storyline „Der Brief“' })).toBeVisible();
 
   // Connect Annas Flucht -> Der Brief as Zeitsprung via the panel.

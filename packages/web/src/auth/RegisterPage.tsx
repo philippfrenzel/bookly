@@ -28,7 +28,7 @@ export function RegisterPage() {
         <h1>Registrieren</h1>
         <label>
           Anzeigename
-          <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required autoComplete="name" />
+          <input value={displayName} maxLength={200} onChange={(e) => setDisplayName(e.target.value)} required autoComplete="name" />
         </label>
         <label>
           E-Mail
