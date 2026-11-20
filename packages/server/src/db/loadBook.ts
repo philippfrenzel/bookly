@@ -1,6 +1,7 @@
 /** Loads a complete book aggregate from the database. */
 import { asc, eq, inArray } from 'drizzle-orm';
 import type { Book, ConnectionType, HintRule, Id, StorylineKind, StorylineStatus } from '@bookly/shared';
+import { NotFoundError } from '../errors.js';
 import type { Db } from './client.js';
 import {
   acknowledgements,
@@ -29,10 +30,10 @@ function groupBy<T, K>(rows: T[], key: (r: T) => K): Map<K, T[]> {
   return m;
 }
 
-/** Loads the full aggregate; time points sorted by position, sections by order. Throws if the book is missing. */
+/** Loads the full aggregate; time points sorted by position, sections by order. Throws NotFoundError if the book is missing. */
 export async function loadBook(db: Db | Tx, bookId: Id): Promise<Book> {
   const [book] = await db.select().from(books).where(eq(books.id, bookId));
-  if (!book) throw new Error(`book ${bookId} not found`);
+  if (!book) throw new NotFoundError();
   const tps = await db.select().from(timePoints).where(eq(timePoints.bookId, bookId)).orderBy(asc(timePoints.position));
   const chars = await db
     .select()
@@ -50,10 +51,12 @@ export async function loadBook(db: Db | Tx, bookId: Id): Promise<Book> {
     : [];
   const lineChars = lineIds.length
     ? await db.select().from(storylineCharacters).where(inArray(storylineCharacters.storylineId, lineIds))
+        .orderBy(asc(storylineCharacters.characterId))
     : [];
   const secIds = secs.map((s) => s.id);
   const secChars = secIds.length
     ? await db.select().from(sectionCharacters).where(inArray(sectionCharacters.sectionId, secIds))
+        .orderBy(asc(sectionCharacters.characterId))
     : [];
   const conns = await db.select().from(connections).where(eq(connections.bookId, bookId)).orderBy(asc(connections.id));
   const connIds = conns.map((c) => c.id);

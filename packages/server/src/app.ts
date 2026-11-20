@@ -3,6 +3,8 @@ import cookie from '@fastify/cookie';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { authRoutes } from './auth/routes.js';
 import { bookRoutes } from './books/routes.js';
+import { characterRoutes } from './books/characters.js';
+import { timePointRoutes } from './books/timepoints.js';
 import { createDb } from './db/client.js';
 import { NotFoundError, ValidationError } from './errors.js';
 
@@ -21,14 +23,17 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   app.addHook('onClose', async () => {
     await db.$client.end();
   });
-  app.setErrorHandler((error: Error & { statusCode?: number }, _request, reply) => {
+  app.setErrorHandler((error: Error & { statusCode?: number }, request, reply) => {
     if (error instanceof ValidationError) return reply.code(422).send({ issues: error.issues });
     if (error instanceof NotFoundError) return reply.code(404).send({ error: 'not_found' });
     const status = error.statusCode ?? 500;
+    if (status >= 500) request.log.error(error);
     return reply.code(status).send({ error: status >= 500 ? 'internal_error' : error.message });
   });
   await app.register(cookie);
   await app.register(authRoutes);
   await app.register(bookRoutes);
+  await app.register(timePointRoutes);
+  await app.register(characterRoutes);
   return app;
 }

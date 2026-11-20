@@ -1,4 +1,5 @@
 /** Integration tests for books, the aggregate loader and the transactional mutation pipeline. */
+import { randomUUID } from 'node:crypto';
 import { describe, expect, test } from 'vitest';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
@@ -81,13 +82,18 @@ describe('books', () => {
       ['GET', `/api/books/${bookId}`],
       ['PATCH', `/api/books/${bookId}`],
       ['DELETE', `/api/books/${bookId}`],
+      ['POST', `/api/books/${bookId}/timepoints`],
+      ['PUT', `/api/books/${bookId}/timepoints/order`],
+      ['DELETE', `/api/books/${bookId}/timepoints/${randomUUID()}`],
+      ['POST', `/api/books/${bookId}/characters`],
+      ['DELETE', `/api/books/${bookId}/characters/${randomUUID()}`],
     ];
     for (const [method, path] of routes) {
       const res = await app.inject({
         method: method as 'GET',
         url: path,
         headers: { cookie: other.cookie },
-        payload: method === 'PATCH' ? { title: 'Hack' } : undefined,
+        payload: method === 'PATCH' ? { title: 'Hack' } : method === 'GET' || method === 'DELETE' ? undefined : {},
       });
       expect([method, path, res.statusCode]).toEqual([method, path, 404]);
     }
