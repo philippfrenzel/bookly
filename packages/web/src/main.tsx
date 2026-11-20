@@ -8,6 +8,7 @@ import { AppRoutes } from './App';
 import '@fontsource/hanken-grotesk/400.css';
 import '@fontsource/hanken-grotesk/600.css';
 import '@fontsource/hanken-grotesk/800.css';
+import './tailwind.css';
 import './styles.css';
 
 const queryClient = createQueryClient();

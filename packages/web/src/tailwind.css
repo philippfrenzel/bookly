@@ -1,0 +1,28 @@
+/*
+ * Tailwind entry: theme tokens and utilities only. Preflight is left out on purpose,
+ * because styles.css already owns the base reset. Colours, radius, shadow and font map
+ * onto the CSS variables in styles.css, so utilities like `bg-wash`, `text-signal`,
+ * `border-rule` or `rounded-app` follow the Liniennetzplan palette.
+ */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-wash: var(--wash);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-focus: var(--focus);
+  --color-focus-wash: var(--focus-wash);
+  --color-signal: var(--signal);
+  --color-signal-ink: var(--signal-ink);
+  --color-signal-wash: var(--signal-wash);
+  --radius-app: var(--radius);
+  --shadow-app: var(--shadow);
+  --font-sans: var(--font);
+  --ease-out: var(--ease-out);
+}
