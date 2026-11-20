@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { testApp, registeredAgent } from '../test/helpers.js';
 import { createDb } from '../db/client.js';
-import { users } from '../db/schema.js';
+import { sessions, users } from '../db/schema.js';
 
 const body = { email: 'Autor@Example.de', password: 'geheimes-passwort', displayName: 'Autor' };
 
@@ -95,6 +95,16 @@ describe('auth', () => {
     const [row] = await db.select().from(users).where(eq(users.email, 'autor@example.de'));
     expect(row!.passwordHash).not.toContain(body.password);
     expect(row!.passwordHash.startsWith('$argon2id$')).toBe(true);
+    await db.$client.end();
+    await app.close();
+  });
+
+  test('expired session is 401', async () => {
+    const app = await testApp();
+    const { cookie } = await registeredAgent(app);
+    await app.db.update(sessions).set({ expiresAt: new Date(Date.now() - 1000) });
+    const me = await app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie } });
+    expect(me.statusCode).toBe(401);
     await app.close();
   });
 });
