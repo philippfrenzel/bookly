@@ -1,6 +1,6 @@
 /** Tests for the request body schemas. */
 import { describe, expect, it } from 'vitest';
-import { RegisterBody, StorylineCreateBody, StorylinePatchBody } from './schemas.js';
+import { AdditionBody, CharacterBody, RegisterBody, StorylineCreateBody, StorylinePatchBody } from './schemas.js';
 
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
@@ -23,4 +23,17 @@ describe('schemas', () => {
     expect(() => RegisterBody.parse({ email: 'a@b.de', password: '1234567', displayName: 'x' })).toThrow();
     expect(RegisterBody.parse({ email: ' A@B.de ', password: '12345678', displayName: 'x' }).email).toBe('a@b.de');
   });
+});
+
+describe('CharacterBody', () => {
+  it('accepts an empty body', () => expect(CharacterBody.parse({})).toEqual({}));
+  it('turns blank strings into null', () => expect(CharacterBody.parse({ name: '  ' })).toEqual({ name: null }));
+  it('rejects over-long fields', () => {
+    expect(() => CharacterBody.parse({ description: 'x'.repeat(2001) })).toThrow();
+    expect(() => CharacterBody.parse({ name: 'x'.repeat(201) })).toThrow();
+  });
+});
+
+describe('AdditionBody', () => {
+  it('accepts partial input', () => expect(AdditionBody.parse({ behavior: 'x' })).toEqual({ behavior: 'x' }));
 });

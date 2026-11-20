@@ -1,5 +1,6 @@
 /** Zod request-body schemas shared by the server (parsing) and the web client (types). */
 import { z } from 'zod';
+import { CHARACTER_CRITERIA, type CharacterCriterion } from './criteria.js';
 
 /** Matches a canonical uuid string. */
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -20,6 +21,7 @@ const Rule = z.enum([
   'switch_character_not_in_both',
   'character_overlap',
 ]);
+const CharacterCriterionSchema = z.enum(CHARACTER_CRITERIA.map((c) => c.key) as [CharacterCriterion, ...CharacterCriterion[]]);
 const color = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 
 export const RegisterBody = z.object({
@@ -47,7 +49,16 @@ export type TimePointPatchBody = z.infer<typeof TimePointPatchBody>;
 export const ReorderBody = z.object({ ids: z.array(Id) });
 export type ReorderBody = z.infer<typeof ReorderBody>;
 
-export const CharacterBody = z.object({ name: title, description: description.nullish() });
+/** Optional free-text field: trimmed, blank becomes null. */
+const profileText = (max: number) =>
+  z.string().trim().max(max).transform((v) => (v === '' ? null : v)).nullish();
+
+export const CharacterBody = z.object({
+  name: profileText(200),
+  description: profileText(2000),
+  behavior: profileText(2000),
+  intentions: profileText(2000),
+});
 export type CharacterBody = z.infer<typeof CharacterBody>;
 
 export const StorylineCreateBody = z.object({
@@ -99,3 +110,22 @@ export const AcknowledgementBody = z.object({
   characterId: Id.nullable(),
 });
 export type AcknowledgementBody = z.infer<typeof AcknowledgementBody>;
+
+export const AdditionBody = z.object({ behavior: profileText(2000), intentions: profileText(2000) });
+export type AdditionBody = z.infer<typeof AdditionBody>;
+
+export const CharacterWarningAckBody = z.object({ storylineId: Id, characterId: Id, criterion: CharacterCriterionSchema });
+export type CharacterWarningAckBody = z.infer<typeof CharacterWarningAckBody>;
+
+/** Draft profile values sent to the suggestion endpoint. */
+export const SuggestionBody = z.object({
+  name: profileText(200),
+  description: profileText(2000),
+  behavior: profileText(2000),
+  intentions: profileText(2000),
+});
+export type SuggestionBody = z.infer<typeof SuggestionBody>;
+
+/** AI suggestion for behavior and intentions. */
+export const SuggestionResult = z.object({ behavior: z.string(), intentions: z.string() });
+export type Suggestion = z.infer<typeof SuggestionResult>;
