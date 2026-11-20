@@ -91,9 +91,9 @@ Die KI-Kriterien liegen als Liste in `packages/shared` (Schlüssel, deutsches La
 - **Automatisch:** Nach jeder erfolgreichen Änderung, die die Eingabe einer Storyline verändert: Storyline/Abschnitte bearbeitet, Figuren zugeordnet/entfernt, Ergänzung geändert, Steckbrief einer zugeordneten Figur geändert (→ alle Storylines dieser Figur). Das Einstellen passiert im Server direkt nach `mutateBook`, nicht im Browser.
 - **Auf Anfrage:** Knopf „Figuren prüfen“ an der Storyline und „Alle prüfen“ in der Hinweisliste. Stellt einen Auftrag ein, auch wenn sich nichts geändert hat.
 
-**Fingerabdruck gegen unnötige Aufrufe.** Aus der Modell-Eingabe (ohne quittierte Warnungen), der Kriterien-Version und dem Modellnamen wird ein Hash gebildet. Automatische Prüfungen werden nur eingestellt, wenn er sich vom Hash der letzten erfolgreichen Prüfung unterscheidet.
+**Fingerabdruck gegen unnötige Aufrufe.** Aus der Modell-Eingabe (ohne quittierte Warnungen), der Kriterien-Version und dem Modellnamen wird ein Hash gebildet. Automatische Prüfungen werden nur eingestellt, wenn er sich vom Hash des letzten Prüfversuchs unterscheidet. So wird eine fehlgeschlagene Prüfung nicht bei jeder fremden Änderung im Buch automatisch wiederholt, sondern erst, wenn sich ihre Eingabe ändert oder der Autor sie anstößt *(Builder-Entscheidung, präzisiert beim Planen)*.
 
-**Warteschlange (Tabelle `character_checks`)**, ein Eintrag pro Storyline: `storyline_id` (eindeutig), `status` (`pending` | `running` | `done` | `failed`), `input_hash`, `requested_at`, `started_at`, `finished_at`, `error`, `model`.
+**Warteschlange (Tabelle `character_checks`)**, ein Eintrag pro Storyline: `storyline_id` (eindeutig), `status` (`pending` | `running` | `done` | `failed`), `input_hash` (letzter Versuch), `requested_at`, `started_at`, `finished_at`, `error`, `model`.
 - Einstellen = Upsert auf `pending` mit neuem `requested_at`. Mehrere Speichervorgänge kurz hintereinander verschmelzen so zu einem Auftrag.
 - **Ruhezeit:** Der Worker nimmt einen Auftrag erst, wenn `requested_at` mindestens 5 s zurückliegt *(Builder-Entscheidung, spart Kosten beim Tippen)*.
 - **Worker** im Server-Prozess: fragt alle ~2 s die Tabelle ab (`FOR UPDATE SKIP LOCKED`), höchstens 2 Aufträge gleichzeitig. Startet nur, wenn ein Schlüssel konfiguriert ist.
