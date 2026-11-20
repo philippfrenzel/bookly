@@ -23,6 +23,8 @@ interface Props {
   target: PanelTarget;
   /** Called with a new target after create (edit the new storyline) or delete (null). */
   onTarget: (target: PanelTarget) => void;
+  /** Opens the connection dialog from the given storyline to another. */
+  onConnect?: (fromId: Id, toId: Id) => void;
 }
 
 /** Local, unsaved form state. */
@@ -40,7 +42,7 @@ interface Draft {
 const DRAFT_ID = 'draft';
 
 /** Picks the form for the target, or a hint when nothing is selected. */
-export function StorylinePanel({ book, target, onTarget }: Props) {
+export function StorylinePanel({ book, target, onTarget, onConnect }: Props) {
   if (target?.mode === 'create') {
     const first = [...book.timePoints].sort((a, b) => a.position - b.position)[0];
     if (!first) return <p className="muted">Lege zuerst Zeitpunkte an.</p>;
@@ -56,7 +58,7 @@ export function StorylinePanel({ book, target, onTarget }: Props) {
     title: storyline.title, description: storyline.description, kind: storyline.kind, status: storyline.status,
     color: storyline.color, range: storyline.range, characterIds: storyline.characterIds, note: storyline.note ?? '',
   };
-  return <StorylineForm key={storyline.id} book={book} initial={draft} storyline={storyline} onTarget={onTarget} />;
+  return <StorylineForm key={storyline.id} book={book} initial={draft} storyline={storyline} onTarget={onTarget} onConnect={onConnect} />;
 }
 
 interface FormProps {
@@ -65,10 +67,11 @@ interface FormProps {
   /** The stored storyline, or null when creating. */
   storyline: Storyline | null;
   onTarget: (target: PanelTarget) => void;
+  onConnect?: (fromId: Id, toId: Id) => void;
 }
 
 /** The form itself; remounted (by key) whenever the target changes. */
-function StorylineForm({ book, initial, storyline, onTarget }: FormProps) {
+function StorylineForm({ book, initial, storyline, onTarget, onConnect }: FormProps) {
   const [draft, setDraft] = useState(initial);
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
   const base = `/api/books/${book.id}/storylines`;
@@ -190,7 +193,27 @@ function StorylineForm({ book, initial, storyline, onTarget }: FormProps) {
           {storyline && <button type="button" onClick={confirmDelete}>Löschen</button>}
         </div>
       </div>
+      {storyline && onConnect && <ConnectPicker book={book} fromId={storyline.id} onConnect={onConnect} />}
       {storyline && storyline.kind === 'main' && <SectionList book={book} storyline={storyline} />}
     </section>
+  );
+}
+
+/** Accessible alternative to dragging a bar handle: pick the target strand and open the connection dialog. */
+function ConnectPicker({ book, fromId, onConnect }: { book: Book; fromId: Id; onConnect: (fromId: Id, toId: Id) => void }) {
+  const [toId, setToId] = useState('');
+  return (
+    <div className="connect-picker inline">
+      <label>
+        Verbinden mit …
+        <select value={toId} onChange={(e) => setToId(e.target.value)}>
+          <option value="" />
+          {book.storylines.filter((s) => s.id !== fromId).map((s) => (
+            <option key={s.id} value={s.id}>{s.title}</option>
+          ))}
+        </select>
+      </label>
+      <button type="button" disabled={!toId} onClick={() => onConnect(fromId, toId)}>Verbinden</button>
+    </div>
   );
 }

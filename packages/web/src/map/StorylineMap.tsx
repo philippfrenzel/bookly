@@ -1,7 +1,8 @@
 /** SVG bird's-eye view of all storylines along the book's story timeline. */
-import { orderIndex, type Book, type Hint, type Id, type TimeRange } from '@bookly/shared';
+import { bounds, orderIndex, type Book, type Hint, type Id, type TimeRange } from '@bookly/shared';
 import { useMemo, useRef, useState, type PointerEvent } from 'react';
-import { assignLanes, columnAt, COLUMN_WIDTH, HEADER_HEIGHT, LANE_HEIGHT } from './layout';
+import { assignLanes, barGeometry, columnAt, COLUMN_WIDTH, HEADER_HEIGHT, LANE_HEIGHT } from './layout';
+import { ConnectionPath } from './ConnectionPath';
 import { StorylineBar } from './StorylineBar';
 
 export interface StorylineMapProps {
@@ -11,19 +12,25 @@ export interface StorylineMapProps {
   onSelectStoryline: (id: Id) => void;
   /** Called when the author drags across free lane area; the range is ordered start <= end. */
   onCreateRange?: (range: TimeRange) => void;
+  /** Called when a connection handle is dragged from one bar onto another. */
+  onConnect?: (fromId: Id, toId: Id) => void;
+  /** Called when an existing connection is clicked. */
+  onSelectConnection?: (id: Id) => void;
 }
 
 const BOTTOM_PADDING = 16;
 const MIN_DRAG_PX = 5;
+const HANDLE_INSET = 6;
 
 /** Renders the time axis header, grid and one bar per storyline; connections are drawn elsewhere. */
-export function StorylineMap({ book, selectedId, onSelectStoryline, onCreateRange }: StorylineMapProps) {
+export function StorylineMap({ book, hints, selectedId, onSelectStoryline, onCreateRange, onConnect, onSelectConnection }: StorylineMapProps) {
   const sorted = useMemo(() => [...book.timePoints].sort((a, b) => a.position - b.position), [book.timePoints]);
   const idx = useMemo(() => orderIndex(book.timePoints), [book.timePoints]);
   const layout = useMemo(() => assignLanes(book.storylines, idx), [book.storylines, idx]);
   const svgRef = useRef<SVGSVGElement>(null);
   const drag = useRef<{ x0: number; moved: boolean } | null>(null);
   const [selection, setSelection] = useState<[number, number] | null>(null);
+  const link = useRef<{ fromId: Id } | null>(null);
 
   if (sorted.length === 0) return <p className="map-empty">Lege zuerst Zeitpunkte an.</p>;
   if (book.storylines.length === 0) return <p className="map-empty">Noch keine Storylines. Lege die erste an.</p>;
@@ -57,9 +64,37 @@ export function StorylineMap({ book, selectedId, onSelectStoryline, onCreateRang
     onCreateRange({ startId: sorted[a]!.id, endId: sorted[b]!.id });
   };
 
+  /** Storyline whose bar lies under the given svg-local point, if any. */
+  const barAt = (x: number, y: number) => {
+    const lane = Math.floor((y - HEADER_HEIGHT) / LANE_HEIGHT);
+    const col = columnAt(x);
+    return book.storylines.find((s) => {
+      if (layout.laneOf.get(s.id) !== lane) return false;
+      const [a, b] = bounds(s.range, idx);
+      return col >= a && col <= b;
+    });
+  };
+  const localPoint = (e: PointerEvent) => {
+    const r = svgRef.current?.getBoundingClientRect();
+    return { x: e.clientX - (r?.left ?? 0), y: e.clientY - (r?.top ?? 0) };
+  };
+  const onLinkUp = (e: PointerEvent) => {
+    const from = link.current;
+    link.current = null;
+    if (!from || !onConnect) return;
+    const { x, y } = localPoint(e);
+    const target = barAt(x, y);
+    if (target && target.id !== from.fromId) onConnect(from.fromId, target.id);
+  };
+
   return (
     <div className="storyline-map">
       <svg ref={svgRef} width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="group" aria-label="Storylines auf der Zeitachse">
+        <defs>
+          <marker id="connection-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" className="connection-arrowhead" />
+          </marker>
+        </defs>
         {mainLast >= mainFirst && (
           <rect
             className="main-band"
@@ -106,6 +141,25 @@ export function StorylineMap({ book, selectedId, onSelectStoryline, onCreateRang
             pointerEvents="none"
           />
         )}
+        {/* Connections sit under the bars so a bar always wins the click. */}
+        {book.connections.map((c) => {
+          const from = book.storylines.find((s) => s.id === c.fromId);
+          const to = book.storylines.find((s) => s.id === c.toId);
+          if (!from || !to) return null;
+          return (
+            <ConnectionPath
+              key={c.id}
+              connection={c}
+              from={from}
+              to={to}
+              fromLane={layout.laneOf.get(from.id) ?? 0}
+              toLane={layout.laneOf.get(to.id) ?? 0}
+              idx={idx}
+              hints={hints.filter((h) => h.connectionId === c.id)}
+              onSelect={(id) => onSelectConnection?.(id)}
+            />
+          );
+        })}
         {book.storylines.map((s) => (
           <StorylineBar
             key={s.id}
@@ -116,6 +170,31 @@ export function StorylineMap({ book, selectedId, onSelectStoryline, onCreateRang
             onSelect={onSelectStoryline}
           />
         ))}
+        {onConnect &&
+          book.storylines.map((s) => {
+            const g = barGeometry(s, layout.laneOf.get(s.id) ?? 0, idx);
+            return (
+              <circle
+                key={s.id}
+                className="connect-handle"
+                cx={g.x + g.width - HANDLE_INSET}
+                cy={g.y}
+                r={6}
+                onPointerDown={(e) => {
+                  if (e.button !== 0) return;
+                  e.stopPropagation();
+                  e.currentTarget.setPointerCapture?.(e.pointerId);
+                  link.current = { fromId: s.id };
+                }}
+                onPointerUp={onLinkUp}
+                onPointerCancel={() => {
+                  link.current = null;
+                }}
+              >
+                <title>{`Verbindung von „${s.title}“ ziehen`}</title>
+              </circle>
+            );
+          })}
       </svg>
     </div>
   );

@@ -90,3 +90,18 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .map-toolbar { margin-bottom: 0.5rem; }
 
 .storyline-form .field { display: flex; flex-direction: column; gap: 0.15rem; }
+
+/* Connections */
+.storyline-map .connection-path { cursor: pointer; }
+.storyline-map .connection-line { stroke: var(--muted); stroke-width: 2; }
+.storyline-map .connection-arrowhead { fill: var(--muted); }
+.storyline-map .connection-icon { font-size: 14px; }
+.storyline-map .connection-label { font-size: 11px; fill: var(--muted); }
+.storyline-map .connection-warning { font-size: 13px; }
+.storyline-map .connect-handle { fill: #fff; stroke: var(--muted); stroke-width: 1.5; cursor: crosshair; opacity: 0.5; }
+.storyline-map .connect-handle:hover { opacity: 1; }
+.hint-list ul { list-style: none; padding: 0; margin: 0; }
+.hint-list .hint { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
+.hint-list .hint.is-acknowledged { color: var(--muted); }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); display: grid; place-items: center; z-index: 10; }
+.modal { background: #fff; border-radius: 8px; padding: 20px; width: min(480px, 92vw); display: grid; gap: 12px; }
