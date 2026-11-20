@@ -102,4 +102,52 @@ describe('ConnectionDialog', () => {
     expect(confirm).toHaveBeenCalledWith('Verbindung löschen?');
     await vi.waitFor(() => expect(deletes).toBe(1));
   });
+
+  it('shows server issues when saving is rejected with 422', async () => {
+    server.use(
+      meOk,
+      bookOk(twoStrands()),
+      http.post('/api/books/b1/connections', () =>
+        HttpResponse.json({ issues: [{ code: 'x', elementId: 's2', message: 'Ziel existiert nicht mehr.' }] }, { status: 422 }),
+      ),
+    );
+    renderApp('/books/b1');
+    const dialog = await openDialog();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Speichern' }));
+    expect(await within(dialog).findByText('Ziel existiert nicht mehr.')).toBeInTheDocument();
+  });
+
+  it('reopens an acknowledged hint with DELETE and the acknowledgement body', async () => {
+    const book = twoStrands();
+    book.connections = [{ id: 'k1', fromId: 's1', toId: 's2', type: 'time_jump', label: null, characterId: null }];
+    book.acknowledgements = [{ connectionId: 'k1', rule: 'time_jump_order', characterId: null }];
+    const bodies: unknown[] = [];
+    server.use(
+      meOk,
+      bookOk(book),
+      http.delete('/api/books/b1/acknowledgements', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({ book, hints: [] });
+      }),
+    );
+    renderApp('/books/b1');
+    await userEvent.click(await screen.findByRole('button', { name: 'Verbindung „Hauptstrang“ → „Früh“' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Verbindung' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Wieder anzeigen' }));
+    await vi.waitFor(() => expect(bodies).toEqual([{ connectionId: 'k1', rule: 'time_jump_order', characterId: null }]));
+  });
+
+  it('closes on Escape and hides acknowledge buttons while the draft is changed', async () => {
+    const book = twoStrands();
+    book.connections = [{ id: 'k1', fromId: 's1', toId: 's2', type: 'time_jump', label: null, characterId: null }];
+    server.use(meOk, bookOk(book));
+    renderApp('/books/b1');
+    await userEvent.click(await screen.findByRole('button', { name: 'Verbindung „Hauptstrang“ → „Früh“' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Verbindung' });
+    expect(dialog).toHaveFocus();
+    await userEvent.type(within(dialog).getByLabelText('Beschriftung'), 'x');
+    expect(within(dialog).queryByRole('button', { name: 'Bewusst so' })).not.toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });

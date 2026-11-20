@@ -1,8 +1,11 @@
 /** Modal for creating or editing a connection; contradiction hints are recomputed live from the draft. */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   checkConnection, hintKey, strandCharacters, type Book, type Connection, type ConnectionType, type Hint, type Id,
+  type ValidationIssue,
 } from '@bookly/shared';
+import type { ApiError } from '../api/client';
+import { IssueList } from '../book/IssueList';
 import { useBookMutation } from '../api/hooks';
 import { HintList } from './HintList';
 
@@ -46,16 +49,25 @@ function DialogBody({ book, initial, isNew, onClose }: { book: Book; initial: Co
   const from = book.storylines.find((s) => s.id === initial.fromId);
   const to = book.storylines.find((s) => s.id === initial.toId);
 
-  const draft: Connection = {
-    ...initial, type, characterId: type === 'character_switch' ? characterId : null, label: label.trim() === '' ? null : label.trim(),
-  };
-
   // Recomputed on every change; the stored acknowledgements mark hints the author already accepted.
-  const hints = useMemo<Hint[]>(() => {
+  const { draft, hints } = useMemo(() => {
+    const d: Connection = {
+      ...initial, type, characterId: type === 'character_switch' ? characterId : null, label: label.trim() === '' ? null : label.trim(),
+    };
     const acked = new Set(book.acknowledgements.map(hintKey));
-    return checkConnection(book, draft).map((h) => ({ ...h, acknowledged: acked.has(hintKey(h)) }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [book, type, characterId, label]);
+    return { draft: d, hints: checkConnection(book, d).map((h) => ({ ...h, acknowledged: acked.has(hintKey(h)) })) as Hint[] };
+  }, [book, initial, type, characterId, label]);
+  // Acknowledgements target the stored connection, so they are only offered while the draft matches it.
+  const unchanged = draft.type === initial.type && draft.characterId === initial.characterId && draft.label === initial.label;
+
+  const [error, setError] = useState<{ issues?: ValidationIssue[]; message?: string } | null>(null);
+  const onError = (e: ApiError) => {
+    const body = e.body as { issues?: ValidationIssue[] } | undefined;
+    if (e.status === 422 && body?.issues) setError({ issues: body.issues });
+    else setError({ message: 'Speichern fehlgeschlagen. Bitte erneut versuchen.' });
+  };
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => dialogRef.current?.focus(), []);
 
   const create = useBookMutation<Record<string, unknown>>(book.id, 'POST', () => `${base}/connections`, (v) => v);
   const update = useBookMutation<Record<string, unknown>>(book.id, 'PATCH', () => `${base}/connections/${initial.id}`, (v) => v);
@@ -67,11 +79,11 @@ function DialogBody({ book, initial, isNew, onClose }: { book: Book; initial: Co
 
   const save = () => {
     const common = { type, label: draft.label, characterId: draft.characterId };
-    if (isNew) create.mutate({ fromId: initial.fromId, toId: initial.toId, ...common }, { onSuccess: onClose });
-    else update.mutate(common, { onSuccess: onClose });
+    if (isNew) create.mutate({ fromId: initial.fromId, toId: initial.toId, ...common }, { onSuccess: onClose, onError });
+    else update.mutate(common, { onSuccess: onClose, onError });
   };
   const confirmDelete = () => {
-    if (window.confirm('Verbindung löschen?')) remove.mutate(undefined, { onSuccess: onClose });
+    if (window.confirm('Verbindung löschen?')) remove.mutate(undefined, { onSuccess: onClose, onError });
   };
 
   // Union of both strands' characters first, then everybody else.
@@ -81,7 +93,17 @@ function DialogBody({ book, initial, isNew, onClose }: { book: Book; initial: Co
 
   return (
     <div className="modal-backdrop">
-      <div className="modal" role="dialog" aria-modal="true" aria-label="Verbindung">
+      <div
+        ref={dialogRef}
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Verbindung"
+        tabIndex={-1}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose();
+        }}
+      >
         <p className="muted">
           „{from?.title}“ → „{to?.title}“
         </p>
@@ -113,9 +135,11 @@ function DialogBody({ book, initial, isNew, onClose }: { book: Book; initial: Co
         </label>
         <HintList
           hints={hints}
-          onAcknowledge={isNew ? undefined : (h) => ack.mutate(h)}
-          onReopen={isNew ? undefined : (h) => unack.mutate(h)}
+          onAcknowledge={isNew || !unchanged ? undefined : (h) => ack.mutate(h, { onError })}
+          onReopen={isNew || !unchanged ? undefined : (h) => unack.mutate(h, { onError })}
         />
+        <IssueList issues={error?.issues ?? []} />
+        {error?.message && <p className="error" role="alert">{error.message}</p>}
         <div className="actions">
           <button type="button" disabled={pending} onClick={save}>Speichern</button>
           {!isNew && <button type="button" disabled={pending} onClick={confirmDelete}>Löschen</button>}

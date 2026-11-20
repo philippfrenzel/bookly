@@ -22,7 +22,7 @@ const BOTTOM_PADDING = 16;
 const MIN_DRAG_PX = 5;
 const HANDLE_INSET = 6;
 
-/** Renders the time axis header, grid and one bar per storyline; connections are drawn elsewhere. */
+/** Renders the time axis header, grid and connections under the bars, one bar per storyline and the connection handles. */
 export function StorylineMap({ book, hints, selectedId, onSelectStoryline, onCreateRange, onConnect, onSelectConnection }: StorylineMapProps) {
   const sorted = useMemo(() => [...book.timePoints].sort((a, b) => a.position - b.position), [book.timePoints]);
   const idx = useMemo(() => orderIndex(book.timePoints), [book.timePoints]);

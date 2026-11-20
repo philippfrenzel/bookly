@@ -37,6 +37,7 @@ export function ConnectionPath({ connection: c, from, to, fromLane, toLane, idx,
   const pull = Math.max(40, Math.abs(x2 - x1) / 2);
   const mx = (x1 + x2) / 2;
   const my = (y1 + y2) / 2;
+  const d = `M ${x1} ${y1} C ${x1 + pull} ${y1}, ${x2 - pull} ${y2}, ${x2} ${y2}`;
   const open = hints.some((h) => !h.acknowledged);
   const warned = hints.length > 0;
 
@@ -56,10 +57,10 @@ export function ConnectionPath({ connection: c, from, to, fromLane, toLane, idx,
       onClick={() => onSelect(c.id)}
       onKeyDown={onKeyDown}
     >
-      <path className="connection-hit" d={`M ${x1} ${y1} C ${x1 + pull} ${y1}, ${x2 - pull} ${y2}, ${x2} ${y2}`} fill="none" stroke="transparent" strokeWidth={14} />
+      <path className="connection-hit" d={d} fill="none" stroke="transparent" strokeWidth={14} />
       <path
         className="connection-line"
-        d={`M ${x1} ${y1} C ${x1 + pull} ${y1}, ${x2 - pull} ${y2}, ${x2} ${y2}`}
+        d={d}
         fill="none"
         markerEnd="url(#connection-arrow)"
       />
