@@ -2,6 +2,7 @@
  * Book-wide hint list at the top of the side panel: open contradictions first, each one able to
  * highlight its connection on the plan and open it; acknowledged hints fold away. Never blocks anything.
  */
+import { useState } from 'react';
 import type { Book, CharacterWarning, Hint, Id } from '@bookly/shared';
 import { useBookMutation } from '../api/hooks';
 import { CharacterWarningItem } from './CharacterWarningItem';
@@ -32,6 +33,9 @@ function routeOf(book: Book, connectionId: Id): string {
 /** Renders the open hints as buttons and the acknowledged ones folded into a disclosure. */
 export function BookHints({ book, hints, warnings, aiEnabled, onShowStoryline, onShow, onHighlight }: Props) {
   const checkAll = useBookMutation<void>(book.id, 'POST', () => `/api/books/${book.id}/character-checks`);
+  const [checkFailed, setCheckFailed] = useState(false);
+  const startCheckAll = () =>
+    checkAll.mutate(undefined, { onError: () => setCheckFailed(true), onSuccess: () => setCheckFailed(false) });
   const open = hints.filter((h) => !h.acknowledged);
   const acknowledged = hints.filter((h) => h.acknowledged);
   const openWarnings = warnings.filter((w) => !w.acknowledged);
@@ -39,7 +43,7 @@ export function BookHints({ book, hints, warnings, aiEnabled, onShowStoryline, o
   const openCount = open.length + openWarnings.length;
   const ackCount = acknowledged.length + ackWarnings.length;
   const warningItem = (w: CharacterWarning) => (
-    <CharacterWarningItem key={`${w.storylineId}:${w.characterId}:${w.criterion}`} book={book} warning={w} onShowStoryline={onShowStoryline} />
+    <CharacterWarningItem key={w.id} book={book} warning={w} onShowStoryline={onShowStoryline} />
   );
   const item = (h: Hint) => (
     <li key={`${h.connectionId}:${h.rule}:${h.characterId ?? ''}`}>
@@ -69,10 +73,11 @@ export function BookHints({ book, hints, warnings, aiEnabled, onShowStoryline, o
       )}
       <div className="book-hints-group">
         <h3>Figuren</h3>
-        <button type="button" disabled={!aiEnabled || checkAll.isPending} onClick={() => checkAll.mutate()}>
+        <button type="button" disabled={!aiEnabled || checkAll.isPending} onClick={startCheckAll}>
           Alle prüfen
         </button>
       </div>
+      {checkFailed && <p className="error" role="alert">Prüfung konnte nicht gestartet werden.</p>}
       {openWarnings.length > 0 && <ul>{openWarnings.map(warningItem)}</ul>}
       {ackCount > 0 && (
         <details>

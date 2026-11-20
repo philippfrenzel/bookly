@@ -13,7 +13,7 @@ interface Props {
   onDismiss: () => void;
 }
 
-/** Suggestion panel; applying over existing text asks first. */
+/** Suggestion panel; applying over existing text asks first, an empty suggested field offers nothing to apply. */
 export function SuggestionBox({ suggestion, fields, onApply, onDismiss }: Props) {
   const apply = (field: Field) => {
     const current = typeof fields[field] === 'function' ? (fields[field] as () => string)() : (fields[field] as string);
@@ -25,8 +25,14 @@ export function SuggestionBox({ suggestion, fields, onApply, onDismiss }: Props)
       {(['behavior', 'intentions'] as const).map((field) => (
         <div key={field} className="suggestion-field">
           <strong>{LABELS[field]}</strong>
-          <p>{suggestion[field]}</p>
-          <button type="button" onClick={() => apply(field)}>Übernehmen</button>
+          {suggestion[field].trim() === '' ? (
+            <p className="muted">Kein Vorschlag.</p>
+          ) : (
+            <>
+              <p>{suggestion[field]}</p>
+              <button type="button" onClick={() => apply(field)}>Übernehmen</button>
+            </>
+          )}
         </div>
       ))}
       <button type="button" onClick={onDismiss}>Verwerfen</button>

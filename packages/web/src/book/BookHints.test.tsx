@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../test/render';
 import { server } from '../test/setup';
 import { bookOk, bookResponse, meOk, sampleBook } from './testFixtures';
+import { SAVE_FAILED_MESSAGE } from './saveFeedback';
 
 const open: CharacterWarning = {
   id: 'w1', storylineId: 's1', characterId: 'c1', criterion: 'behavior_change',
@@ -105,5 +106,46 @@ describe('BookHints – Figuren', () => {
     server.use(meOk, bookOk(sampleBook(), { ai: { enabled: false } }));
     renderApp('/books/b1');
     expect(await screen.findByRole('button', { name: 'Alle prüfen' })).toBeDisabled();
+  });
+  it('renders two warnings of the same criterion and character without duplicate keys', async () => {
+    const error = vi.spyOn(console, 'error');
+    const second: CharacterWarning = { ...open, id: 'w3', message: 'Mira zögert an anderer Stelle.' };
+    server.use(meOk, bookOk(sampleBook(), { characterWarnings: [open, second] }));
+    renderApp('/books/b1');
+    expect(await screen.findByText('Mira zögert an anderer Stelle.')).toBeInTheDocument();
+    expect(screen.getByText('Mira handelt plötzlich feige.')).toBeInTheDocument();
+    expect(error.mock.calls.flat().join(' ')).not.toMatch(/same key/);
+  });
+
+  it('shows an alert when „Alle prüfen“ fails and disables it while pending', async () => {
+    let release!: () => void;
+    const held = new Promise<void>((r) => { release = r; });
+    server.use(
+      meOk,
+      bookOk(sampleBook()),
+      http.post('/api/books/b1/character-checks', async () => {
+        await held;
+        return HttpResponse.json({ error: 'boom' }, { status: 500 });
+      }),
+    );
+    renderApp('/books/b1');
+    const button = await screen.findByRole('button', { name: 'Alle prüfen' });
+    await userEvent.click(button);
+    expect(button).toBeDisabled();
+    release();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Prüfung konnte nicht gestartet werden.');
+    expect(button).toBeEnabled();
+  });
+
+  it('shows the save failure alert when acknowledging fails', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    server.use(
+      meOk,
+      bookOk(sampleBook(), { characterWarnings: [open] }),
+      http.post('/api/books/b1/character-warning-acks', () => HttpResponse.json({ error: 'boom' }, { status: 500 })),
+    );
+    renderApp('/books/b1');
+    await userEvent.click(await screen.findByRole('button', { name: 'Bewusst so' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(SAVE_FAILED_MESSAGE);
   });
 });

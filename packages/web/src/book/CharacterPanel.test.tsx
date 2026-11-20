@@ -329,4 +329,15 @@ describe('CharacterPanel', () => {
     expect(bodies).not.toContainEqual({ behavior: 'mutig' });
     expect(screen.getByLabelText('Verhalten Figur Jon')).toHaveValue('getippt');
   });
+  it('offers no „Übernehmen“ for an empty suggested field', async () => {
+    server.use(
+      meOk,
+      bookOk(sampleBook()),
+      http.post('/api/books/b1/characters/c2/suggestion', () => HttpResponse.json({ behavior: '', intentions: 'Heimkehr' })),
+    );
+    await openPanel();
+    await userEvent.click(screen.getAllByRole('button', { name: 'Vorschlagen' })[1]!);
+    expect(await screen.findByText('Heimkehr')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Übernehmen' })).toHaveLength(1);
+  });
 });
