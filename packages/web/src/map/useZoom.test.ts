@@ -1,7 +1,7 @@
 /** Tests for the pure zoom helpers: coordinate conversion, fit transform and the gesture filter. */
 import { zoomIdentity } from 'd3-zoom';
 import { describe, expect, it } from 'vitest';
-import { fitTransform, toContentPoint, zoomFilter } from './useZoom';
+import { fitTransform, MAX_FIT_ZOOM, toContentPoint, zoomFilter } from './useZoom';
 
 const rect = { left: 100, top: 50 };
 
@@ -22,9 +22,9 @@ describe('fitTransform', () => {
   it('is identity without a known viewport', () => {
     expect(fitTransform(0, 0, { width: 800, height: 400 })).toBe(zoomIdentity);
   });
-  it('never magnifies small content but centres it horizontally', () => {
+  it('magnifies small content at most to MAX_FIT_ZOOM, centres it horizontally and aligns it to the top', () => {
     const t = fitTransform(1000, 600, { width: 400, height: 200 });
-    expect([t.k, t.x, t.y]).toEqual([1, 300, 0]);
+    expect([t.k, t.x, t.y]).toEqual([MAX_FIT_ZOOM, 200, 0]);
   });
   it('shrinks by the tighter axis', () => {
     const t = fitTransform(1000, 300, { width: 2000, height: 600 });

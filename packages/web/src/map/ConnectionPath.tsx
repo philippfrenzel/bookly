@@ -32,22 +32,88 @@ interface Props {
   onSelect: (id: string) => void;
 }
 
-/** Horizontal overshoot allowed for backwards connections, in px. */
-const BACKWARD_MARGIN = 40;
+/** Furthest a backwards connection's markers sit from its source end, in px, so its label stays clear of the target end. */
+const BACKWARD_MARKER_REACH = 140;
+/** How far a backwards connection leaves its source lane before running back, in px: inside the gap between lanes, never on the next lane. */
+const LANE_GAP_OFFSET = 30;
+/** Distance of a vertical connection's markers from the target lane, in px: the centre of the gap before it. */
+const MARKER_GAP_OFFSET = 38;
+/** Corner radius of the plan's bends, in px. */
+const CORNER = 8;
+
+export interface Point { x: number; y: number }
 
 /**
- * Cubic path from (x1,y1) to (x2,y2). Forward connections leave and enter horizontally. Backwards ones
- * (target left of the source) use an S-curve whose control points stay within min/max x of the endpoints
- * plus BACKWARD_MARGIN, so the curve never leaves the content area; same-lane backwards curves bulge downwards.
+ * Octilinear route of a connection, as on a network plan: every segment is horizontal, vertical or
+ * at 45 degrees. Forward connections leave and enter horizontally with one 45-degree diagonal (or a
+ * vertical drop when too steep for one). Backwards connections turn off the source end into the lane gap,
+ * run back and turn onto the target start, staying exactly within the x-range of their endpoints.
  */
-export function connectionPathD(x1: number, y1: number, x2: number, y2: number): string {
+export function connectionRoute(x1: number, y1: number, x2: number, y2: number): Point[] {
+  const dy = y2 - y1;
   if (x2 >= x1) {
-    const pull = Math.max(40, (x2 - x1) / 2);
-    return `M ${x1} ${y1} C ${x1 + pull} ${y1}, ${x2 - pull} ${y2}, ${x2} ${y2}`;
+    if (Math.abs(dy) < 1) return [{ x: x1, y: y1 }, { x: x2, y: y2 }];
+    const mid = (x1 + x2) / 2;
+    if (x2 - x1 >= Math.abs(dy) + 2 * CORNER) {
+      const half = Math.abs(dy) / 2;
+      return [{ x: x1, y: y1 }, { x: mid - half, y: y1 }, { x: mid + half, y: y2 }, { x: x2, y: y2 }];
+    }
+    return [{ x: x1, y: y1 }, { x: mid, y: y1 }, { x: mid, y: y2 }, { x: x2, y: y2 }];
   }
-  const bulge = Math.abs(y2 - y1) < 24 ? 24 : 0;
-  const my = (y1 + y2) / 2 + bulge;
-  return `M ${x1} ${y1} C ${x1 + BACKWARD_MARGIN} ${my}, ${x2 - BACKWARD_MARGIN} ${my}, ${x2} ${y2}`;
+  const ym = backwardRunY(y1, y2);
+  return [{ x: x1, y: y1 }, { x: x1, y: ym }, { x: x2, y: ym }, { x: x2, y: y2 }];
+}
+
+/** Height of a backwards connection's return run: the lane gap next to the source lane. */
+function backwardRunY(y1: number, y2: number): number {
+  return y1 + (y2 - y1 < -1 ? -LANE_GAP_OFFSET : LANE_GAP_OFFSET);
+}
+
+/** SVG path for a polyline with rounded corners (radius clamped to half the shorter adjacent segment). */
+export function roundedPath(points: Point[], r: number = CORNER): string {
+  if (points.length < 2) return '';
+  let d = `M ${points[0]!.x} ${points[0]!.y}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const [a, b, c] = [points[i - 1]!, points[i]!, points[i + 1]!];
+    const lenIn = Math.hypot(b.x - a.x, b.y - a.y);
+    const lenOut = Math.hypot(c.x - b.x, c.y - b.y);
+    const k = Math.min(r, lenIn / 2, lenOut / 2);
+    const p = { x: b.x - ((b.x - a.x) / (lenIn || 1)) * k, y: b.y - ((b.y - a.y) / (lenIn || 1)) * k };
+    const q = { x: b.x + ((c.x - b.x) / (lenOut || 1)) * k, y: b.y + ((c.y - b.y) / (lenOut || 1)) * k };
+    d += ` L ${p.x} ${p.y} Q ${b.x} ${b.y} ${q.x} ${q.y}`;
+  }
+  const last = points[points.length - 1]!;
+  return `${d} L ${last.x} ${last.y}`;
+}
+
+/** Path data of a connection from (x1,y1) to (x2,y2). */
+export function connectionPathD(x1: number, y1: number, x2: number, y2: number): string {
+  return roundedPath(connectionRoute(x1, y1, x2, y2));
+}
+
+/**
+ * Point on the route where the markers sit: on its longest segment. A segment that crosses other lanes
+ * carries its markers in the gap just before the target lane, so they never sit on a line in between.
+ */
+export function connectionMarkerPoint(x1: number, y1: number, x2: number, y2: number): Point {
+  if (x2 < x1) return { x: Math.max((x1 + x2) / 2, x1 - BACKWARD_MARKER_REACH), y: backwardRunY(y1, y2) };
+  const pts = connectionRoute(x1, y1, x2, y2);
+  let best = { x: (x1 + x2) / 2, y: (y1 + y2) / 2 };
+  let bestLen = -1;
+  for (let i = 1; i < pts.length; i++) {
+    const [a, b] = [pts[i - 1]!, pts[i]!];
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    if (len <= bestLen) continue;
+    bestLen = len;
+    const dy = b.y - a.y;
+    if (Math.abs(dy) > 2 * MARKER_GAP_OFFSET) {
+      const y = b.y - Math.sign(dy) * MARKER_GAP_OFFSET;
+      best = { x: a.x + ((b.x - a.x) * (y - a.y)) / dy, y };
+    } else {
+      best = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    }
+  }
+  return best;
 }
 
 /** Focusable interchange path with rings, type glyph, label and a warning glyph when hints exist. */
@@ -58,8 +124,7 @@ export function ConnectionPath({ connection: c, from, to, fromLane, toLane, idx,
   const y1 = a.y;
   const x2 = b.x + INSET;
   const y2 = b.y;
-  const mx = (x1 + x2) / 2;
-  const my = (y1 + y2) / 2;
+  const { x: mx, y: my } = connectionMarkerPoint(x1, y1, x2, y2);
   const d = connectionPathD(x1, y1, x2, y2);
   const open = hints.some((h) => !h.acknowledged);
   const warned = hints.length > 0;
@@ -76,11 +141,11 @@ export function ConnectionPath({ connection: c, from, to, fromLane, toLane, idx,
     <>
       <TypeGlyph type={c.type} x={mx} y={my} />
       {c.label && (
-        <text className="connection-label" x={mx} y={my + 22} textAnchor="middle">
+        <text className="connection-label" x={mx + (warned ? 36 : 16)} y={my} dominantBaseline="central">
           {c.label}
         </text>
       )}
-      {warned && <WarningGlyph x={mx + 22} y={my} open={open} />}
+      {warned && <WarningGlyph x={mx + 22} y={my - 1} open={open} />}
     </>
   );
 

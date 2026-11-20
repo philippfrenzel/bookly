@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, type PointerEvent } from 'react';
 import { assignLanes, barGeometry, columnAt, COLUMN_WIDTH, HEADER_HEIGHT, laneHeightFor } from './layout';
 import { ConnectionPath, ConnectionStub } from './ConnectionPath';
 import { applyFilters, type MapFilter } from './filters';
+import { Icon } from '../ui/Icon';
 import { lineSignets } from './signets';
 import { StorylineBar } from './StorylineBar';
 import { toContentPoint, transformAttr, useZoom } from './useZoom';
@@ -27,9 +28,14 @@ export interface StorylineMapProps {
   highlightId?: Id | null;
   /** Pointer entered (id) or left (null) a line on the map. */
   onHighlight?: (id: Id | null) => void;
+  /** Connection highlighted from outside (e.g. the hint list): it and its two lines stay, the rest recedes. */
+  highlightConnectionId?: Id | null;
 }
 
-const BOTTOM_PADDING = 16;
+/** Room under the last lane, in px: keeps the floating zoom controls clear of the lines. */
+const BOTTOM_PADDING = 56;
+/** How to zoom and pan, shown as a tooltip on the zoom controls. */
+const ZOOM_HELP = 'Zoomen: Mausrad · Verschieben: Leertaste + Ziehen oder die Haltestellenzeile ziehen';
 const MIN_DRAG_PX = 5;
 const MAX_VIEWPORT_HEIGHT = 640;
 const HANDLE_INSET = 6;
@@ -45,7 +51,7 @@ export function StorylineMap(props: StorylineMapProps) {
 }
 
 /** The zoomable svg; mounted only when there is something to draw so zoom attaches to a real element. */
-function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, onConnect, onSelectConnection, showNotes = false, highlightId: outerHighlight = null, onHighlight, visibleIds }: StorylineMapProps & { visibleIds: Set<Id> | null }) {
+function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, onConnect, onSelectConnection, showNotes = false, highlightId: outerHighlight = null, onHighlight, highlightConnectionId = null, visibleIds }: StorylineMapProps & { visibleIds: Set<Id> | null }) {
   const sorted = useMemo(() => [...book.timePoints].sort((a, b) => a.position - b.position), [book.timePoints]);
   const idx = useMemo(() => orderIndex(book.timePoints), [book.timePoints]);
   const visible = useMemo(() => (visibleIds ? book.storylines.filter((s) => visibleIds.has(s.id)) : book.storylines), [book.storylines, visibleIds]);
@@ -53,6 +59,13 @@ function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, 
   const signets = useMemo(() => lineSignets(book.storylines, idx), [book.storylines, idx]);
   const [hoverId, setHoverId] = useState<Id | null>(null);
   const highlightId = hoverId ?? outerHighlight;
+  const focusConnection = highlightConnectionId ? book.connections.find((c) => c.id === highlightConnectionId) : undefined;
+  /** Whether a line recedes behind the current highlight (a hinted connection wins over a hovered line). */
+  const lineDimmed = (id: Id) =>
+    focusConnection ? id !== focusConnection.fromId && id !== focusConnection.toId : highlightId != null && highlightId !== id;
+  /** Whether a connection recedes behind the current highlight. */
+  const connectionDimmed = (c: { id: Id; fromId: Id; toId: Id }) =>
+    focusConnection ? c.id !== focusConnection.id : highlightId != null && c.fromId !== highlightId && c.toId !== highlightId;
   const hover = (id: Id | null) => {
     setHoverId(id);
     onHighlight?.(id);
@@ -117,11 +130,10 @@ function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, 
 
   return (
     <div className="storyline-map">
-      <div className="zoom-controls">
-        <button type="button" aria-label="Vergrößern" onClick={zoomIn}>+</button>
-        <button type="button" aria-label="Verkleinern" onClick={zoomOut}>−</button>
-        <button type="button" aria-label="Alles einpassen" onClick={fit}>Alles einpassen</button>
-        <span className="zoom-hint">Zoomen: Mausrad · Verschieben: Leertaste + Ziehen oder Kopfzeile ziehen</span>
+      <div className="zoom-controls" title={ZOOM_HELP}>
+        <button type="button" className="icon-button" aria-label="Vergrößern" title="Vergrößern" onClick={zoomIn}><Icon name="plus" /></button>
+        <button type="button" className="icon-button" aria-label="Verkleinern" title="Verkleinern" onClick={zoomOut}><Icon name="minus" /></button>
+        <button type="button" className="icon-button" aria-label="Alles einpassen" title="Alles einpassen" onClick={fit}><Icon name="fit" /></button>
       </div>
       <svg ref={svgRef} width="100%" height={Math.min(Math.max(height, 240), MAX_VIEWPORT_HEIGHT)} role="group" aria-label="Storylines auf der Zeitachse">
         <defs>
@@ -206,7 +218,7 @@ function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, 
               idx={idx}
               laneHeight={laneHeight}
               hints={hints.filter((h) => h.connectionId === c.id)}
-              dimmed={highlightId != null && c.fromId !== highlightId && c.toId !== highlightId}
+              dimmed={connectionDimmed(c)}
               part="path"
               onSelect={(id) => onSelectConnection?.(id)}
             />
@@ -220,7 +232,7 @@ function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, 
             idx={idx}
             selected={s.id === selectedId}
             signet={signets.get(s.id)}
-            dimmed={highlightId != null && highlightId !== s.id}
+            dimmed={lineDimmed(s.id)}
             showNote={showNotes}
             laneHeight={laneHeight}
             onSelect={onSelectStoryline}
@@ -244,7 +256,7 @@ function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, 
               idx={idx}
               laneHeight={laneHeight}
               hints={hints.filter((h) => h.connectionId === c.id)}
-              dimmed={highlightId != null && c.fromId !== highlightId && c.toId !== highlightId}
+              dimmed={connectionDimmed(c)}
               part="markers"
               onSelect={(id) => onSelectConnection?.(id)}
             />

@@ -10,6 +10,7 @@ import { LineLegend } from '../map/LineLegend';
 import { applyFilters, toMapFilter, useStoredFilters } from '../map/filters';
 import { StorylineMap, type StorylineMapProps } from '../map/StorylineMap';
 import { StorylinePanel, type PanelTarget } from '../storyline/StorylinePanel';
+import { BookHints } from './BookHints';
 import { CharacterPanel } from './CharacterPanel';
 import { SidePanel } from './SidePanel';
 import { TimePointPanel } from './TimePointPanel';
@@ -22,6 +23,7 @@ export function BookPage() {
   const [target, setTarget] = useState<PanelTarget>(null);
   const [tab, setTab] = useState('timepoints');
   const [connection, setConnection] = useState<ConnectionTarget | null>(null);
+  const [hintConnectionId, setHintConnectionId] = useState<Id | null>(null);
   const [nonce, setNonce] = useState(0);
   const selectedId = target?.mode === 'edit' ? target.id : null;
 
@@ -77,10 +79,22 @@ export function BookPage() {
                 onCreateRange={(range) => startCreate(range)}
                 onConnect={(fromId, toId) => setConnection({ mode: 'create', fromId, toId })}
                 onSelectConnection={(id) => setConnection({ mode: 'edit', id })}
+                highlightConnectionId={hintConnectionId}
               />
             </section>
           </main>
           <SidePanel
+            top={
+              <BookHints
+                book={book}
+                hints={query.data?.hints ?? []}
+                onShow={(id) => {
+                  setHintConnectionId(null);
+                  setConnection({ mode: 'edit', id });
+                }}
+                onHighlight={setHintConnectionId}
+              />
+            }
             activeId={tab}
             onActiveChange={setTab}
             tabs={[
@@ -97,7 +111,7 @@ export function BookPage() {
 }
 
 /** Filter bar plus map; filter state is remembered per book in localStorage. */
-function FilteredMap(props: Omit<StorylineMapProps, 'filter' | 'showNotes'> & { book: Book }) {
+function FilteredMap(props: Omit<StorylineMapProps, 'filter' | 'showNotes' | 'highlightId'> & { book: Book }) {
   const { book } = props;
   const [state, setState] = useStoredFilters(book.id, book);
   const filter = useMemo(() => toMapFilter(state, book.timePoints), [state, book.timePoints]);
@@ -105,8 +119,10 @@ function FilteredMap(props: Omit<StorylineMapProps, 'filter' | 'showNotes'> & { 
   const [highlightId, setHighlightId] = useState<Id | null>(null);
   return (
     <>
-      <LineLegend book={book} visibleIds={visibleIds} selectedId={props.selectedId} onSelect={props.onSelectStoryline} onHighlight={setHighlightId} />
-      <FilterBar book={book} state={state} onChange={setState} visibleCount={visibleIds.size} />
+      <div className="map-bar">
+        <LineLegend book={book} visibleIds={visibleIds} selectedId={props.selectedId} onSelect={props.onSelectStoryline} onHighlight={setHighlightId} />
+        <FilterBar book={book} state={state} onChange={setState} visibleCount={visibleIds.size} />
+      </div>
       <StorylineMap {...props} filter={filter} showNotes={state.showNotes} highlightId={highlightId} />
     </>
   );

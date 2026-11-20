@@ -11,6 +11,8 @@ import { noteOrNull, validateWithStoryline } from './draft';
 import { ColorInput, TextInput } from './fields';
 import { RangePicker } from './RangePicker';
 import { SectionList } from './SectionList';
+import { StatusGlyph } from '../map/icons';
+import { LINE_PALETTE, nextLineColor } from '../map/linePalette';
 
 /** What the panel shows: nothing, a blank form (optionally with a prefilled range) or an existing storyline. */
 export type PanelTarget =
@@ -41,18 +43,6 @@ interface Draft {
 
 const DRAFT_ID = 'draft';
 
-/** Line colours offered as one-click swatches; the first two are the default main and side colours. */
-const LINE_COLORS = [
-  { name: 'Hauptblau', hex: KIND_DEFAULT_COLOR.main },
-  { name: 'Nebengrau', hex: KIND_DEFAULT_COLOR.side },
-  { name: 'Grün', hex: '#00A651' },
-  { name: 'Gelb', hex: '#F7A600' },
-  { name: 'Rotbraun', hex: '#A0522D' },
-  { name: 'Violett', hex: '#9B3D97' },
-  { name: 'Türkis', hex: '#0098A1' },
-  { name: 'Hellblau', hex: '#5AA5DC' },
-];
-
 /** Picks the form for the target, or a hint when nothing is selected. */
 export function StorylinePanel({ book, target, onTarget, onConnect }: Props) {
   if (target?.mode === 'create') {
@@ -60,7 +50,7 @@ export function StorylinePanel({ book, target, onTarget, onConnect }: Props) {
     if (!first) return <p className="muted">Lege zuerst Zeitpunkte an.</p>;
     const range = target.range ?? { startId: first.id, endId: first.id };
     const draft: Draft = {
-      title: '', description: '', kind: 'main', status: 'in_progress', color: KIND_DEFAULT_COLOR.main, range, characterIds: [], note: '',
+      title: '', description: '', kind: 'main', status: 'in_progress', color: nextLineColor(book, 'main'), range, characterIds: [], note: '',
     };
     return <StorylineForm key={`new-${target.nonce}`} book={book} initial={draft} storyline={null} onTarget={onTarget} />;
   }
@@ -141,8 +131,8 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect }: FormPr
       saveField({ kind });
       return;
     }
-    // A colour still at the old default follows the kind.
-    setDraft((d) => ({ ...d, kind, color: d.color === KIND_DEFAULT_COLOR[d.kind] ? KIND_DEFAULT_COLOR[kind] : d.color }));
+    // A colour still at the automatic pick follows the kind.
+    setDraft((d) => ({ ...d, kind, color: d.color === nextLineColor(book, d.kind) ? nextLineColor(book, kind) : d.color }));
   };
 
   /** Create mode: validates the draft locally and POSTs it. */
@@ -162,7 +152,7 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect }: FormPr
       title, description: draft.description, characterIds: draft.characterIds, range: draft.range, kind: draft.kind,
       note: candidate.note,
     };
-    const body = draft.color === KIND_DEFAULT_COLOR[draft.kind] ? common : { ...common, color: draft.color };
+    const body = { ...common, color: draft.color };
     create.mutate(body, {
       onError: fb.onError,
       onSuccess: (res: BookResponse) => {
@@ -208,20 +198,25 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect }: FormPr
           </div>
         </fieldset>
         {editing && (
-          <label>
-            Status
-            <select value={v.status} onChange={(e) => commit({ status: e.target.value as StorylineStatus })}>
-              {(Object.keys(STATUS_STYLE) as StorylineStatus[]).map((st) => (
-                <option key={st} value={st}>{STATUS_STYLE[st].label}</option>
-              ))}
-            </select>
-          </label>
+          <fieldset className="status-options">
+            <legend>Status</legend>
+            {(Object.keys(STATUS_STYLE) as StorylineStatus[]).map((st) => (
+              <label key={st} className={`status-option${v.status === st ? ' is-current' : ''}`}>
+                <input type="radio" name="status" value={st} checked={v.status === st} onChange={() => commit({ status: st })} />
+                <svg className="status-disc" width="22" height="22" viewBox="-11 -11 22 22" aria-hidden="true">
+                  <circle r="9" fill="#fff" stroke={STATUS_STYLE[st].color} strokeWidth="2.5" />
+                  <StatusGlyph status={st} x={0} y={0} color={STATUS_STYLE[st].color} />
+                </svg>
+                {STATUS_STYLE[st].label}
+              </label>
+            ))}
+          </fieldset>
         )}
         <div className="field">
           <span>Farbe</span>
           <div className="line-colors">
             <ColorInput {...text} ariaLabel="Farbe" value={v.color} onCommit={(color) => commit({ color })} />
-            {LINE_COLORS.map((c) => (
+            {LINE_PALETTE[v.kind].map((c) => (
               <button
                 key={c.hex}
                 type="button"

@@ -129,8 +129,9 @@ describe('StorylineMap', () => {
     expect(getComputedStyle(note).pointerEvents).not.toBe('none');
   });
 
-  it('shows the gesture hint next to the zoom controls', () => {
+  it('explains the zoom gestures as a tooltip on the zoom controls', () => {
     render(<StorylineMap book={sampleBook()} hints={[]} selectedId={null} onSelectStoryline={() => {}} />);
-    expect(screen.getByText('Zoomen: Mausrad · Verschieben: Leertaste + Ziehen oder Kopfzeile ziehen')).toBeInTheDocument();
+    const zoomIn = screen.getByRole('button', { name: 'Vergrößern' });
+    expect(zoomIn.parentElement).toHaveAttribute('title', expect.stringContaining('Zoomen: Mausrad'));
   });
 });
