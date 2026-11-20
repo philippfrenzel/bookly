@@ -307,4 +307,26 @@ describe('CharacterPanel', () => {
     await screen.findByRole('tab', { name: 'Figuren' });
     await vi.waitFor(() => expect(gets).toBeGreaterThanOrEqual(2), { timeout: 5000 });
   }, 8000);
+
+  it('asks before overwriting typed but unsaved text and keeps it when declined', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const bodies: unknown[] = [];
+    server.use(
+      meOk,
+      bookOk(sampleBook()),
+      http.post('/api/books/b1/characters/c2/suggestion', () => HttpResponse.json({ behavior: 'mutig', intentions: 'Heimkehr' })),
+      http.patch('/api/books/b1/characters/c2', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json(bookResponse(sampleBook()));
+      }),
+    );
+    await openPanel();
+    await userEvent.click(screen.getAllByRole('button', { name: 'Vorschlagen' })[1]!);
+    const apply = await screen.findAllByRole('button', { name: 'Übernehmen' });
+    await userEvent.type(screen.getByLabelText('Verhalten Figur Jon'), 'getippt');
+    await userEvent.click(apply[0]!);
+    expect(confirm).toHaveBeenCalledWith('Vorhandenen Text ersetzen?');
+    expect(bodies).not.toContainEqual({ behavior: 'mutig' });
+    expect(screen.getByLabelText('Verhalten Figur Jon')).toHaveValue('getippt');
+  });
 });

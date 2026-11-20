@@ -1,5 +1,5 @@
 /** Character management: add, edit profile fields, ask for AI suggestions, delete with confirmation. */
-import type { FocusEvent } from 'react';
+import { useRef, type FocusEvent } from 'react';
 import type { Book, Character, Id } from '@bookly/shared';
 import { characterLabel } from '@bookly/shared';
 import { useBookMutation } from '../api/hooks';
@@ -25,6 +25,8 @@ function CharacterItem({ character: c, base, aiEnabled, fb, save, onDelete }: It
   const label = characterLabel(c);
   const { suggestion, loading, error, request, dismiss } = useSuggestion(`${base}/${c.id}/suggestion`);
 
+  const areas = useRef<Partial<Record<TextField, HTMLTextAreaElement | null>>>({});
+
   const draft = (over: Partial<Record<TextField, string>> = {}) => ({
     name: c.name, description: c.description, behavior: c.behavior, intentions: c.intentions, ...over,
   });
@@ -43,6 +45,7 @@ function CharacterItem({ character: c, base, aiEnabled, fb, save, onDelete }: It
       key={`${field}-${c[field] ?? ''}-${fb.resetKey}`}
       maxLength={2000}
       placeholder={title}
+      ref={(el) => { areas.current[field] = el; }}
       defaultValue={c[field] ?? ''}
       onBlur={onBlurField(field)}
     />
@@ -77,7 +80,10 @@ function CharacterItem({ character: c, base, aiEnabled, fb, save, onDelete }: It
       {suggestion && (
         <SuggestionBox
           suggestion={suggestion}
-          fields={{ behavior: c.behavior ?? '', intentions: c.intentions ?? '' }}
+          fields={{
+            behavior: () => areas.current.behavior?.value ?? c.behavior ?? '',
+            intentions: () => areas.current.intentions?.value ?? c.intentions ?? '',
+          }}
           onApply={(field, value) => save({ id: c.id, [field]: value })}
           onDismiss={dismiss}
         />

@@ -7,8 +7,8 @@ const LABELS: Record<Field, string> = { behavior: 'Verhalten', intentions: 'Absi
 
 interface Props {
   suggestion: Suggestion;
-  /** Current field values; a non-empty one is only replaced after confirmation. */
-  fields: Record<Field, string>;
+  /** Current (live) field values, or getters for them; a non-empty one is only replaced after confirmation. */
+  fields: Record<Field, string | (() => string)>;
   onApply: (field: Field, value: string) => void;
   onDismiss: () => void;
 }
@@ -16,7 +16,8 @@ interface Props {
 /** Suggestion panel; applying over existing text asks first. */
 export function SuggestionBox({ suggestion, fields, onApply, onDismiss }: Props) {
   const apply = (field: Field) => {
-    if (fields[field].trim() !== '' && !window.confirm('Vorhandenen Text ersetzen?')) return;
+    const current = typeof fields[field] === 'function' ? (fields[field] as () => string)() : (fields[field] as string);
+    if (current.trim() !== '' && !window.confirm('Vorhandenen Text ersetzen?')) return;
     onApply(field, suggestion[field]);
   };
   return (
