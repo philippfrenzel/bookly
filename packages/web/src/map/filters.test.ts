@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Book, Storyline } from '@bookly/shared';
 import { sampleBook } from '../book/testFixtures';
-import { applyFilters, defaultFilterState, loadFilterState, saveFilterState, toMapFilter, type MapFilter } from './filters';
+import { applyFilters, defaultFilterState, loadFilterState, sanitizeFilterState, saveFilterState, toMapFilter, type MapFilter } from './filters';
 
 const none: MapFilter = { mainOnly: false, openOnly: false, range: null, characterIds: [] };
 
@@ -94,5 +94,12 @@ describe('filter persistence', () => {
     vi.stubGlobal('localStorage', { getItem: denied, setItem: denied });
     expect(loadFilterState('b1', book())).toEqual(defaultFilterState());
     expect(() => saveFilterState('b1', defaultFilterState())).not.toThrow();
+  });
+});
+
+describe('sanitizeFilterState', () => {
+  it('drops ids that vanished from the book and fixes wrong types', () => {
+    const state = sanitizeFilterState({ characterIds: ['c1', 'gone'], fromId: 'gone', toId: 't3', mainOnly: 'yes' as never }, book());
+    expect(state).toEqual({ ...defaultFilterState(), characterIds: ['c1'], toId: 't3' });
   });
 });

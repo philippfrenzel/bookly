@@ -56,6 +56,7 @@ export function BookPage() {
             </div>
             <section aria-label="Storyline-Karte">
               <FilteredMap
+                key={book.id}
                 book={book}
                 hints={query.data?.hints ?? []}
                 selectedId={selectedId}

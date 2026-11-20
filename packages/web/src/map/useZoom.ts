@@ -43,6 +43,16 @@ export function zoomFilter(event: Event, spaceHeld: boolean): boolean {
   return spaceHeld || !!target?.closest?.(PAN_AREA);
 }
 
+/**
+ * Transform that fits the content into the viewport: scale capped at 1 (never magnifies) and floored at MIN_ZOOM,
+ * centred horizontally, top-aligned. Identity when the viewport or content size is unknown.
+ */
+export function fitTransform(viewW: number, viewH: number, content?: { width: number; height: number }): ZoomTransform {
+  if (!content || viewW <= 0 || viewH <= 0 || content.width <= 0 || content.height <= 0) return zoomIdentity;
+  const k = Math.max(MIN_ZOOM, Math.min(1, viewW / content.width, viewH / content.height));
+  return zoomIdentity.translate((viewW - content.width * k) / 2, 0).scale(k);
+}
+
 /** Zoom state for the map svg; `contentSize` lets fit() scale everything into the viewport. */
 export function useZoom(
   svgRef: RefObject<SVGSVGElement>,
@@ -64,17 +74,34 @@ export function useZoom(
       .on('zoom', (e) => setTransform(e.transform));
     behavior.current = z;
     select(svg).call(z).on('dblclick.zoom', null);
+    // Start with everything in view when the content does not fit; small maps stay at 1:1.
+    const initial = fitTransform(svg.clientWidth, svg.clientHeight, size.current);
+    if (initial.k < 1) select(svg).call(z.transform, initial);
+    let hovering = false;
+    const enter = () => (hovering = true);
+    const leave = () => (hovering = false);
     const down = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !/input|textarea|select|button/i.test((e.target as Element)?.tagName ?? '')) space.current = true;
+      const target = e.target as Element | null;
+      if (e.code !== 'Space' || /input|textarea|select|button/i.test(target?.tagName ?? '')) return;
+      space.current = true;
+      // Keep the page from scrolling while panning, but let a focused bar still handle Space.
+      if (hovering && !target?.closest?.(NO_PAN)) e.preventDefault();
     };
     const up = (e: KeyboardEvent) => {
       if (e.code === 'Space') space.current = false;
     };
+    const blur = () => (space.current = false);
+    svg.addEventListener('mouseenter', enter);
+    svg.addEventListener('mouseleave', leave);
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
+    window.addEventListener('blur', blur);
     return () => {
+      svg.removeEventListener('mouseenter', enter);
+      svg.removeEventListener('mouseleave', leave);
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
+      window.removeEventListener('blur', blur);
       select(svg).on('.zoom', null);
     };
   }, [svgRef]);
@@ -90,15 +117,7 @@ export function useZoom(
   const fit = useCallback(() => {
     const svg = svgRef.current;
     if (!svg || !behavior.current) return;
-    const c = size.current;
-    const w = svg.clientWidth;
-    const h = svg.clientHeight;
-    let t = zoomIdentity;
-    if (c && w > 0 && h > 0 && c.width > 0 && c.height > 0) {
-      const k = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(w / c.width, h / c.height)));
-      t = zoomIdentity.scale(k);
-    }
-    select(svg).call(behavior.current.transform, t);
+    select(svg).call(behavior.current.transform, fitTransform(svg.clientWidth, svg.clientHeight, size.current));
   }, [svgRef]);
 
   return { transform, fit, zoomIn: () => scaleBy(ZOOM_STEP), zoomOut: () => scaleBy(1 / ZOOM_STEP), spaceHeld: () => space.current };

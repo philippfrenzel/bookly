@@ -1,7 +1,7 @@
 /** SVG bird's-eye view of all storylines along the book's story timeline. */
 import { bounds, orderIndex, type Book, type Hint, type Id, type TimeRange } from '@bookly/shared';
 import { useMemo, useRef, useState, type PointerEvent } from 'react';
-import { assignLanes, barGeometry, columnAt, COLUMN_WIDTH, HEADER_HEIGHT, LANE_HEIGHT } from './layout';
+import { assignLanes, barGeometry, columnAt, COLUMN_WIDTH, HEADER_HEIGHT, laneHeightFor } from './layout';
 import { ConnectionPath, ConnectionStub } from './ConnectionPath';
 import { applyFilters, type MapFilter } from './filters';
 import { StorylineBar } from './StorylineBar';
@@ -51,7 +51,8 @@ function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, 
   const link = useRef<{ fromId: Id } | null>(null);
 
   const width = sorted.length * COLUMN_WIDTH;
-  const height = HEADER_HEIGHT + layout.laneCount * LANE_HEIGHT + BOTTOM_PADDING;
+  const laneHeight = laneHeightFor(showNotes);
+  const height = HEADER_HEIGHT + layout.laneCount * laneHeight + BOTTOM_PADDING;
   const { transform, fit, zoomIn, zoomOut, spaceHeld } = useZoom(svgRef, { width, height });
   const [mainFirst, mainLast] = layout.mainLanes;
 
@@ -85,7 +86,7 @@ function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, 
 
   /** Storyline whose bar lies under the given svg-local point, if any. */
   const barAt = (x: number, y: number) => {
-    const lane = Math.floor((y - HEADER_HEIGHT) / LANE_HEIGHT);
+    const lane = Math.floor((y - HEADER_HEIGHT) / laneHeight);
     const col = columnAt(x);
     return visible.find((s) => {
       if (layout.laneOf.get(s.id) !== lane) return false;
@@ -108,6 +109,7 @@ function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, 
         <button type="button" aria-label="Vergrößern" onClick={zoomIn}>+</button>
         <button type="button" aria-label="Verkleinern" onClick={zoomOut}>−</button>
         <button type="button" aria-label="Alles einpassen" onClick={fit}>Alles einpassen</button>
+        <span className="zoom-hint">Zoomen: Mausrad · Verschieben: Leertaste + Ziehen oder Kopfzeile ziehen</span>
       </div>
       <svg ref={svgRef} width="100%" height={Math.min(Math.max(height, 240), MAX_VIEWPORT_HEIGHT)} role="group" aria-label="Storylines auf der Zeitachse">
         <defs>
@@ -120,9 +122,9 @@ function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, 
           <rect
             className="main-band"
             x={0}
-            y={HEADER_HEIGHT + mainFirst * LANE_HEIGHT}
+            y={HEADER_HEIGHT + mainFirst * laneHeight}
             width={width}
-            height={(mainLast - mainFirst + 1) * LANE_HEIGHT}
+            height={(mainLast - mainFirst + 1) * laneHeight}
           />
         )}
         {sorted.map((tp, i) => (
@@ -176,7 +178,7 @@ function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, 
           if (!fromShown && !toShown) return null;
           if (fromShown !== toShown) {
             const shown = fromShown ? from : to;
-            return <ConnectionStub key={c.id} visible={shown} lane={layout.laneOf.get(shown.id) ?? 0} idx={idx} visibleIs={fromShown ? 'from' : 'to'} />;
+            return <ConnectionStub key={c.id} visible={shown} lane={layout.laneOf.get(shown.id) ?? 0} idx={idx} laneHeight={laneHeight} visibleIs={fromShown ? 'from' : 'to'} />;
           }
           return (
             <ConnectionPath
@@ -187,6 +189,7 @@ function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, 
               fromLane={layout.laneOf.get(from.id) ?? 0}
               toLane={layout.laneOf.get(to.id) ?? 0}
               idx={idx}
+              laneHeight={laneHeight}
               hints={hints.filter((h) => h.connectionId === c.id)}
               onSelect={(id) => onSelectConnection?.(id)}
             />
@@ -200,12 +203,13 @@ function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, 
             idx={idx}
             selected={s.id === selectedId}
             showNote={showNotes}
+            laneHeight={laneHeight}
             onSelect={onSelectStoryline}
           />
         ))}
         {onConnect &&
           visible.map((s) => {
-            const g = barGeometry(s, layout.laneOf.get(s.id) ?? 0, idx);
+            const g = barGeometry(s, layout.laneOf.get(s.id) ?? 0, idx, laneHeight);
             return (
               <circle
                 key={s.id}

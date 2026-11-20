@@ -1,6 +1,6 @@
 /** Map filters: pure visibility computation plus per-book persistence in localStorage. */
 import { overlaps, orderIndex, strandCharacters, type Book, type Id, type TimePoint, type TimeRange } from '@bookly/shared';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 /** Criteria applied to the map; all active criteria are AND-combined. */
 export interface MapFilter {
@@ -59,25 +59,28 @@ export function toMapFilter(s: FilterState, timePoints: TimePoint[]): MapFilter 
 
 const storageKey = (bookId: Id) => `bookly:filters:${bookId}`;
 
+/** Coerces untrusted (stored or stale) state into a valid one: wrong types fall back, ids unknown to the book are dropped. */
+export function sanitizeFilterState(o: Partial<FilterState>, book: Book): FilterState {
+  const tps = new Set(book.timePoints.map((t) => t.id));
+  const chars = new Set(book.characters.map((c) => c.id));
+  return {
+    mainOnly: o.mainOnly === true,
+    openOnly: o.openOnly === true,
+    fromId: typeof o.fromId === 'string' && tps.has(o.fromId) ? o.fromId : null,
+    toId: typeof o.toId === 'string' && tps.has(o.toId) ? o.toId : null,
+    characterIds: Array.isArray(o.characterIds) ? o.characterIds.filter((id): id is Id => typeof id === 'string' && chars.has(id)) : [],
+    showNotes: o.showNotes === true,
+  };
+}
+
 /** Reads the stored state for a book; unknown ids are dropped and any failure yields the defaults. */
 export function loadFilterState(bookId: Id, book: Book): FilterState {
-  const base = defaultFilterState();
   try {
     const raw = localStorage.getItem(storageKey(bookId));
-    if (!raw) return base;
-    const o = JSON.parse(raw) as Partial<FilterState>;
-    const tps = new Set(book.timePoints.map((t) => t.id));
-    const chars = new Set(book.characters.map((c) => c.id));
-    return {
-      mainOnly: o.mainOnly === true,
-      openOnly: o.openOnly === true,
-      fromId: typeof o.fromId === 'string' && tps.has(o.fromId) ? o.fromId : null,
-      toId: typeof o.toId === 'string' && tps.has(o.toId) ? o.toId : null,
-      characterIds: Array.isArray(o.characterIds) ? o.characterIds.filter((id): id is Id => typeof id === 'string' && chars.has(id)) : [],
-      showNotes: o.showNotes === true,
-    };
+    if (!raw) return defaultFilterState();
+    return sanitizeFilterState(JSON.parse(raw) as Partial<FilterState>, book);
   } catch {
-    return base;
+    return defaultFilterState();
   }
 }
 
@@ -92,7 +95,9 @@ export function saveFilterState(bookId: Id, state: FilterState): void {
 
 /** Filter state for a book, loaded once from and written through to localStorage. */
 export function useStoredFilters(bookId: Id, book: Book): [FilterState, (next: FilterState) => void] {
-  const [state, setState] = useState(() => loadFilterState(bookId, book));
+  const [raw, setState] = useState(() => loadFilterState(bookId, book));
+  // Ids deleted from the book after loading must not keep filtering the map.
+  const state = useMemo(() => sanitizeFilterState(raw, book), [raw, book]);
   const update = useCallback(
     (next: FilterState) => {
       setState(next);

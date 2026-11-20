@@ -110,4 +110,27 @@ describe('StorylineMap', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Alles einpassen' }));
     expect(layer()).toBe('translate(0,0) scale(1)');
   });
+
+  it('grows the lane pitch when notes are shown', () => {
+    const bandHeight = (showNotes: boolean) => {
+      const { container, unmount } = render(<StorylineMap book={sampleBook()} hints={[]} selectedId={null} onSelectStoryline={() => {}} showNotes={showNotes} />);
+      const h = Number(container.querySelector('rect.main-band')!.getAttribute('height'));
+      unmount();
+      return h;
+    };
+    expect(bandHeight(true)).toBeGreaterThanOrEqual(bandHeight(false) + 24);
+  });
+
+  it('keeps the note title reachable for hover', async () => {
+    render(<Harness book={connectedBook()} />);
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Notizen einblenden' }));
+    const note = document.querySelector('.bar-note')!;
+    expect(note.querySelector('title')?.textContent).toBe('Ein langer Gedanke zum Nebenstrang');
+    expect(getComputedStyle(note).pointerEvents).not.toBe('none');
+  });
+
+  it('shows the gesture hint next to the zoom controls', () => {
+    render(<StorylineMap book={sampleBook()} hints={[]} selectedId={null} onSelectStoryline={() => {}} />);
+    expect(screen.getByText('Zoomen: Mausrad · Verschieben: Leertaste + Ziehen oder Kopfzeile ziehen')).toBeInTheDocument();
+  });
 });

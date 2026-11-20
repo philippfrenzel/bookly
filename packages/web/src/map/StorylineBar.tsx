@@ -16,6 +16,8 @@ interface Props {
   selected: boolean;
   /** Show the storyline note under the bar. */
   showNote?: boolean;
+  /** Lane pitch in px (see laneHeightFor). */
+  laneHeight?: number;
   onSelect: (id: string) => void;
 }
 
@@ -45,8 +47,8 @@ export function clampTwoLines(text: string, width: number): string[] {
 }
 
 /** Renders a focusable, clickable bar for a storyline. */
-export function StorylineBar({ storyline: s, lane, idx, selected, showNote = false, onSelect }: Props) {
-  const { x, y, width } = barGeometry(s, lane, idx);
+export function StorylineBar({ storyline: s, lane, idx, selected, showNote = false, laneHeight, onSelect }: Props) {
+  const { x, y, width } = barGeometry(s, lane, idx, laneHeight);
   const isMain = s.kind === 'main';
   const stroke = isMain ? MAIN_STROKE : SIDE_STROKE;
   const left = x + INSET;

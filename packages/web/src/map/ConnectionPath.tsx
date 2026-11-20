@@ -23,13 +23,15 @@ interface Props {
   idx: OrderIndex;
   /** Hints of this connection only. */
   hints: Hint[];
+  /** Lane pitch in px (see laneHeightFor). */
+  laneHeight?: number;
   onSelect: (id: string) => void;
 }
 
 /** Focusable path with arrowhead, type icon, label and a warning triangle when hints exist. */
-export function ConnectionPath({ connection: c, from, to, fromLane, toLane, idx, hints, onSelect }: Props) {
-  const a = barGeometry(from, fromLane, idx);
-  const b = barGeometry(to, toLane, idx);
+export function ConnectionPath({ connection: c, from, to, fromLane, toLane, idx, hints, laneHeight, onSelect }: Props) {
+  const a = barGeometry(from, fromLane, idx, laneHeight);
+  const b = barGeometry(to, toLane, idx, laneHeight);
   const x1 = a.x + a.width - INSET;
   const y1 = a.y;
   const x2 = b.x + INSET;
@@ -94,13 +96,14 @@ interface StubProps {
   visible: Storyline;
   lane: number;
   idx: OrderIndex;
+  laneHeight?: number;
   /** Whether the visible storyline is the connection's source (stub leaves its end) or target (stub enters its start). */
   visibleIs: 'from' | 'to';
 }
 
 /** Short dashed line from the visible end of a connection whose other storyline is filtered out. */
-export function ConnectionStub({ visible, lane, idx, visibleIs }: StubProps) {
-  const g = barGeometry(visible, lane, idx);
+export function ConnectionStub({ visible, lane, idx, laneHeight, visibleIs }: StubProps) {
+  const g = barGeometry(visible, lane, idx, laneHeight);
   const x = visibleIs === 'from' ? g.x + g.width - INSET : g.x + INSET;
   const x2 = visibleIs === 'from' ? x + STUB_LENGTH : x - STUB_LENGTH;
   return (

@@ -4,6 +4,13 @@ import { bounds, type Id, type OrderIndex, type Storyline } from '@bookly/shared
 export const COLUMN_WIDTH = 160;
 export const LANE_HEIGHT = 48;
 export const HEADER_HEIGHT = 40;
+/** Extra lane pitch that makes room for a two-line note under the bar. */
+export const NOTE_EXTRA = 24;
+
+/** Lane pitch: taller when notes are shown so note lines never reach into the next lane. */
+export function laneHeightFor(showNotes: boolean): number {
+  return showNotes ? LANE_HEIGHT + NOTE_EXTRA : LANE_HEIGHT;
+}
 
 /** Lane per storyline; lane 0 is the top lane. `mainLanes` is the inclusive [first, last] centre block. */
 export interface LaneLayout {
@@ -61,11 +68,11 @@ export function columnAt(x: number): number {
 }
 
 /** Left edge, vertical centre of the lane and width of a storyline bar (before visual insets). */
-export function barGeometry(s: Storyline, lane: number, idx: OrderIndex): { x: number; y: number; width: number } {
+export function barGeometry(s: Storyline, lane: number, idx: OrderIndex, laneHeight: number = LANE_HEIGHT): { x: number; y: number; width: number } {
   const [start, end] = bounds(s.range, idx);
   return {
     x: start * COLUMN_WIDTH,
-    y: HEADER_HEIGHT + lane * LANE_HEIGHT + LANE_HEIGHT / 2,
+    y: HEADER_HEIGHT + lane * laneHeight + LANE_HEIGHT / 2,
     width: (end - start + 1) * COLUMN_WIDTH,
   };
 }
