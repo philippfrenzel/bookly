@@ -49,6 +49,7 @@ export async function enqueueForced(db: Db, storylineIds: Id[]): Promise<void> {
 /** Deletes the check rows and warnings of the given storylines. */
 export async function clearChecks(db: Db | Tx, storylineIds: Id[]): Promise<void> {
   if (storylineIds.length === 0) return;
-  await db.delete(characterWarnings).where(inArray(characterWarnings.storylineId, storylineIds));
+  // Row first: it waits for a worker holding the row lock, so the warnings delete then sees its result.
   await db.delete(characterChecks).where(inArray(characterChecks.storylineId, storylineIds));
+  await db.delete(characterWarnings).where(inArray(characterWarnings.storylineId, storylineIds));
 }

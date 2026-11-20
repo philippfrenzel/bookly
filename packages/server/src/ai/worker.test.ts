@@ -158,6 +158,56 @@ describe('character check worker', () => {
     await s.app.close();
   });
 
+  test('check cleared during run writes no warnings', async () => {
+    const s = await setup();
+    s.ai.reply = async () => {
+      await s.app.db.delete(storylineCharacters).where(eq(storylineCharacters.storylineId, s.storylineId));
+      await enqueue(s);
+      return { warnings: [{ characterId: s.charId, criterion: 'behavior_change', message: 'Verwaist.' }] };
+    };
+    await enqueue(s);
+    expect(await worker(s).runOnce()).toBe(1);
+    expect(await checkRow(s)).toBeUndefined();
+    expect(await warningRows(s)).toEqual([]);
+    await s.app.close();
+  });
+
+  test('check re-created during run is not overwritten by done', async () => {
+    const s = await setup();
+    s.ai.reply = async () => {
+      await s.app.db.delete(characterChecks).where(eq(characterChecks.storylineId, s.storylineId));
+      await enqueueForced(s.app.db, [s.storylineId]);
+      return { warnings: [{ characterId: s.charId, criterion: 'behavior_change', message: 'Veraltet.' }] };
+    };
+    await enqueue(s);
+    expect(await worker(s).runOnce()).toBe(1);
+    expect(await checkRow(s)).toMatchObject({ status: 'pending', finishedAt: null, error: null });
+    expect(await warningRows(s)).toEqual([]);
+    await s.app.close();
+  });
+
+  test('check re-created during run is not overwritten by failed', async () => {
+    const s = await setup();
+    s.ai.reply = async () => {
+      await s.app.db.delete(characterChecks).where(eq(characterChecks.storylineId, s.storylineId));
+      await enqueueForced(s.app.db, [s.storylineId]);
+      throw new AiError('AI request failed');
+    };
+    await enqueue(s);
+    expect(await worker(s).runOnce()).toBe(1);
+    expect(await checkRow(s)).toMatchObject({ status: 'pending', finishedAt: null, error: null });
+    await s.app.close();
+  });
+
+  test('two workers claim a check only once', async () => {
+    const s = await setup();
+    await enqueue(s);
+    const counts = await Promise.all([worker(s).runOnce(), worker(s).runOnce()]);
+    expect(counts[0]! + counts[1]!).toBe(1);
+    expect(s.ai.calls).toBe(1);
+    await s.app.close();
+  });
+
   test('storyline deleted during run leaves nothing behind', async () => {
     const s = await setup();
     s.ai.reply = async () => {

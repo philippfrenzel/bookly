@@ -29,6 +29,11 @@ export interface CheckWorker {
 
 const STALE_SECS = 5 * 60;
 
+/** Matches the storyline's check row only while it is still claimed (`running`). */
+function isRunning(storylineId: Id) {
+  return and(eq(characterChecks.storylineId, storylineId), eq(characterChecks.status, 'running'));
+}
+
 /** Creates a worker; `runOnce` claims and processes one batch and resolves with the job count. */
 export function createCheckWorker(opts: CheckWorkerOptions): CheckWorker {
   const { db, ai, log } = opts;
@@ -61,6 +66,10 @@ export function createCheckWorker(opts: CheckWorkerOptions): CheckWorker {
       // Share locks keep the storyline and characters from vanishing before the insert.
       const [line] = await tx.select({ id: storylines.id }).from(storylines).where(eq(storylines.id, storylineId)).for('share');
       if (!line) return;
+      // The check row may have been cleared or re-created while the model ran: then this result is stale.
+      const [check] = await tx.select({ status: characterChecks.status }).from(characterChecks)
+        .where(eq(characterChecks.storylineId, storylineId)).for('update');
+      if (check?.status !== 'running') return;
       const ids = [...new Set(warnings.map((w) => w.characterId))];
       const existing = ids.length
         ? await tx.select({ id: characters.id }).from(characters)
@@ -72,7 +81,7 @@ export function createCheckWorker(opts: CheckWorkerOptions): CheckWorker {
       if (rows.length) await tx.insert(characterWarnings).values(rows);
       await tx.update(characterChecks)
         .set({ status: 'done', finishedAt: new Date(), error: null })
-        .where(eq(characterChecks.storylineId, storylineId));
+        .where(isRunning(storylineId));
     });
   }
 
@@ -106,7 +115,7 @@ export function createCheckWorker(opts: CheckWorkerOptions): CheckWorker {
         return;
       }
       hash = inputHash(input, ai.model);
-      await db.update(characterChecks).set({ inputHash: hash, model: ai.model }).where(eq(characterChecks.storylineId, storylineId));
+      await db.update(characterChecks).set({ inputHash: hash, model: ai.model }).where(isRunning(storylineId));
       const warnings = parseCheckResponse(await ai.complete(checkRequest(input)), input);
       await saveResult(storylineId, bookId, warnings);
     } catch (err) {
@@ -115,7 +124,7 @@ export function createCheckWorker(opts: CheckWorkerOptions): CheckWorker {
       const error = err instanceof AiError ? err.message : 'check failed';
       await db.update(characterChecks)
         .set({ status: 'failed', finishedAt: new Date(), error: error.slice(0, 200) })
-        .where(eq(characterChecks.storylineId, storylineId))
+        .where(isRunning(storylineId))
         .catch((e: unknown) => log.error({ err: e, storylineId }, 'could not mark character check failed'));
     }
     if (bookId && hash) {
