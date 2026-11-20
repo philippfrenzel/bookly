@@ -3,7 +3,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import type { Id, ValidationIssue } from '@bookly/shared';
 import type { Db } from '../db/client.js';
 import type { Tx } from '../db/loadBook.js';
-import { characters, storylines, timePoints } from '../db/schema.js';
+import { characters, connections, storylines, timePoints } from '../db/schema.js';
 import { NotFoundError, ValidationError } from '../errors.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -11,7 +11,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Throws NotFoundError unless `id` is a well-formed uuid of a row in `table` belonging to `bookId`. */
 export async function assertInBook(
   db: Db | Tx,
-  table: typeof timePoints | typeof characters | typeof storylines,
+  table: typeof timePoints | typeof characters | typeof storylines | typeof connections,
   id: string | null | undefined,
   bookId: Id,
 ): Promise<void> {
@@ -31,7 +31,7 @@ export async function assertKnownRefs(
   tx: Tx,
   bookId: Id,
   elementId: Id,
-  refs: { timePointIds?: Id[]; characterIds?: Id[] },
+  refs: { timePointIds?: Id[]; storylineIds?: Id[]; characterIds?: Id[] },
 ): Promise<void> {
   const issues: ValidationIssue[] = [];
   const tpIds = [...new Set(refs.timePointIds ?? [])];
@@ -42,6 +42,16 @@ export async function assertKnownRefs(
       .where(and(eq(timePoints.bookId, bookId), inArray(timePoints.id, tpIds)));
     if (rows.length !== tpIds.length) {
       issues.push({ code: 'unknown_time_point', elementId, message: 'Zeitpunkt existiert nicht.' });
+    }
+  }
+  const lineIds = [...new Set(refs.storylineIds ?? [])];
+  if (lineIds.length > 0) {
+    const rows = await tx
+      .select({ id: storylines.id })
+      .from(storylines)
+      .where(and(eq(storylines.bookId, bookId), inArray(storylines.id, lineIds)));
+    if (rows.length !== lineIds.length) {
+      issues.push({ code: 'unknown_storyline', elementId, message: 'Storyline existiert nicht.' });
     }
   }
   const charIds = [...new Set(refs.characterIds ?? [])];
