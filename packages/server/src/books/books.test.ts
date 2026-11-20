@@ -87,6 +87,9 @@ describe('books', () => {
       ['DELETE', `/api/books/${bookId}/timepoints/${randomUUID()}`],
       ['POST', `/api/books/${bookId}/characters`],
       ['DELETE', `/api/books/${bookId}/characters/${randomUUID()}`],
+      ['POST', `/api/books/${bookId}/storylines`],
+      ['PATCH', `/api/books/${bookId}/storylines/${randomUUID()}`],
+      ['DELETE', `/api/books/${bookId}/sections/${randomUUID()}`],
     ];
     for (const [method, path] of routes) {
       const res = await app.inject({

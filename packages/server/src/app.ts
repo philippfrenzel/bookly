@@ -4,6 +4,8 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { authRoutes } from './auth/routes.js';
 import { bookRoutes } from './books/routes.js';
 import { characterRoutes } from './books/characters.js';
+import { sectionRoutes } from './books/sections.js';
+import { storylineRoutes } from './books/storylines.js';
 import { timePointRoutes } from './books/timepoints.js';
 import { createDb } from './db/client.js';
 import { NotFoundError, ValidationError } from './errors.js';
@@ -35,5 +37,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   await app.register(bookRoutes);
   await app.register(timePointRoutes);
   await app.register(characterRoutes);
+  await app.register(storylineRoutes);
+  await app.register(sectionRoutes);
   return app;
 }
