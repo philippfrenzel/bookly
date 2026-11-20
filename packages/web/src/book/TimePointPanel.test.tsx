@@ -31,7 +31,7 @@ describe('TimePointPanel', () => {
       }),
     );
     await openPanel();
-    await userEvent.click(screen.getByRole('button', { name: '+ Zeitpunkt' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Zeitpunkt' }));
     await userEvent.click(screen.getByRole('button', { name: 'Zeitpunkt „Mitte“ danach einfügen' }));
     expect(bodies).toEqual([
       { name: 'Neuer Zeitpunkt', afterId: null },
@@ -145,7 +145,7 @@ describe('TimePointPanel', () => {
       http.post('/api/books/b1/timepoints', () => HttpResponse.json({ error: 'internal_error' }, { status: 500 })),
     );
     await openPanel();
-    await userEvent.click(screen.getByRole('button', { name: '+ Zeitpunkt' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Zeitpunkt' }));
     expect(await screen.findByText('Speichern fehlgeschlagen. Bitte erneut versuchen.')).toHaveAttribute('role', 'alert');
   });
 });

@@ -1,0 +1,683 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-20T19:36:20+00:00",
+  "title": "Design System: Bookly",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Plan White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#aeaeae",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
+      },
+      "wash": {
+        "role": "neutral",
+        "displayName": "Band Wash",
+        "canonical": "#f3f4f4",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262727",
+          "#444545",
+          "#656666",
+          "#888989",
+          "#adaeae",
+          "#d0d1d1",
+          "#eeefef"
+        ]
+      },
+      "ink": {
+        "role": "primary",
+        "displayName": "Plan Ink",
+        "canonical": "#1a1a1a",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#aeaeae",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Label Ink",
+        "canonical": "#3d3f42",
+        "tonalRamp": [
+          "#0a0b0e",
+          "#252729",
+          "#434548",
+          "#646669",
+          "#87898d",
+          "#acaeb2",
+          "#cfd1d5",
+          "#eceff2"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Quiet Grey",
+        "canonical": "#5d6166",
+        "tonalRamp": [
+          "#080b0f",
+          "#23272b",
+          "#42454a",
+          "#62666b",
+          "#858a8f",
+          "#aaaeb4",
+          "#cdd1d7",
+          "#eaeff5"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#e2e3e5",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#262628",
+          "#444547",
+          "#656668",
+          "#88898b",
+          "#adaeb0",
+          "#d0d1d3",
+          "#edeef0"
+        ]
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "Control Rule",
+        "canonical": "#c9cbcf",
+        "tonalRamp": [
+          "#0a0b0e",
+          "#252629",
+          "#434548",
+          "#64666a",
+          "#87898d",
+          "#acaeb2",
+          "#cfd1d5",
+          "#eceef3"
+        ]
+      },
+      "focus": {
+        "role": "neutral",
+        "displayName": "Focus Blue",
+        "canonical": "#0065ae",
+        "tonalRamp": [
+          "#000b23",
+          "#00274e",
+          "#01477c",
+          "#1769ae",
+          "#488dd1",
+          "#7bb3eb",
+          "#aad6ff",
+          "#d0f3ff"
+        ]
+      },
+      "focus-wash": {
+        "role": "neutral",
+        "displayName": "Focus Halo",
+        "canonical": "#e5f0f8",
+        "tonalRamp": [
+          "#090c0e",
+          "#22272b",
+          "#3f464b",
+          "#5f676e",
+          "#828b91",
+          "#a8afb5",
+          "#ccd2d6",
+          "#eaeff3"
+        ]
+      },
+      "signal": {
+        "role": "tertiary",
+        "displayName": "Signal Red",
+        "canonical": "#e3000f",
+        "tonalRamp": [
+          "#290000",
+          "#590000",
+          "#8e0000",
+          "#c60000",
+          "#ed4238",
+          "#ff7e6f",
+          "#ffaea0",
+          "#ffd4c8"
+        ]
+      },
+      "signal-ink": {
+        "role": "tertiary",
+        "displayName": "Signal Ink",
+        "canonical": "#b3000c",
+        "tonalRamp": [
+          "#250000",
+          "#520000",
+          "#84090c",
+          "#b92320",
+          "#df554a",
+          "#fb887b",
+          "#ffb5a8",
+          "#ffd9cf"
+        ]
+      },
+      "signal-wash": {
+        "role": "tertiary",
+        "displayName": "Signal Wash",
+        "canonical": "#fff0f0",
+        "tonalRamp": [
+          "#0e0a0a",
+          "#2b2525",
+          "#4c4242",
+          "#6f6363",
+          "#928686",
+          "#b5abab",
+          "#d7cfcf",
+          "#f3eded"
+        ]
+      },
+      "signal-rule": {
+        "role": "tertiary",
+        "displayName": "Signal Rule",
+        "canonical": "#f5b5b1",
+        "tonalRamp": [
+          "#170605",
+          "#3a1d1c",
+          "#613836",
+          "#8a5553",
+          "#ae7976",
+          "#cea19e",
+          "#ecc7c4",
+          "#ffe6e4"
+        ]
+      },
+      "line-main-blau": {
+        "role": "secondary",
+        "displayName": "Blau (main)",
+        "canonical": "#2B59C3",
+        "tonalRamp": [
+          "#00062b",
+          "#092159",
+          "#1d3f8c",
+          "#325fc2",
+          "#5785e6",
+          "#85adfd",
+          "#b0d1ff",
+          "#d4efff"
+        ]
+      },
+      "line-main-gruen": {
+        "role": "secondary",
+        "displayName": "Grün (main)",
+        "canonical": "#00A651",
+        "tonalRamp": [
+          "#001300",
+          "#003306",
+          "#00571a",
+          "#007e30",
+          "#2ca257",
+          "#6fc486",
+          "#a2e4b1",
+          "#cbfed5"
+        ]
+      },
+      "line-main-violett": {
+        "role": "secondary",
+        "displayName": "Violett (main)",
+        "canonical": "#9B3D97",
+        "tonalRamp": [
+          "#1a0019",
+          "#3f0d3e",
+          "#692466",
+          "#953d91",
+          "#b965b4",
+          "#d892d3",
+          "#f4bbef",
+          "#ffdeff"
+        ]
+      },
+      "line-main-orange": {
+        "role": "secondary",
+        "displayName": "Orange (main)",
+        "canonical": "#E07B00",
+        "tonalRamp": [
+          "#1f0100",
+          "#471400",
+          "#732d00",
+          "#a34900",
+          "#c77014",
+          "#e59b5f",
+          "#ffc395",
+          "#ffe4c0"
+        ]
+      },
+      "line-main-petrol": {
+        "role": "secondary",
+        "displayName": "Petrol (main)",
+        "canonical": "#00838F",
+        "tonalRamp": [
+          "#001014",
+          "#002e34",
+          "#005058",
+          "#00747f",
+          "#4098a2",
+          "#78bbc3",
+          "#a8dce2",
+          "#cff7fc"
+        ]
+      },
+      "line-main-braun": {
+        "role": "secondary",
+        "displayName": "Braun (main)",
+        "canonical": "#8D5524",
+        "tonalRamp": [
+          "#180600",
+          "#3b1e03",
+          "#633a16",
+          "#8d582b",
+          "#b07c53",
+          "#d0a482",
+          "#edc9ae",
+          "#ffe8d3"
+        ]
+      },
+      "line-side-hellblau": {
+        "role": "secondary",
+        "displayName": "Hellblau (side)",
+        "canonical": "#5AA5DC",
+        "tonalRamp": [
+          "#000c1e",
+          "#002944",
+          "#0d496f",
+          "#236c9c",
+          "#4f90c0",
+          "#81b4dc",
+          "#aed7f7",
+          "#d3f3ff"
+        ]
+      },
+      "line-side-hellgruen": {
+        "role": "secondary",
+        "displayName": "Hellgrün (side)",
+        "canonical": "#7CC48B",
+        "tonalRamp": [
+          "#001002",
+          "#072f14",
+          "#1d512b",
+          "#347645",
+          "#5c9a69",
+          "#8abc94",
+          "#b5ddbc",
+          "#d9f8de"
+        ]
+      },
+      "line-side-sand": {
+        "role": "secondary",
+        "displayName": "Sand (side)",
+        "canonical": "#E3B54A",
+        "tonalRamp": [
+          "#160800",
+          "#382200",
+          "#5e3f00",
+          "#865e00",
+          "#aa8321",
+          "#caaa64",
+          "#e8ce98",
+          "#ffecc2"
+        ]
+      },
+      "line-side-flieder": {
+        "role": "secondary",
+        "displayName": "Flieder (side)",
+        "canonical": "#B794C9",
+        "tonalRamp": [
+          "#110616",
+          "#2f1e38",
+          "#523a5e",
+          "#775886",
+          "#9a7ca9",
+          "#bca3c9",
+          "#ddc8e8",
+          "#f8e8ff"
+        ]
+      },
+      "line-side-lagune": {
+        "role": "secondary",
+        "displayName": "Lagune (side)",
+        "canonical": "#7DC4C9",
+        "tonalRamp": [
+          "#000f11",
+          "#032d2f",
+          "#184e51",
+          "#2e7276",
+          "#589599",
+          "#88b8bc",
+          "#b3d9dc",
+          "#d7f5f7"
+        ]
+      },
+      "line-side-grau": {
+        "role": "secondary",
+        "displayName": "Grau (side)",
+        "canonical": "#8A94A6",
+        "tonalRamp": [
+          "#080b11",
+          "#22272f",
+          "#3e4551",
+          "#5e6676",
+          "#818a99",
+          "#a7aebc",
+          "#cbd1dc",
+          "#eaeff7"
+        ]
+      },
+      "status-in-progress": {
+        "role": "secondary",
+        "displayName": "Status: in Bearbeitung",
+        "canonical": "#D98E04",
+        "tonalRamp": [
+          "#1b0400",
+          "#401b00",
+          "#6a3600",
+          "#965400",
+          "#ba7906",
+          "#d9a25d",
+          "#f4c893",
+          "#ffe8be"
+        ]
+      },
+      "status-completed": {
+        "role": "secondary",
+        "displayName": "Status: abgeschlossen",
+        "canonical": "#2E8B57",
+        "tonalRamp": [
+          "#001103",
+          "#003016",
+          "#08532e",
+          "#207849",
+          "#4f9c6d",
+          "#82be96",
+          "#afdfbe",
+          "#d4fadf"
+        ]
+      },
+      "status-open": {
+        "role": "secondary",
+        "displayName": "Status: bewusst offen",
+        "canonical": "#7B5EA7",
+        "tonalRamp": [
+          "#0f051d",
+          "#2c1d43",
+          "#4d386d",
+          "#71569a",
+          "#947abd",
+          "#b7a2da",
+          "#d8c8f6",
+          "#f4e7ff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page title („Meine Bücher“)."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Auth card heading („Anmelden“)."
+      },
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "„Bookly“ wordmark with its three-colour line mark."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Dialog titles."
+      },
+      "title-sm": {
+        "displayName": "Title Sm",
+        "purpose": "Book title in the header and book list rows."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text and inputs; tabular figures."
+      },
+      "control": {
+        "displayName": "Control",
+        "purpose": "Buttons, line chips, crumbs."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, legends, filter chips."
+      },
+      "section-label": {
+        "displayName": "Section Label",
+        "purpose": "Uppercase panel section heading („Hinweise“); is itself the heading, never an eyebrow."
+      },
+      "signet": {
+        "displayName": "Signet",
+        "purpose": "Signet badges H1/N1 and the count badge."
+      },
+      "map-station": {
+        "displayName": "Map Station",
+        "purpose": "Station names and main-line titles on the plan."
+      },
+      "map-annotation": {
+        "displayName": "Map Annotation",
+        "purpose": "Section names, connection labels, notes on the plan."
+      }
+    },
+    "shadows": [
+      {
+        "name": "floating-surface",
+        "value": "0 12px 32px -8px rgba(26, 26, 26, 0.28), 0 2px 6px rgba(26, 26, 26, 0.1)",
+        "purpose": "Login card, connection dialog, filter popovers."
+      },
+      {
+        "name": "map-control",
+        "value": "0 4px 12px -4px rgba(26, 26, 26, 0.18)",
+        "purpose": "Floating zoom controls on the plan."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Recede highlight (240ms), dialog rise-in (240ms, 8px), backdrop fade (160ms)."
+      },
+      {
+        "name": "control-transition",
+        "value": "120ms",
+        "purpose": "Border, background and colour changes on controls."
+      },
+      {
+        "name": "recede",
+        "value": "opacity 240ms; lines 0.2, connections 0.15",
+        "purpose": "Hover/select highlight: everything not related recedes."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "stack-panel",
+        "value": "1100px"
+      },
+      {
+        "name": "narrow",
+        "value": "700px"
+      }
+    ],
+    "lineSystem": {
+      "mainStroke": "14px",
+      "sideStroke": "6px",
+      "sectionBodyOpacity": 0.35,
+      "stationDotRadius": "2.5px",
+      "statusStationRadius": "9px",
+      "statusStationStroke": "2.5px",
+      "interchangeRadius": "6px",
+      "interchangeStroke": "2.5px",
+      "connectionStroke": "2.5px",
+      "connectionCasing": "7px white",
+      "cornerRadius": "8px",
+      "backwardLaneGapOffset": "30px",
+      "markerGapOffset": "38px",
+      "contradictionDash": "7 5",
+      "signets": {
+        "main": "H1, H2 …",
+        "side": "N1, N2 …",
+        "order": "start, end, title"
+      },
+      "statusGlyphs": {
+        "in_progress": "drawn pencil",
+        "completed": "drawn check",
+        "open": "drawn open ring"
+      }
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one main action per view, white on ink.",
+      "html": "<button class=\"ds-btn-primary\">Neue Storyline</button>",
+      "css": ".ds-btn-primary { font-family: var(--font, 'Hanken Grotesk', system-ui, sans-serif); font-size: 0.875rem; font-weight: 600; color: #fff; background: var(--ink, #1a1a1a); border: 1px solid var(--ink, #1a1a1a); border-radius: var(--radius, 6px); padding: 0.5rem 0.875rem; cursor: pointer; transition: background 120ms, border-color 120ms; } .ds-btn-primary:hover { background: #000; border-color: #000; } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:focus-visible { outline: 2px solid var(--focus, #0065ae); outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Default button: white with a control rule; hover darkens the border and washes the fill.",
+      "html": "<button class=\"ds-btn\">Abbrechen</button>",
+      "css": ".ds-btn { font-family: var(--font, 'Hanken Grotesk', system-ui, sans-serif); font-size: 0.875rem; font-weight: 600; color: var(--ink, #1a1a1a); background: var(--ground, #fff); border: 1px solid var(--rule-strong, #c9cbcf); border-radius: var(--radius, 6px); padding: 0.5rem 0.875rem; cursor: pointer; transition: background 120ms, border-color 120ms; } .ds-btn:hover { border-color: var(--ink, #1a1a1a); background: var(--wash, #f3f4f4); } .ds-btn:active { transform: translateY(1px); } .ds-btn:focus-visible { outline: 2px solid var(--focus, #0065ae); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Stacked label over a 6px field; focus turns the border blue with a halo.",
+      "html": "<label class=\"ds-field\">Titel<input class=\"ds-input\" value=\"Annas Flucht\"></label>",
+      "css": ".ds-field { font-family: var(--font, 'Hanken Grotesk', system-ui, sans-serif); display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8125rem; font-weight: 600; color: var(--ink-2, #3d3f42); } .ds-input { font: inherit; font-weight: 400; font-size: 0.9375rem; color: var(--ink, #1a1a1a); padding: 0.5rem 0.625rem; border: 1px solid var(--rule-strong, #c9cbcf); border-radius: var(--radius, 6px); background: #fff; transition: border-color 120ms, box-shadow 120ms; } .ds-input:hover { border-color: var(--muted, #5d6166); } .ds-input:focus { outline: none; border-color: var(--focus, #0065ae); box-shadow: 0 0 0 3px var(--focus-wash, #e5f0f8); }"
+    },
+    {
+      "name": "Filter Chips",
+      "kind": "chip",
+      "refersTo": "chip-toggle",
+      "description": "Pill toggles; the on state is ink-filled.",
+      "html": "<span class=\"ds-chip\">Nur Hauptstränge</span><span class=\"ds-chip is-on\">Nur bewusst offene</span><span class=\"ds-chip\">Notizen einblenden</span>",
+      "css": ".ds-chip { font-family: var(--font, 'Hanken Grotesk', system-ui, sans-serif); display: inline-flex; align-items: center; margin-right: 0.375rem; padding: 0.3125rem 0.75rem; border: 1px solid var(--rule-strong, #c9cbcf); border-radius: 999px; font-size: 0.8125rem; font-weight: 600; color: var(--ink, #1a1a1a); background: #fff; cursor: pointer; transition: background 120ms, border-color 120ms; } .ds-chip:hover { border-color: var(--ink, #1a1a1a); } .ds-chip.is-on { background: var(--ink, #1a1a1a); border-color: var(--ink, #1a1a1a); color: #fff; }"
+    },
+    {
+      "name": "Line Legend Chips",
+      "kind": "chip",
+      "refersTo": "line-chip",
+      "description": "Signet plus title per line; hover highlights the line, selected gets an ink ring.",
+      "html": "<button class=\"ds-line-chip is-selected\"><span class=\"ds-signet\" style=\"background:#2B59C3;color:#fff\">H1</span>Annas Flucht</button><button class=\"ds-line-chip\"><span class=\"ds-signet\" style=\"background:#E3B54A;color:#1A1A1A\">N1</span>Erinnerungen</button>",
+      "css": ".ds-line-chip { font-family: var(--font, 'Hanken Grotesk', system-ui, sans-serif); display: inline-flex; align-items: center; gap: 0.5rem; margin-right: 0.375rem; padding: 0.25rem 0.75rem 0.25rem 0.25rem; border: 1px solid var(--rule, #e2e3e5); border-radius: 999px; background: #fff; font-size: 0.875rem; font-weight: 600; color: var(--ink, #1a1a1a); cursor: pointer; } .ds-line-chip:hover { border-color: var(--ink, #1a1a1a); background: var(--wash, #f3f4f4); } .ds-line-chip.is-selected { border-color: var(--ink, #1a1a1a); box-shadow: inset 0 0 0 1px var(--ink, #1a1a1a); } .ds-line-chip:focus-visible { outline: 2px solid var(--focus, #0065ae); outline-offset: 2px; } .ds-signet { display: inline-grid; place-items: center; min-width: 28px; height: 20px; padding: 0 5px; border-radius: 4px; font-weight: 800; font-size: 0.75rem; letter-spacing: 0.02em; }"
+    },
+    {
+      "name": "Hint Card",
+      "kind": "card",
+      "refersTo": "hint",
+      "description": "Open contradiction in the side panel: ring disc, route, message.",
+      "html": "<button class=\"ds-hint\"><span class=\"ds-hint-route\">Der Prozess → Der Fremde</span><span>Zeitsprung: „Der Fremde“ beginnt nicht nach dem Ende von „Der Prozess“.</span></button>",
+      "css": ".ds-hint { font-family: var(--font, 'Hanken Grotesk', system-ui, sans-serif); display: grid; grid-template-columns: 12px 1fr; column-gap: 0.625rem; row-gap: 0.125rem; width: 320px; text-align: left; padding: 0.625rem 0.75rem; background: var(--signal-wash, #fff0f0); border: 1px solid #f5b5b1; border-radius: var(--radius, 6px); font-size: 0.875rem; font-weight: 400; color: var(--ink, #1a1a1a); cursor: pointer; } .ds-hint::before { content: ''; grid-row: span 2; width: 12px; height: 12px; margin-top: 3px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 3px var(--signal, #e3000f); } .ds-hint:hover { background: #ffe5e4; border-color: var(--signal, #e3000f); } .ds-hint:focus-visible { outline: 2px solid var(--focus, #0065ae); outline-offset: 2px; } .ds-hint-route { font-weight: 800; font-size: 0.8125rem; }"
+    },
+    {
+      "name": "Network Lines",
+      "kind": "custom",
+      "refersTo": "line",
+      "description": "Main line (14px, status station, station dots, signet) and side line (6px) joined by an octilinear interchange; hover recedes the rest.",
+      "html": "<svg class=\"ds-plan\" width=\"420\" height=\"150\" viewBox=\"0 0 420 150\"><rect x=\"0\" y=\"80\" width=\"420\" height=\"60\" fill=\"#f3f4f4\"/><g><rect x=\"20\" y=\"38\" width=\"26\" height=\"16\" rx=\"3\" fill=\"#E3B54A\"/><text x=\"33\" y=\"46\" fill=\"#1A1A1A\" class=\"ds-sig\">N1</text><text x=\"52\" y=\"50\" class=\"ds-side-title\">Erinnerungen</text><rect x=\"20\" y=\"57\" width=\"170\" height=\"6\" rx=\"3\" fill=\"#E3B54A\"/><circle cx=\"29\" cy=\"60\" r=\"9\" fill=\"#fff\" stroke=\"#2E8B57\" stroke-width=\"2.5\"/><path d=\"M -4.5 0.5 L -1.5 3.5 L 4.5 -3.5\" transform=\"translate(29 60)\" stroke=\"#2E8B57\" fill=\"none\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></g><path d=\"M 190 60 L 205 60 Q 212 60 217 65 L 243 105 Q 248 110 255 110 L 270 110\" fill=\"none\" stroke=\"#fff\" stroke-width=\"7\" stroke-linecap=\"round\"/><path d=\"M 190 60 L 205 60 Q 212 60 217 65 L 243 105 Q 248 110 255 110 L 270 110\" fill=\"none\" stroke=\"#1a1a1a\" stroke-width=\"2.5\" stroke-linecap=\"round\"/><circle cx=\"190\" cy=\"60\" r=\"6\" fill=\"#fff\" stroke=\"#1a1a1a\" stroke-width=\"2.5\"/><g><rect x=\"40\" y=\"84\" width=\"26\" height=\"16\" rx=\"3\" fill=\"#2B59C3\"/><text x=\"53\" y=\"92\" fill=\"#fff\" class=\"ds-sig\">H1</text><text x=\"72\" y=\"96\" class=\"ds-main-title\">Annas Flucht</text><rect x=\"40\" y=\"103\" width=\"360\" height=\"14\" rx=\"7\" fill=\"#2B59C3\"/><circle cx=\"130\" cy=\"110\" r=\"2.5\" fill=\"#fff\"/><circle cx=\"290\" cy=\"110\" r=\"2.5\" fill=\"#fff\"/><circle cx=\"49\" cy=\"110\" r=\"9\" fill=\"#fff\" stroke=\"#D98E04\" stroke-width=\"2.5\"/><path d=\"M -4 4 L -3 1 L 2.5 -4.5 L 4.5 -2.5 L -1 3 Z\" transform=\"translate(49 110)\" stroke=\"#D98E04\" fill=\"none\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></g><circle cx=\"270\" cy=\"110\" r=\"6\" fill=\"#fff\" stroke=\"#1a1a1a\" stroke-width=\"2.5\"/><g transform=\"translate(230 85)\"><rect x=\"-11\" y=\"-8\" width=\"22\" height=\"16\" rx=\"8\" fill=\"#fff\" stroke=\"#1a1a1a\" stroke-width=\"1.5\"/><path d=\"M -5 -4 L -1 0 L -5 4 M 0 -4 L 4 0 L 0 4\" fill=\"none\" stroke=\"#1a1a1a\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></g></svg>",
+      "css": ".ds-plan { font-family: var(--font, 'Hanken Grotesk', system-ui, sans-serif); display: block; background: #fff; border: 1px solid var(--rule, #e2e3e5); border-radius: var(--radius, 6px); } .ds-plan g { transition: opacity 240ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-plan:hover > g { opacity: 0.2; } .ds-plan > g:hover { opacity: 1; } .ds-sig { font-size: 11px; font-weight: 800; text-anchor: middle; dominant-baseline: central; } .ds-main-title { font-size: 12px; font-weight: 800; fill: #1a1a1a; } .ds-side-title { font-size: 12px; font-weight: 600; fill: #3d3f42; }"
+    },
+    {
+      "name": "Status Options",
+      "kind": "custom",
+      "refersTo": "status-option",
+      "description": "Status choice as pills holding the drawn status disc.",
+      "html": "<span class=\"ds-status is-current\"><svg width=\"22\" height=\"22\" viewBox=\"-11 -11 22 22\"><circle r=\"9\" fill=\"#fff\" stroke=\"#D98E04\" stroke-width=\"2.5\"/><path d=\"M -4 4 L -3 1 L 2.5 -4.5 L 4.5 -2.5 L -1 3 Z\" stroke=\"#D98E04\" fill=\"none\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>in Bearbeitung</span><span class=\"ds-status\"><svg width=\"22\" height=\"22\" viewBox=\"-11 -11 22 22\"><circle r=\"9\" fill=\"#fff\" stroke=\"#2E8B57\" stroke-width=\"2.5\"/><path d=\"M -4.5 0.5 L -1.5 3.5 L 4.5 -3.5\" stroke=\"#2E8B57\" fill=\"none\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>abgeschlossen</span><span class=\"ds-status\"><svg width=\"22\" height=\"22\" viewBox=\"-11 -11 22 22\"><circle r=\"9\" fill=\"#fff\" stroke=\"#7B5EA7\" stroke-width=\"2.5\"/><path d=\"M 3.5 0 A 3.5 3.5 0 1 1 -3.5 0 A 3.5 3.5 0 1 1 3.5 0\" stroke=\"#7B5EA7\" fill=\"none\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>bewusst offen</span>",
+      "css": ".ds-status { font-family: var(--font, 'Hanken Grotesk', system-ui, sans-serif); display: flex; width: fit-content; align-items: center; gap: 0.5rem; margin-bottom: 0.375rem; padding: 0.3125rem 0.625rem 0.3125rem 0.3125rem; border: 1px solid var(--rule, #e2e3e5); border-radius: 999px; color: var(--ink, #1a1a1a); font-size: 0.875rem; font-weight: 600; cursor: pointer; } .ds-status:hover { border-color: var(--ink, #1a1a1a); } .ds-status.is-current { border-color: var(--ink, #1a1a1a); box-shadow: inset 0 0 0 1px var(--ink, #1a1a1a); }"
+    },
+    {
+      "name": "App Header",
+      "kind": "nav",
+      "refersTo": "app-header",
+      "description": "Wordmark, crumbs, book title and the primary action, closed by the 4px ink rule.",
+      "html": "<header class=\"ds-header\"><span class=\"ds-wordmark\">Bookly</span><span class=\"ds-crumbs\">Meine Bücher /</span><span class=\"ds-book\">Der Weg nach Norden</span><button class=\"ds-header-btn\">Neue Storyline</button></header>",
+      "css": ".ds-header { font-family: var(--font, 'Hanken Grotesk', system-ui, sans-serif); display: flex; align-items: center; gap: 1rem; height: 60px; padding: 0 1.5rem; background: #fff; border-bottom: 4px solid var(--ink, #1a1a1a); } .ds-wordmark { font-weight: 800; font-size: 1.25rem; letter-spacing: -0.02em; color: var(--ink, #1a1a1a); display: inline-flex; align-items: center; gap: 0.5rem; } .ds-wordmark::before { content: ''; width: 22px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #0065ae 0 33%, #00a651 33% 66%, #f7a600 66%); } .ds-crumbs { color: var(--muted, #5d6166); font-weight: 600; font-size: 0.875rem; } .ds-book { font-weight: 800; font-size: 1.0625rem; margin-right: auto; } .ds-header-btn { font: inherit; font-size: 0.875rem; font-weight: 600; color: #fff; background: var(--ink, #1a1a1a); border: 1px solid var(--ink, #1a1a1a); border-radius: var(--radius, 6px); padding: 0.5rem 0.875rem; cursor: pointer; } .ds-header-btn:hover { background: #000; } .ds-header-btn:focus-visible { outline: 2px solid var(--focus, #0065ae); outline-offset: 2px; }"
+    },
+    {
+      "name": "Login Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Floating sign panel: square, 4px ink top edge, soft shadow.",
+      "html": "<form class=\"ds-card\"><h1>Anmelden</h1><label>E-Mail<input type=\"email\"></label><button type=\"button\">Anmelden</button></form>",
+      "css": ".ds-card { font-family: var(--font, 'Hanken Grotesk', system-ui, sans-serif); display: flex; flex-direction: column; gap: 1rem; width: 340px; padding: 1.75rem; background: #fff; border: 1px solid var(--rule, #e2e3e5); border-top: 4px solid var(--ink, #1a1a1a); box-shadow: 0 12px 32px -8px rgba(26, 26, 26, 0.28), 0 2px 6px rgba(26, 26, 26, 0.1); } .ds-card h1 { margin: 0; font-size: 1.375rem; font-weight: 800; letter-spacing: -0.015em; } .ds-card label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8125rem; font-weight: 600; color: var(--ink-2, #3d3f42); } .ds-card input { font: inherit; font-size: 0.9375rem; padding: 0.5rem 0.625rem; border: 1px solid var(--rule-strong, #c9cbcf); border-radius: 6px; } .ds-card input:focus { outline: none; border-color: var(--focus, #0065ae); box-shadow: 0 0 0 3px var(--focus-wash, #e5f0f8); } .ds-card button { font: inherit; font-size: 0.875rem; font-weight: 600; color: #fff; background: var(--ink, #1a1a1a); border: 0; border-radius: 6px; padding: 0.625rem; cursor: pointer; } .ds-card button:hover { background: #000; } .ds-card button:focus-visible { outline: 2px solid var(--focus, #0065ae); outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Liniennetzplan",
+    "overview": "A book's story is drawn as a transit network plan. Storylines are lines, time points are stations, connections are interchanges. The whole network reads at once on a white ground, framed by near-black rules, with every line in its own colour. The refusal is explicit in the build: no grey timeline grid with rounded bars and a blue accent. The map is the product; panels, chips and dialogs are signage around it.\n\nThe density is that of a station wall plan: compact, legible at a glance, quietly structured by hairlines and dotted station verticals, with heavy rules only where the plan has a frame (the 4px rule under the header, the 2px rule under the station names, the 4px top edge on cards and dialogs). Colour belongs to the lines. The chrome is ink on white, and the one alarm colour, signal red, is spent only on contradictions, so a red mark on the plan always means \"look here\".\n\nThe world is light, friendly and exact rather than technical. Status, connection types and every icon are drawn as small SVG glyphs in one stroke weight, never typed characters. Motion is short and functional: lines recede and return over 240ms, dialogs rise 8px in.",
+    "keyCharacteristics": [
+      "White ground, near-black frame rules, colour reserved for lines.",
+      "Main lines thick (14px) in saturated colours in the centre band; side lines thin (6px) in lighter colours at the edge.",
+      "Signets H1, H2 … and N1, N2 … name every line, on the map and in the legend.",
+      "Octilinear connections with white interchange rings; signal red only for open contradictions.",
+      "Hover or select recedes everything else to 15–20% opacity.",
+      "Hanken Grotesk at 400, 600 and 800, self-hosted; tabular figures throughout."
+    ],
+    "rules": [
+      {
+        "name": "The Signal Red Rule",
+        "body": "#E3000F is spent only on contradictions. It is never offered in the line palette, never a brand accent, never decoration. Acknowledged hints drop to grey rings.",
+        "section": "colors"
+      },
+      {
+        "name": "The Lines Own the Colour Rule",
+        "body": "Chrome is ink, white and grey. Hue appears only as a storyline's line colour, a status station, or signal red.",
+        "section": "colors"
+      },
+      {
+        "name": "The Legible Signet Rule",
+        "body": "Signet text is #1A1A1A or #FFFFFF, whichever has the higher WCAG contrast on the line colour.",
+        "section": "colors"
+      },
+      {
+        "name": "The Signage Weight Rule",
+        "body": "Anything that names a line or a station is set at 800. Side lines are the one step down (600), matching their thinner stroke.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Plan Rule",
+        "body": "Nothing on the plan casts a shadow. Overlap is resolved by white casings and halos, as on a printed network map.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** give every storyline its own colour from its kind's family: saturated for main lines, lighter for side lines.",
+      "**Do** keep main lines at 14px in the centre band and side lines at 6px at the edges, so kind reads by weight, colour and position.",
+      "**Do** name every line with its signet (H1 …, N1 …) wherever the line is referenced.",
+      "**Do** route connections octilinearly, with backwards runs in the lane gap and markers in gaps, never on a line in between.",
+      "**Do** draw every icon and glyph as SVG on the 16-unit grid with round caps (status, connection types, warning, UI icons, chevrons).",
+      "**Do** mark hints and status with ring discs, the plan's station form.",
+      "**Do** close frames with heavy ink rules: 4px under the header, 4px atop cards, dialogs and the stacked side panel.",
+      "**Do** write UI copy in German, with „…“ quotes and → in route labels."
+    ],
+    "donts": [
+      "**Don't** use signal red (#E3000F) for anything but contradictions, and never offer it as a line colour.",
+      "**Don't** use Unicode characters as icons; the status symbols ✎ ✓ ○ are always drawn glyphs.",
+      "**Don't** put thick coloured side stripes on cards, hints or list items; mark them with a ring disc instead.",
+      "**Don't** set small uppercase eyebrows above headings; uppercase is reserved for the section label that is itself the heading.",
+      "**Don't** cast shadows on the plan; only surfaces that float over it get one.",
+      "**Don't** draw lines on the plan in neutral ink; the ink route mark belongs to the book list only."
+    ]
+  }
+}

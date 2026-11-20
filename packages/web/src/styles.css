@@ -341,3 +341,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
 .status-option > input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
 .status-option:has(> input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 .status-disc { flex: none; display: block; }
+
+/* Text buttons that lead with a drawn icon. */
+.with-icon { display: inline-flex; align-items: center; gap: 0.375rem; }

@@ -27,7 +27,7 @@ export function CharacterPanel({ book }: { book: Book }) {
 
   return (
     <section aria-label="Figuren">
-      <button type="button" onClick={() => create.mutate(undefined, { onError })}>+ Figur</button>
+      <button type="button" className="with-icon" onClick={() => create.mutate(undefined, { onError })}><Icon name="plus" />Figur</button>
       {fb.feedback}
       <ul className="panel-list">
         {book.characters.map((c) => (

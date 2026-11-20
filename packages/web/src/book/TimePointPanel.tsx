@@ -81,8 +81,9 @@ export function TimePointPanel({ book }: { book: Book }) {
 
   return (
     <section aria-label="Zeitpunkte">
-      <button type="button" onClick={() => { clear(); create.mutate({ afterId: null }, { onError }); }}>
-        + Zeitpunkt
+      <button type="button" className="with-icon" onClick={() => { clear(); create.mutate({ afterId: null }, { onError }); }}>
+        <Icon name="plus" />
+        Zeitpunkt
       </button>
       {fb.feedback}
       {usages.length > 0 && <UsageList usages={usages} />}
