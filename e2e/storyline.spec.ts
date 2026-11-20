@@ -2,7 +2,7 @@
 import { expect, test } from '@playwright/test';
 
 test('storyline flow with contradiction hint', async ({ page }) => {
-  const email = `author-${Date.now()}@example.com`;
+  const email = `author-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
 
   await page.goto('/register');
   await page.getByLabel('Anzeigename').fill('Test Autorin');

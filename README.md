@@ -1,6 +1,6 @@
 # bookly
 
-A web app for authors to map the storylines of a book on a story timeline. Main strands, side strands, sections, characters and typed connections live on one map; contradictions (for example a time jump that does not move forward) are surfaced as hints that never block saving.
+A web app for authors to map the storylines of a book on a story timeline. Main strands, side strands, sections, characters and typed connections live on one map; contradictions (for example a time jump that does not move forward) are surfaced as hints that never block saving. Characters have profiles (description, behavior, intentions) with optional per-storyline additions; with AI configured (see below) the app suggests profile text and warns about contradictions between a character's profile and a storyline. Warnings never block saving and can be acknowledged.
 
 The UI is German; code and docs are English.
 
