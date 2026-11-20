@@ -10,6 +10,7 @@ import { connectionRoutes } from './books/connections.js';
 import { sectionRoutes } from './books/sections.js';
 import { storylineRoutes } from './books/storylines.js';
 import { timePointRoutes } from './books/timepoints.js';
+import type { AiClient } from './ai/client.js';
 import { createDb } from './db/client.js';
 import { NotFoundError, ValidationError } from './errors.js';
 
@@ -19,6 +20,8 @@ export interface AppConfig {
   cookieSecure: boolean;
   /** Enables the Fastify logger (default true; tests pass false). */
   logger?: boolean;
+  /** AI client; null or absent disables AI features. */
+  ai?: AiClient | null;
 }
 
 /** Builds the Fastify app (does not listen and does not run migrations). */
@@ -27,6 +30,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   const db = createDb(config.databaseUrl);
   app.decorate('db', db);
   app.decorate('config', config);
+  app.decorate('ai', config.ai ?? null);
   app.addHook('onClose', async () => {
     await db.$client.end();
   });

@@ -53,6 +53,9 @@ npm run e2e         # Playwright end-to-end flow (needs bookly_e2e, starts its o
 | `DATABASE_URL` | `postgres://localhost:5432/bookly_dev` | Database of the API server |
 | `TEST_DATABASE_URL` | `postgres://localhost:5432/bookly_test` | Database used by the server tests |
 | `PORT` | `3000` | API server port |
+| `OPENROUTER_API_KEY` | _(unset, AI off)_ | OpenRouter API key enabling AI character warnings |
+| `OPENROUTER_MODEL` | _(none)_ | OpenRouter model id; required when `OPENROUTER_API_KEY` is set |
+| `AI_FAKE` | _(unset)_ | Set to `1` to use a deterministic fake AI client (used by e2e) |
 | `API_TARGET` | `http://localhost:3000` | API URL the web dev server proxies `/api` to |
 | `E2E_DATABASE_URL` | `postgres://localhost:5432/bookly_e2e` | Database used by the e2e run (API on port 3100, web on 5174) |
 

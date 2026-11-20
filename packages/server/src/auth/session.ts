@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { and, eq, gt } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { Id, SessionUser } from '@bookly/shared';
+import type { AiClient } from '../ai/client.js';
 import type { Db } from '../db/client.js';
 import { sessions, users } from '../db/schema.js';
 
@@ -15,7 +16,8 @@ declare module 'fastify' {
   }
   interface FastifyInstance {
     db: Db;
-    config: { databaseUrl: string; cookieSecure: boolean; logger?: boolean };
+    config: { databaseUrl: string; cookieSecure: boolean; logger?: boolean; ai?: AiClient | null };
+    ai: AiClient | null;
   }
 }
 
