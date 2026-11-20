@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+.superpowers/
+.worktrees/
+.claude/worktrees/
+.claude/settings.local.json
+playwright-report/
+test-results/
