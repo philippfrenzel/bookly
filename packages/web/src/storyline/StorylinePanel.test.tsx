@@ -51,6 +51,7 @@ describe('StorylinePanel', () => {
     await vi.waitFor(() => expect(bodies).toHaveLength(1));
     expect(bodies[0]).toEqual({
       title: 'Rivale', description: '', characterIds: [], range: { startId: 't2', endId: 't3' }, kind: 'side', note: null,
+      color: expect.stringMatching(/^#[0-9A-Fa-f]{6}$/),
     });
     expect(bodies[0]).not.toHaveProperty('status');
   });
@@ -223,7 +224,7 @@ describe('StorylinePanel', () => {
       server.use(meOk, bookOk(sampleBook()), patchStoryline(bodies));
       renderApp('/books/b1');
       await openStoryline('Hauptstrang');
-      await userEvent.selectOptions(screen.getByLabelText('Status'), 'completed');
+      await userEvent.click(within(screen.getByRole('group', { name: 'Status' })).getByRole('radio', { name: 'abgeschlossen' }));
       await vi.waitFor(() => expect(bodies).toHaveLength(1));
       await userEvent.click(within(within(screen.getByRole('region', { name: 'Storyline bearbeiten' })).getByRole('group', { name: 'Figuren' })).getByRole('checkbox', { name: 'Jon' }));
       await vi.waitFor(() => expect(bodies).toHaveLength(2));
@@ -269,7 +270,7 @@ describe('StorylinePanel', () => {
       );
       renderApp('/books/b1');
       await openStoryline('Hauptstrang');
-      await userEvent.selectOptions(screen.getByLabelText('Status'), 'open');
+      await userEvent.click(within(screen.getByRole('group', { name: 'Status' })).getByRole('radio', { name: 'bewusst offen' }));
       expect(await screen.findByRole('heading', { name: 'Anmelden' })).toBeInTheDocument();
     });
 

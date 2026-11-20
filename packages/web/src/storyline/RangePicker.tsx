@@ -22,7 +22,7 @@ export function RangePicker({ label, timePoints, value, onChange }: Props) {
   return (
     <span className="range-picker">
       {select('Start', value.startId, (startId) => onChange({ ...value, startId }))}
-      {' bis '}
+      <span className="range-sep">bis</span>
       {select('Ende', value.endId, (endId) => onChange({ ...value, endId }))}
     </span>
   );

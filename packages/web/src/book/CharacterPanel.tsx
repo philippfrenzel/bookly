@@ -2,6 +2,7 @@
 import type { Book, Character, Id } from '@bookly/shared';
 import { useBookMutation } from '../api/hooks';
 import { useSaveFeedback } from './saveFeedback';
+import { Icon } from '../ui/Icon';
 
 /** Panel for the book's characters. */
 export function CharacterPanel({ book }: { book: Book }) {
@@ -26,7 +27,7 @@ export function CharacterPanel({ book }: { book: Book }) {
 
   return (
     <section aria-label="Figuren">
-      <button type="button" onClick={() => create.mutate(undefined, { onError })}>+ Figur</button>
+      <button type="button" className="with-icon" onClick={() => create.mutate(undefined, { onError })}><Icon name="plus" />Figur</button>
       {fb.feedback}
       <ul className="panel-list">
         {book.characters.map((c) => (
@@ -51,7 +52,7 @@ export function CharacterPanel({ book }: { book: Book }) {
                 if (e.target.value !== (c.description ?? '')) save({ id: c.id, name: c.name, description: e.target.value });
               }}
             />
-            <button type="button" aria-label={`Figur „${c.name}“ löschen`} onClick={() => confirmDelete(c)}>Löschen</button>
+            <button type="button" aria-label={`Figur „${c.name}“ löschen`} title="Löschen" className="icon-button" onClick={() => confirmDelete(c)}><Icon name="trash" /></button>
           </li>
         ))}
       </ul>

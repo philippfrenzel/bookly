@@ -2,8 +2,8 @@
 import { bounds, type Id, type OrderIndex, type Storyline } from '@bookly/shared';
 
 export const COLUMN_WIDTH = 160;
-export const LANE_HEIGHT = 48;
-export const HEADER_HEIGHT = 40;
+export const LANE_HEIGHT = 76;
+export const HEADER_HEIGHT = 48;
 /** Extra lane pitch that makes room for a two-line note under the bar. */
 export const NOTE_EXTRA = 24;
 
