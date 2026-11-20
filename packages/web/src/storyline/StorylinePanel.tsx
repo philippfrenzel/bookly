@@ -140,7 +140,7 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect }: FormPr
     const title = draft.title.trim();
     const candidate: Storyline = {
       id: DRAFT_ID, title, description: draft.description, characterIds: draft.characterIds, range: draft.range,
-      kind: draft.kind, status: draft.status, color: draft.color, note: noteOrNull(draft.note), sections: [],
+      kind: draft.kind, status: draft.status, color: draft.color, note: noteOrNull(draft.note), additions: [], sections: [],
     };
     const found = validateWithStoryline(book, candidate);
     if (found.length > 0) {

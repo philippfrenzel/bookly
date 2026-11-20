@@ -66,9 +66,18 @@ export function useCreateBook() {
   });
 }
 
-/** One book aggregate with hints. */
+/** Polls every 2 s while any AI check is pending or running, otherwise not at all. */
+export function checksRefetchInterval(q: { state: { data: Pick<BookResponse, 'characterChecks'> | undefined } }): number | false {
+  return q.state.data?.characterChecks.some((c) => c.status === 'pending' || c.status === 'running') ? 2000 : false;
+}
+
+/** One book aggregate with hints, polled while AI checks are in flight. */
 export function useBook(bookId: Id) {
-  return useQuery({ queryKey: ['book', bookId], queryFn: () => api<BookResponse>('GET', `/api/books/${bookId}`) });
+  return useQuery({
+    queryKey: ['book', bookId],
+    queryFn: () => api<BookResponse>('GET', `/api/books/${bookId}`),
+    refetchInterval: checksRefetchInterval,
+  });
 }
 
 /** Generic book mutation; the BookResponse replaces the cached aggregate on success. */

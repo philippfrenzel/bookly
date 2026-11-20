@@ -5,7 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { renderApp } from '../test/render';
 import { server } from '../test/setup';
-import { bookOk, meOk, sampleBook } from './testFixtures';
+import { bookOk, meOk, sampleBook, bookResponse } from './testFixtures';
 
 async function openPanel() {
   renderApp('/books/b1');
@@ -27,7 +27,7 @@ describe('TimePointPanel', () => {
       bookOk(sampleBook()),
       http.post('/api/books/b1/timepoints', async ({ request }) => {
         bodies.push(await request.json());
-        return HttpResponse.json({ book: sampleBook(), hints: [] }, { status: 201 });
+        return HttpResponse.json(bookResponse(sampleBook()), { status: 201 });
       }),
     );
     await openPanel();
@@ -46,7 +46,7 @@ describe('TimePointPanel', () => {
       bookOk(sampleBook()),
       http.patch('/api/books/b1/timepoints/t3', async ({ request }) => {
         bodies.push(await request.json());
-        return HttpResponse.json({ book: sampleBook(), hints: [] });
+        return HttpResponse.json(bookResponse(sampleBook()));
       }),
     );
     await openPanel();
@@ -82,7 +82,7 @@ describe('TimePointPanel', () => {
       bookOk(sampleBook()),
       http.put('/api/books/b1/timepoints/order', async ({ request }) => {
         bodies.push(await request.json());
-        return HttpResponse.json({ book: sampleBook(), hints: [] });
+        return HttpResponse.json(bookResponse(sampleBook()));
       }),
     );
     await openPanel();
@@ -130,7 +130,7 @@ describe('TimePointPanel', () => {
     server.use(
       meOk,
       bookOk(sampleBook()),
-      http.delete('/api/books/b1/timepoints/t3', () => HttpResponse.json({ book: after, hints: [] })),
+      http.delete('/api/books/b1/timepoints/t3', () => HttpResponse.json(bookResponse(after))),
     );
     await openPanel();
     await userEvent.click(screen.getByRole('button', { name: 'Zeitpunkt „Ende“ löschen' }));

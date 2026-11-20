@@ -1,7 +1,7 @@
 /** Modal for creating or editing a connection; contradiction hints are recomputed live from the draft. */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  checkConnection, hintKey, strandCharacters, type Book, type Connection, type ConnectionType, type Hint, type Id,
+  characterLabel, checkConnection, hintKey, strandCharacters, type Book, type Connection, type ConnectionType, type Hint, type Id,
   type ValidationIssue,
 } from '@bookly/shared';
 import type { ApiError } from '../api/client';
@@ -122,10 +122,10 @@ function DialogBody({ book, initial, isNew, onClose }: { book: Book; initial: Co
             <select value={characterId ?? ''} onChange={(e) => setCharacterId(e.target.value || null)}>
               <option value="">– Figur wählen –</option>
               {preferred.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <option key={c.id} value={c.id}>{characterLabel(c)}</option>
               ))}
               {others.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <option key={c.id} value={c.id}>{characterLabel(c)}</option>
               ))}
             </select>
           </label>

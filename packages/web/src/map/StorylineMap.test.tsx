@@ -13,7 +13,7 @@ function connectedBook(): Book {
   const b = sampleBook();
   b.storylines.push({
     id: 's2', title: 'Nebenstrang', description: '', characterIds: ['c2'], range: { startId: 't2', endId: 't3' },
-    kind: 'side', status: 'open', color: '#8A94A6', note: 'Ein langer Gedanke zum Nebenstrang', sections: [],
+    kind: 'side', status: 'open', color: '#8A94A6', note: 'Ein langer Gedanke zum Nebenstrang', additions: [], sections: [],
   });
   b.connections.push({ id: 'k1', fromId: 's1', toId: 's2', type: 'time_jump', label: null, characterId: null });
   return b;

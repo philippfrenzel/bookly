@@ -2,7 +2,7 @@
  * Filter controls in one compact row: main/open/notes toggles as chips, time range and characters
  * in small disclosure popovers, a reset that appears only when something is filtered, and the count.
  */
-import type { Book } from '@bookly/shared';
+import { characterLabel, type Book } from '@bookly/shared';
 import { defaultFilterState, hasActiveFilter, type FilterState } from './filters';
 
 interface Props {
@@ -61,7 +61,7 @@ export function FilterBar({ book, state, onChange, visibleCount }: Props) {
             <legend className="visually-hidden">Figuren</legend>
             {book.characters.map((c) => (
               <label key={c.id} className="check-row">
-                <input type="checkbox" checked={state.characterIds.includes(c.id)} onChange={() => toggleCharacter(c.id)} /> {c.name}
+                <input type="checkbox" checked={state.characterIds.includes(c.id)} onChange={() => toggleCharacter(c.id)} /> {characterLabel(c)}
               </label>
             ))}
           </fieldset>

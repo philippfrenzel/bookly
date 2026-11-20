@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import type { Book, Section } from '@bookly/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { bookOk, meOk, sampleBook } from '../book/testFixtures';
+import { bookOk, meOk, sampleBook, bookResponse } from '../book/testFixtures';
 import { renderApp } from '../test/render';
 import { server } from '../test/setup';
 
@@ -18,7 +18,7 @@ function richBook(): Book {
   book.storylines[0]!.sections = [section('x1', 0, 't1', 't1'), section('x2', 1, 't2', 't2')];
   book.storylines.push({
     id: 's2', title: 'Rivale', description: '', characterIds: [], range: { startId: 't1', endId: 't3' },
-    kind: 'side', status: 'open', color: '#8A94A6', note: null, sections: [],
+    kind: 'side', status: 'open', color: '#8A94A6', note: null, additions: [], sections: [],
   });
   book.connections = [{ id: 'k1', fromId: 's1', toId: 's2', type: 'time_jump', label: null, characterId: null }];
   return book;
@@ -38,7 +38,7 @@ describe('StorylinePanel', () => {
       bookOk(sampleBook()),
       http.post('/api/books/b1/storylines', async ({ request }) => {
         bodies.push((await request.json()) as Record<string, unknown>);
-        return HttpResponse.json({ book: sampleBook(), hints: [] }, { status: 201 });
+        return HttpResponse.json(bookResponse(sampleBook()), { status: 201 });
       }),
     );
     renderApp('/books/b1');
@@ -84,7 +84,7 @@ describe('StorylinePanel', () => {
       bookOk(richBook()),
       http.patch('/api/books/b1/storylines/s1', async ({ request }) => {
         bodies.push(await request.json());
-        return HttpResponse.json({ book: converted, hints: [] });
+        return HttpResponse.json(bookResponse(converted));
       }),
     );
     renderApp('/books/b1');
@@ -123,7 +123,7 @@ describe('StorylinePanel', () => {
       bookOk(richBook()),
       http.delete('/api/books/b1/storylines/s1', () => {
         deletes += 1;
-        return HttpResponse.json({ book: sampleBook(), hints: [] });
+        return HttpResponse.json(bookResponse(sampleBook()));
       }),
     );
     renderApp('/books/b1');
@@ -150,7 +150,7 @@ describe('StorylinePanel', () => {
       bookOk(richBook()),
       http.put('/api/books/b1/storylines/s1/sections/order', async ({ request }) => {
         bodies.push(await request.json());
-        return HttpResponse.json({ book: richBook(), hints: [] });
+        return HttpResponse.json(bookResponse(richBook()));
       }),
     );
     renderApp('/books/b1');
@@ -168,7 +168,7 @@ describe('StorylinePanel', () => {
       bookOk(richBook()),
       http.delete('/api/books/b1/sections/x2', () => {
         deletes += 1;
-        return HttpResponse.json({ book: richBook(), hints: [] });
+        return HttpResponse.json(bookResponse(richBook()));
       }),
     );
     renderApp('/books/b1');
@@ -185,7 +185,7 @@ describe('StorylinePanel', () => {
       bookOk(sampleBook()),
       http.post('/api/books/b1/storylines/s1/sections', async ({ request }) => {
         bodies.push(await request.json());
-        return HttpResponse.json({ book: sampleBook(), hints: [] }, { status: 201 });
+        return HttpResponse.json(bookResponse(sampleBook()), { status: 201 });
       }),
     );
     renderApp('/books/b1');
@@ -197,7 +197,7 @@ describe('StorylinePanel', () => {
   });
   describe('direct saving (no Speichern button)', () => {
     /** Registers a PATCH handler that records bodies and answers with the given status/body. */
-    function patchStoryline(bodies: unknown[], respond: () => Response = () => HttpResponse.json({ book: sampleBook(), hints: [] })) {
+    function patchStoryline(bodies: unknown[], respond: () => Response = () => HttpResponse.json(bookResponse(sampleBook()))) {
       return http.patch('/api/books/b1/storylines/s1', async ({ request }) => {
         bodies.push(await request.json());
         return respond();
@@ -290,7 +290,7 @@ describe('StorylinePanel', () => {
         bookOk(richBook()),
         http.patch('/api/books/b1/sections/x1', async ({ request }) => {
           bodies.push(await request.json());
-          return HttpResponse.json({ book: richBook(), hints: [] });
+          return HttpResponse.json(bookResponse(richBook()));
         }),
       );
       renderApp('/books/b1');

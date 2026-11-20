@@ -1,5 +1,5 @@
 /** Checkbox list for assigning book characters to a storyline or section. */
-import type { Character, Id } from '@bookly/shared';
+import { characterLabel, type Character, type Id } from '@bookly/shared';
 
 interface Props {
   characters: Character[];
@@ -19,7 +19,7 @@ export function CharacterChecks({ characters, value, onChange }: Props) {
             checked={value.includes(c.id)}
             onChange={(e) => onChange(e.target.checked ? [...value, c.id] : value.filter((id) => id !== c.id))}
           />
-          {c.name}
+          {characterLabel(c)}
         </label>
       ))}
     </div>

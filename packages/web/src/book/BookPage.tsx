@@ -99,7 +99,7 @@ export function BookPage() {
             onActiveChange={setTab}
             tabs={[
               { id: 'timepoints', label: 'Zeitpunkte', content: <TimePointPanel book={book} /> },
-              { id: 'characters', label: 'Figuren', content: <CharacterPanel book={book} /> },
+              { id: 'characters', label: 'Figuren', content: <CharacterPanel book={book} aiEnabled={query.data?.ai.enabled ?? false} /> },
               { id: 'storyline', label: 'Storyline', content: <StorylinePanel book={book} target={target} onTarget={open} onConnect={(fromId, toId) => setConnection({ mode: 'create', fromId, toId })} /> },
             ]}
           />
