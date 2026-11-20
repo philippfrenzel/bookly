@@ -88,6 +88,9 @@ export function BookPage() {
               <BookHints
                 book={book}
                 hints={query.data?.hints ?? []}
+                warnings={query.data?.characterWarnings ?? []}
+                aiEnabled={query.data?.ai.enabled ?? false}
+                onShowStoryline={(id) => open({ mode: 'edit', id })}
                 onShow={(id) => {
                   setHintConnectionId(null);
                   setConnection({ mode: 'edit', id });

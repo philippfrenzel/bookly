@@ -321,6 +321,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
 .book-hint { display: grid; grid-template-columns: 12px 1fr; column-gap: 0.625rem; row-gap: 0.125rem; width: 100%; text-align: left; padding: 0.625rem 0.75rem; background: var(--signal-wash); border: 1px solid #f5b5b1; font-weight: 400; color: var(--ink); }
 .book-hint::before { content: ''; grid-row: span 2; width: 12px; height: 12px; margin-top: 3px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 3px var(--signal); }
 .book-hint:hover:not(:disabled) { background: #ffe5e4; border-color: var(--signal); }
+.book-hints-group { display: flex; align-items: center; justify-content: space-between; margin: 0.75rem 0 0.375rem; }
+.book-hints-group h3 { margin: 0; }
+div.book-hint { cursor: pointer; }
+.book-hint-main { grid-column: 2; display: grid; text-align: left; padding: 0; border: 0; background: none; font-weight: 400; color: inherit; }
+.book-hint-ack { grid-column: 2; justify-self: start; margin-top: 0.375rem; }
 .book-hint-route { font-weight: 800; font-size: 0.8125rem; }
 .book-hint.is-acknowledged { background: var(--ground); border-color: var(--rule); color: var(--muted); }
 .book-hint.is-acknowledged::before { box-shadow: inset 0 0 0 3px var(--rule-strong); }

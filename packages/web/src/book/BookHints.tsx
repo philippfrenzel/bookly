@@ -2,11 +2,19 @@
  * Book-wide hint list at the top of the side panel: open contradictions first, each one able to
  * highlight its connection on the plan and open it; acknowledged hints fold away. Never blocks anything.
  */
-import type { Book, Hint, Id } from '@bookly/shared';
+import type { Book, CharacterWarning, Hint, Id } from '@bookly/shared';
+import { useBookMutation } from '../api/hooks';
+import { CharacterWarningItem } from './CharacterWarningItem';
 
 interface Props {
   book: Book;
   hints: Hint[];
+  /** AI character warnings for the whole book. */
+  warnings: CharacterWarning[];
+  /** Whether „Alle prüfen“ can run. */
+  aiEnabled: boolean;
+  /** Opens a storyline in the side panel. */
+  onShowStoryline: (storylineId: Id) => void;
   /** Opens the connection (its dialog holds „Bewusst so“). */
   onShow: (connectionId: Id) => void;
   /** Highlights a connection on the plan (null clears). */
@@ -22,9 +30,17 @@ function routeOf(book: Book, connectionId: Id): string {
 }
 
 /** Renders the open hints as buttons and the acknowledged ones folded into a disclosure. */
-export function BookHints({ book, hints, onShow, onHighlight }: Props) {
+export function BookHints({ book, hints, warnings, aiEnabled, onShowStoryline, onShow, onHighlight }: Props) {
+  const checkAll = useBookMutation<void>(book.id, 'POST', () => `/api/books/${book.id}/character-checks`);
   const open = hints.filter((h) => !h.acknowledged);
   const acknowledged = hints.filter((h) => h.acknowledged);
+  const openWarnings = warnings.filter((w) => !w.acknowledged);
+  const ackWarnings = warnings.filter((w) => w.acknowledged);
+  const openCount = open.length + openWarnings.length;
+  const ackCount = acknowledged.length + ackWarnings.length;
+  const warningItem = (w: CharacterWarning) => (
+    <CharacterWarningItem key={`${w.storylineId}:${w.characterId}:${w.criterion}`} book={book} warning={w} onShowStoryline={onShowStoryline} />
+  );
   const item = (h: Hint) => (
     <li key={`${h.connectionId}:${h.rule}:${h.characterId ?? ''}`}>
       <button
@@ -44,17 +60,24 @@ export function BookHints({ book, hints, onShow, onHighlight }: Props) {
   return (
     <section className="book-hints" aria-label="Hinweise im Buch">
       <h2>
-        Hinweise{open.length > 0 && <span className="count-badge">{open.length}</span>}
+        Hinweise{openCount > 0 && <span className="count-badge">{openCount}</span>}
       </h2>
-      {open.length === 0 ? (
+      {openCount === 0 ? (
         <p className="all-clear">Keine offenen Widersprüche. Die Geschichte hält zusammen.</p>
       ) : (
-        <ul>{open.map(item)}</ul>
+        open.length > 0 && <ul>{open.map(item)}</ul>
       )}
-      {acknowledged.length > 0 && (
+      <div className="book-hints-group">
+        <h3>Figuren</h3>
+        <button type="button" disabled={!aiEnabled || checkAll.isPending} onClick={() => checkAll.mutate()}>
+          Alle prüfen
+        </button>
+      </div>
+      {openWarnings.length > 0 && <ul>{openWarnings.map(warningItem)}</ul>}
+      {ackCount > 0 && (
         <details>
-          <summary>{acknowledged.length} bewusst so belassen</summary>
-          <ul>{acknowledged.map(item)}</ul>
+          <summary>{ackCount} bewusst so belassen</summary>
+          <ul>{acknowledged.map(item)}{ackWarnings.map(warningItem)}</ul>
         </details>
       )}
     </section>
