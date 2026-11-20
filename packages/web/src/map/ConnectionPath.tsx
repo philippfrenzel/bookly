@@ -1,18 +1,15 @@
-/** One connection drawn as a cubic curve from the end of strand A to the start of strand B. */
-import type { Connection, ConnectionType, Hint, OrderIndex, Storyline } from '@bookly/shared';
+/**
+ * One connection drawn as an interchange: a cased transfer path from the end of line A to the start
+ * of line B, with interchange rings at both ends, a type glyph in a pill, the label and, when the
+ * connection has hints, a warning glyph (signal red while open). Red is reserved for contradictions.
+ */
+import type { Connection, Hint, OrderIndex, Storyline } from '@bookly/shared';
 import type { KeyboardEvent } from 'react';
+import { TypeGlyph, WarningGlyph } from './icons';
 import { barGeometry } from './layout';
 
 const INSET = 6;
-const WARNING_COLOR = '#D98E04';
-const MUTED_COLOR = '#9AA1AD';
-
-const TYPE_ICON: Record<ConnectionType, string> = {
-  time_jump: '⏩',
-  flashback: '⏪',
-  merge: '⋈',
-  character_switch: '⇄',
-};
+const RING_R = 6;
 
 interface Props {
   connection: Connection;
@@ -25,6 +22,13 @@ interface Props {
   hints: Hint[];
   /** Lane pitch in px (see laneHeightFor). */
   laneHeight?: number;
+  /** Another line is highlighted and this connection does not touch it. */
+  dimmed?: boolean;
+  /**
+   * Which layer to draw: the focusable path (under the lines), the markers (type pill, label, warning;
+   * drawn over the lines so they are never hidden), or both.
+   */
+  part?: 'path' | 'markers' | 'both';
   onSelect: (id: string) => void;
 }
 
@@ -46,8 +50,8 @@ export function connectionPathD(x1: number, y1: number, x2: number, y2: number):
   return `M ${x1} ${y1} C ${x1 + BACKWARD_MARGIN} ${my}, ${x2 - BACKWARD_MARGIN} ${my}, ${x2} ${y2}`;
 }
 
-/** Focusable path with arrowhead, type icon, label and a warning triangle when hints exist. */
-export function ConnectionPath({ connection: c, from, to, fromLane, toLane, idx, hints, laneHeight, onSelect }: Props) {
+/** Focusable interchange path with rings, type glyph, label and a warning glyph when hints exist. */
+export function ConnectionPath({ connection: c, from, to, fromLane, toLane, idx, hints, laneHeight, dimmed = false, part = 'both', onSelect }: Props) {
   const a = barGeometry(from, fromLane, idx, laneHeight);
   const b = barGeometry(to, toLane, idx, laneHeight);
   const x1 = a.x + a.width - INSET;
@@ -67,42 +71,44 @@ export function ConnectionPath({ connection: c, from, to, fromLane, toLane, idx,
     }
   };
 
+  const hintState = !warned ? 'none' : open ? 'open' : 'acknowledged';
+  const markers = (
+    <>
+      <TypeGlyph type={c.type} x={mx} y={my} />
+      {c.label && (
+        <text className="connection-label" x={mx} y={my + 22} textAnchor="middle">
+          {c.label}
+        </text>
+      )}
+      {warned && <WarningGlyph x={mx + 22} y={my} open={open} />}
+    </>
+  );
+
+  if (part === 'markers') {
+    // Mouse shortcut onto the same connection; keyboard users reach it through the path's button.
+    return (
+      <g className={`connection-markers${dimmed ? ' is-dimmed' : ''}`} data-hint-state={hintState} aria-hidden="true" onClick={() => onSelect(c.id)}>
+        {markers}
+      </g>
+    );
+  }
+
   return (
     <g
-      className="connection-path"
-      data-hint-state={!warned ? 'none' : open ? 'open' : 'acknowledged'}
+      className={`connection-path${dimmed ? ' is-dimmed' : ''}`}
+      data-hint-state={hintState}
       role="button"
       tabIndex={0}
       aria-label={`Verbindung „${from.title}“ → „${to.title}“`}
       onClick={() => onSelect(c.id)}
       onKeyDown={onKeyDown}
     >
-      <path className="connection-hit" d={d} fill="none" stroke="transparent" strokeWidth={14} />
-      <path
-        className="connection-line"
-        d={d}
-        fill="none"
-        markerEnd="url(#connection-arrow)"
-      />
-      <text className="connection-icon" x={mx} y={my} textAnchor="middle" dominantBaseline="central">
-        {TYPE_ICON[c.type]}
-      </text>
-      {c.label && (
-        <text className="connection-label" x={mx} y={my + 16} textAnchor="middle">
-          {c.label}
-        </text>
-      )}
-      {warned && (
-        <text
-          className="connection-warning"
-          x={mx + 16}
-          y={my}
-          dominantBaseline="central"
-          fill={open ? WARNING_COLOR : MUTED_COLOR}
-        >
-          ▲
-        </text>
-      )}
+      <path className="connection-hit" d={d} fill="none" stroke="transparent" strokeWidth={16} />
+      <path className="connection-casing" d={d} fill="none" />
+      <path className="connection-line" d={d} fill="none" markerEnd="url(#connection-arrow)" />
+      <circle className="interchange" cx={x1} cy={y1} r={RING_R} />
+      <circle className="interchange" cx={x2} cy={y2} r={RING_R} />
+      {part === 'both' && markers}
     </g>
   );
 }

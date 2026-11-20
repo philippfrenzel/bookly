@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, type PointerEvent } from 'react';
 import { assignLanes, barGeometry, columnAt, COLUMN_WIDTH, HEADER_HEIGHT, laneHeightFor } from './layout';
 import { ConnectionPath, ConnectionStub } from './ConnectionPath';
 import { applyFilters, type MapFilter } from './filters';
+import { lineSignets } from './signets';
 import { StorylineBar } from './StorylineBar';
 import { toContentPoint, transformAttr, useZoom } from './useZoom';
 
@@ -22,6 +23,10 @@ export interface StorylineMapProps {
   filter?: MapFilter;
   /** Show storyline notes under the bars. */
   showNotes?: boolean;
+  /** Line highlighted from outside (e.g. the legend); the rest of the network recedes. */
+  highlightId?: Id | null;
+  /** Pointer entered (id) or left (null) a line on the map. */
+  onHighlight?: (id: Id | null) => void;
 }
 
 const BOTTOM_PADDING = 16;
@@ -40,11 +45,18 @@ export function StorylineMap(props: StorylineMapProps) {
 }
 
 /** The zoomable svg; mounted only when there is something to draw so zoom attaches to a real element. */
-function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, onConnect, onSelectConnection, showNotes = false, visibleIds }: StorylineMapProps & { visibleIds: Set<Id> | null }) {
+function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, onConnect, onSelectConnection, showNotes = false, highlightId: outerHighlight = null, onHighlight, visibleIds }: StorylineMapProps & { visibleIds: Set<Id> | null }) {
   const sorted = useMemo(() => [...book.timePoints].sort((a, b) => a.position - b.position), [book.timePoints]);
   const idx = useMemo(() => orderIndex(book.timePoints), [book.timePoints]);
   const visible = useMemo(() => (visibleIds ? book.storylines.filter((s) => visibleIds.has(s.id)) : book.storylines), [book.storylines, visibleIds]);
   const layout = useMemo(() => assignLanes(visible, idx), [visible, idx]);
+  const signets = useMemo(() => lineSignets(book.storylines, idx), [book.storylines, idx]);
+  const [hoverId, setHoverId] = useState<Id | null>(null);
+  const highlightId = hoverId ?? outerHighlight;
+  const hover = (id: Id | null) => {
+    setHoverId(id);
+    onHighlight?.(id);
+  };
   const svgRef = useRef<SVGSVGElement>(null);
   const drag = useRef<{ x0: number; moved: boolean } | null>(null);
   const [selection, setSelection] = useState<[number, number] | null>(null);
@@ -113,7 +125,8 @@ function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, 
       </div>
       <svg ref={svgRef} width="100%" height={Math.min(Math.max(height, 240), MAX_VIEWPORT_HEIGHT)} role="group" aria-label="Storylines auf der Zeitachse">
         <defs>
-          <marker id="connection-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          {/* Tip stops at the target's interchange ring (6px radius): 1 unit = 0.8px, so refX = 10 + 6 / 0.8. */}
+          <marker id="connection-arrow" viewBox="0 0 10 10" refX="17.5" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
             <path d="M 0 0 L 10 5 L 0 10 z" className="connection-arrowhead" />
           </marker>
         </defs>
@@ -128,19 +141,21 @@ function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, 
           />
         )}
         {sorted.map((tp, i) => (
-          <line key={tp.id} className="grid-line" x1={i * COLUMN_WIDTH} x2={i * COLUMN_WIDTH} y1={0} y2={height} />
+          <line key={tp.id} className="grid-line" x1={i * COLUMN_WIDTH + COLUMN_WIDTH / 2} x2={i * COLUMN_WIDTH + COLUMN_WIDTH / 2} y1={HEADER_HEIGHT} y2={height} />
         ))}
         {/* Left-drag on the header pans the map (see zoomFilter). */}
         <g className="pan-area">
           <rect x={0} y={0} width={width} height={HEADER_HEIGHT} fill="transparent" />
           {sorted.map((tp, i) => (
-            <text key={tp.id} className="column-name" x={i * COLUMN_WIDTH + COLUMN_WIDTH / 2} y={HEADER_HEIGHT / 2}>
-              {tp.name}
-            </text>
+            <g key={tp.id} className="station-name">
+              <text className="column-name" x={i * COLUMN_WIDTH + COLUMN_WIDTH / 2} y={HEADER_HEIGHT / 2 - 4}>
+                {tp.name}
+              </text>
+              <line className="station-tick" x1={i * COLUMN_WIDTH + COLUMN_WIDTH / 2} x2={i * COLUMN_WIDTH + COLUMN_WIDTH / 2} y1={HEADER_HEIGHT - 12} y2={HEADER_HEIGHT - 2} />
+            </g>
           ))}
         </g>
-        <line className="grid-line" x1={width} x2={width} y1={0} y2={height} />
-        <line className="header-rule" x1={0} x2={width} y1={HEADER_HEIGHT} y2={HEADER_HEIGHT} />
+        <line className="header-rule" x1={0} x2={width} y1={HEADER_HEIGHT - 2} y2={HEADER_HEIGHT - 2} />
         {onCreateRange && (
           <rect
             className="drag-surface"
@@ -191,6 +206,8 @@ function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, 
               idx={idx}
               laneHeight={laneHeight}
               hints={hints.filter((h) => h.connectionId === c.id)}
+              dimmed={highlightId != null && c.fromId !== highlightId && c.toId !== highlightId}
+              part="path"
               onSelect={(id) => onSelectConnection?.(id)}
             />
           );
@@ -202,11 +219,37 @@ function MapCanvas({ book, hints, selectedId, onSelectStoryline, onCreateRange, 
             lane={layout.laneOf.get(s.id) ?? 0}
             idx={idx}
             selected={s.id === selectedId}
+            signet={signets.get(s.id)}
+            dimmed={highlightId != null && highlightId !== s.id}
             showNote={showNotes}
             laneHeight={laneHeight}
             onSelect={onSelectStoryline}
+            onHover={hover}
           />
         ))}
+        {/* Connection markers sit over the lines so type, label and warning are never hidden. */}
+        {book.connections.map((c) => {
+          const from = book.storylines.find((s) => s.id === c.fromId);
+          const to = book.storylines.find((s) => s.id === c.toId);
+          if (!from || !to) return null;
+          if (visibleIds && (!visibleIds.has(from.id) || !visibleIds.has(to.id))) return null;
+          return (
+            <ConnectionPath
+              key={c.id}
+              connection={c}
+              from={from}
+              to={to}
+              fromLane={layout.laneOf.get(from.id) ?? 0}
+              toLane={layout.laneOf.get(to.id) ?? 0}
+              idx={idx}
+              laneHeight={laneHeight}
+              hints={hints.filter((h) => h.connectionId === c.id)}
+              dimmed={highlightId != null && c.fromId !== highlightId && c.toId !== highlightId}
+              part="markers"
+              onSelect={(id) => onSelectConnection?.(id)}
+            />
+          );
+        })}
         {onConnect &&
           visible.map((s) => {
             const g = barGeometry(s, layout.laneOf.get(s.id) ?? 0, idx, laneHeight);

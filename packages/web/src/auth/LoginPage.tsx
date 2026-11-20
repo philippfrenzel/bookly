@@ -17,6 +17,7 @@ export function LoginPage() {
 
   return (
     <main className="auth-page">
+      <p className="wordmark auth-wordmark">Bookly</p>
       <form className="card" onSubmit={submit}>
         <h1>Anmelden</h1>
         <label>
@@ -25,7 +26,7 @@ export function LoginPage() {
         </label>
         <label>
           Passwort
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+          <input type="password" maxLength={1024} value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
         </label>
         {login.isError && (
           <p className="error" role="alert">

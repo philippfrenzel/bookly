@@ -41,6 +41,18 @@ interface Draft {
 
 const DRAFT_ID = 'draft';
 
+/** Line colours offered as one-click swatches; the first two are the default main and side colours. */
+const LINE_COLORS = [
+  { name: 'Hauptblau', hex: KIND_DEFAULT_COLOR.main },
+  { name: 'Nebengrau', hex: KIND_DEFAULT_COLOR.side },
+  { name: 'Grün', hex: '#00A651' },
+  { name: 'Gelb', hex: '#F7A600' },
+  { name: 'Rotbraun', hex: '#A0522D' },
+  { name: 'Violett', hex: '#9B3D97' },
+  { name: 'Türkis', hex: '#0098A1' },
+  { name: 'Hellblau', hex: '#5AA5DC' },
+];
+
 /** Picks the form for the target, or a hint when nothing is selected. */
 export function StorylinePanel({ book, target, onTarget, onConnect }: Props) {
   if (target?.mode === 'create') {
@@ -205,10 +217,24 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect }: FormPr
             </select>
           </label>
         )}
-        <label>
-          Farbe
-          <ColorInput {...text} value={v.color} onCommit={(color) => commit({ color })} />
-        </label>
+        <div className="field">
+          <span>Farbe</span>
+          <div className="line-colors">
+            <ColorInput {...text} ariaLabel="Farbe" value={v.color} onCommit={(color) => commit({ color })} />
+            {LINE_COLORS.map((c) => (
+              <button
+                key={c.hex}
+                type="button"
+                className={`swatch${v.color.toLowerCase() === c.hex.toLowerCase() ? ' is-current' : ''}`}
+                style={{ background: c.hex }}
+                aria-label={`Linienfarbe ${c.name}`}
+                aria-pressed={v.color.toLowerCase() === c.hex.toLowerCase()}
+                title={c.name}
+                onClick={() => commit({ color: c.hex })}
+              />
+            ))}
+          </div>
+        </div>
         <div className="field">
           <span>Zeitraum</span>
           <RangePicker label="Zeitraum" timePoints={book.timePoints} value={v.range} onChange={(range) => commit({ range })} />

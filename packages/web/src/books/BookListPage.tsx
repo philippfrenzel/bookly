@@ -34,61 +34,66 @@ export function BookListPage() {
   };
 
   return (
-    <main className="page">
-      <header className="page-header">
-        <h1>Meine Bücher</h1>
-        <span className="muted">{me.data?.displayName}</span>
-        <button type="button" onClick={() => logout.mutate(undefined, { onSuccess: () => navigate('/login') })}>
+    <>
+      <header className="app-header">
+        <span className="wordmark">Bookly</span>
+        <span className="header-spacer" />
+        <span className="user-name">{me.data?.displayName}</span>
+        <button type="button" className="header-quiet" onClick={() => logout.mutate(undefined, { onSuccess: () => navigate('/login') })}>
           Abmelden
         </button>
       </header>
+      <main className="page">
+        <div className="page-title">
+          <h1>Meine Bücher</h1>
+          {adding ? (
+            <form className="inline-form" onSubmit={submit}>
+              <label>
+                Titel
+                <input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus maxLength={200} />
+              </label>
+              <button type="submit" className="primary" disabled={create.isPending}>
+                Anlegen
+              </button>
+              <button type="button" onClick={() => setAdding(false)}>
+                Abbrechen
+              </button>
+            </form>
+          ) : (
+            <button type="button" className="primary" onClick={() => setAdding(true)}>
+              Neues Buch
+            </button>
+          )}
+        </div>
+        {create.isError && (
+          <p className="error" role="alert">
+            Das Buch konnte nicht angelegt werden.
+          </p>
+        )}
 
-      {adding ? (
-        <form className="inline-form" onSubmit={submit}>
-          <label>
-            Titel
-            <input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus maxLength={200} />
-          </label>
-          <button type="submit" className="primary" disabled={create.isPending}>
-            Anlegen
-          </button>
-          <button type="button" onClick={() => setAdding(false)}>
-            Abbrechen
-          </button>
-        </form>
-      ) : (
-        <button type="button" className="primary" onClick={() => setAdding(true)}>
-          Neues Buch
-        </button>
-      )}
-      {create.isError && (
-        <p className="error" role="alert">
-          Das Buch konnte nicht angelegt werden.
-        </p>
-      )}
-
-      {fb.feedback}
-      {books.isPending && <p className="muted">Laden …</p>}
-      {books.isError && <p className="error">Bücher konnten nicht geladen werden.</p>}
-      {books.data && books.data.length === 0 && <p className="muted">Noch keine Bücher. Lege dein erstes an.</p>}
-      <ul className="book-list">
-        {books.data?.map((b) => (
-          <BookRow
-            key={b.id}
-            book={b}
-            resetKey={fb.resetKey}
-            onRename={(id, next) => {
-              fb.clear();
-              rename.mutate({ id, title: next }, { onError: fb.onError });
-            }}
-            onDelete={(id) => {
-              fb.clear();
-              remove.mutate({ id }, { onError: fb.onError });
-            }}
-          />
-        ))}
-      </ul>
-    </main>
+        {fb.feedback}
+        {books.isPending && <p className="muted">Laden …</p>}
+        {books.isError && <p className="error">Bücher konnten nicht geladen werden.</p>}
+        {books.data && books.data.length === 0 && <p className="muted">Noch keine Bücher. Lege dein erstes an.</p>}
+        <ul className="book-list">
+          {books.data?.map((b) => (
+            <BookRow
+              key={b.id}
+              book={b}
+              resetKey={fb.resetKey}
+              onRename={(id, next) => {
+                fb.clear();
+                rename.mutate({ id, title: next }, { onError: fb.onError });
+              }}
+              onDelete={(id) => {
+                fb.clear();
+                remove.mutate({ id }, { onError: fb.onError });
+              }}
+            />
+          ))}
+        </ul>
+      </main>
+    </>
   );
 }
 
@@ -125,7 +130,10 @@ function BookRow({ book, resetKey, onRename, onDelete }: RowProps) {
           }}
         />
       ) : (
-        <Link to={`/books/${book.id}`}>{book.title}</Link>
+        <Link to={`/books/${book.id}`}>
+          <span className="route-mark" aria-hidden="true" />
+          {book.title}
+        </Link>
       )}
       <span className="muted">
         {book.storylineCount} {book.storylineCount === 1 ? 'Handlungsstrang' : 'Handlungsstränge'}

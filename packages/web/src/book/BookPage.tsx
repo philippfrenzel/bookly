@@ -1,11 +1,12 @@
 /** Book page: header, storyline map slot and the side area with time point, character and storyline panels. */
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import type { Book, TimeRange } from '@bookly/shared';
+import type { Book, Id, TimeRange } from '@bookly/shared';
 import { ApiError } from '../api/client';
 import { useBook } from '../api/hooks';
 import { ConnectionDialog, type ConnectionTarget } from '../connection/ConnectionDialog';
 import { FilterBar } from '../map/FilterBar';
+import { LineLegend } from '../map/LineLegend';
 import { applyFilters, toMapFilter, useStoredFilters } from '../map/filters';
 import { StorylineMap, type StorylineMapProps } from '../map/StorylineMap';
 import { StorylinePanel, type PanelTarget } from '../storyline/StorylinePanel';
@@ -36,13 +37,28 @@ export function BookPage() {
 
   return (
     <div className="book-page">
-      <header className="page-header">
-        <Link to="/">← Meine Bücher</Link>
+      <header className="app-header">
+        <Link to="/" className="wordmark">Bookly</Link>
+        <nav className="crumbs" aria-label="Pfad">
+          <Link to="/">Meine Bücher</Link>
+          {book && <span aria-hidden="true">/</span>}
+        </nav>
         {book && <h1>{book.title}</h1>}
+        {book && (
+          <button
+            type="button"
+            className="primary header-action"
+            disabled={book.timePoints.length === 0}
+            title={book.timePoints.length === 0 ? 'Lege zuerst Zeitpunkte an.' : undefined}
+            onClick={() => startCreate()}
+          >
+            Neue Storyline
+          </button>
+        )}
       </header>
-      {query.isPending && <p className="muted">Laden …</p>}
+      {query.isPending && <p className="muted page-status">Laden …</p>}
       {query.isError && (
-        <p className="error" role="alert">
+        <p className="error page-status" role="alert">
           {query.error instanceof ApiError && query.error.status === 404
             ? 'Buch nicht gefunden.'
             : 'Das Buch konnte nicht geladen werden.'}
@@ -51,16 +67,6 @@ export function BookPage() {
       {book && (
         <div className="book-layout">
           <main>
-            <div className="map-toolbar">
-              <button
-                type="button"
-                disabled={book.timePoints.length === 0}
-                title={book.timePoints.length === 0 ? 'Lege zuerst Zeitpunkte an.' : undefined}
-                onClick={() => startCreate()}
-              >
-                Neue Storyline
-              </button>
-            </div>
             <section aria-label="Storyline-Karte">
               <FilteredMap
                 key={book.id}
@@ -95,11 +101,13 @@ function FilteredMap(props: Omit<StorylineMapProps, 'filter' | 'showNotes'> & { 
   const { book } = props;
   const [state, setState] = useStoredFilters(book.id, book);
   const filter = useMemo(() => toMapFilter(state, book.timePoints), [state, book.timePoints]);
-  const visibleCount = useMemo(() => applyFilters(book, filter).size, [book, filter]);
+  const visibleIds = useMemo(() => applyFilters(book, filter), [book, filter]);
+  const [highlightId, setHighlightId] = useState<Id | null>(null);
   return (
     <>
-      <FilterBar book={book} state={state} onChange={setState} visibleCount={visibleCount} />
-      <StorylineMap {...props} filter={filter} showNotes={state.showNotes} />
+      <LineLegend book={book} visibleIds={visibleIds} selectedId={props.selectedId} onSelect={props.onSelectStoryline} onHighlight={setHighlightId} />
+      <FilterBar book={book} state={state} onChange={setState} visibleCount={visibleIds.size} />
+      <StorylineMap {...props} filter={filter} showNotes={state.showNotes} highlightId={highlightId} />
     </>
   );
 }

@@ -46,7 +46,7 @@ describe('StorylineMap', () => {
   it('shows time point names and the status symbol', () => {
     render(<StorylineMap book={sampleBook()} hints={[]} selectedId={null} onSelectStoryline={() => {}} />);
     expect(screen.getByText('Mitte')).toBeInTheDocument();
-    expect(screen.getByText('✎')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Status: in Bearbeitung' })).toBeInTheDocument();
   });
 
   it('selects a storyline on click and Enter', async () => {
