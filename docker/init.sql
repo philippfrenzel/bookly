@@ -1,0 +1,2 @@
+CREATE DATABASE bookly_test;
+CREATE DATABASE bookly_e2e;
