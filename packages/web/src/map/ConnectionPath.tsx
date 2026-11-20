@@ -53,6 +53,7 @@ export function ConnectionPath({ connection: c, from, to, fromLane, toLane, idx,
   return (
     <g
       className="connection-path"
+      data-hint-state={!warned ? 'none' : open ? 'open' : 'acknowledged'}
       role="button"
       tabIndex={0}
       aria-label={`Verbindung „${from.title}“ → „${to.title}“`}
