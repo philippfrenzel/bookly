@@ -5,7 +5,6 @@ import { ReorderBody, TimePointCreateBody, TimePointPatchBody, timePointUsages }
 import type { Id, TimePointUsage } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
 import { loadBook, type Tx } from '../db/loadBook.js';
-import { mutateBook } from '../db/mutate.js';
 import { timePoints } from '../db/schema.js';
 import { assertInBook, assertKnownRefs } from './childId.js';
 import { bookGuard } from './guard.js';
@@ -51,7 +50,7 @@ export async function timePointRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) return reply.code(400).send({ error: 'invalid_body', details: parsed.error.flatten() });
     const { bookId } = request.params as { bookId: string };
     const { name, afterId } = parsed.data;
-    const result = await mutateBook(app.db, bookId, async (tx) => {
+    const result = await app.mutate(bookId, async (tx) => {
       const ids = await orderedIds(tx, bookId);
       let index = 0;
       if (afterId !== null) {
@@ -73,7 +72,7 @@ export async function timePointRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) return reply.code(400).send({ error: 'invalid_body', details: parsed.error.flatten() });
     const { bookId, id } = request.params as { bookId: string; id: string };
     await assertInBook(app.db, timePoints, id, bookId);
-    return mutateBook(app.db, bookId, async (tx) => {
+    return app.mutate(bookId, async (tx) => {
       await tx.update(timePoints).set({ name: parsed.data.name }).where(eq(timePoints.id, id));
     });
   });
@@ -84,7 +83,7 @@ export async function timePointRoutes(app: FastifyInstance): Promise<void> {
     const { bookId } = request.params as { bookId: string };
     const { ids } = parsed.data;
     try {
-      return await mutateBook(app.db, bookId, async (tx) => {
+      return await app.mutate(bookId, async (tx) => {
         const existing = new Set(await orderedIds(tx, bookId));
         if (ids.length !== existing.size || new Set(ids).size !== ids.length || !ids.every((i) => existing.has(i))) {
           throw new InvalidOrder();
@@ -101,7 +100,7 @@ export async function timePointRoutes(app: FastifyInstance): Promise<void> {
     const { bookId, id } = request.params as { bookId: string; id: string };
     await assertInBook(app.db, timePoints, id, bookId);
     try {
-      return await mutateBook(app.db, bookId, async (tx) => {
+      return await app.mutate(bookId, async (tx) => {
         const usages = timePointUsages(await loadBook(tx, bookId), id);
         if (usages.length > 0) throw new TimePointInUse(usages);
         await tx.delete(timePoints).where(eq(timePoints.id, id));

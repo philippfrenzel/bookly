@@ -1,5 +1,5 @@
 /** TanStack Query hooks for auth, book list and the book aggregate. */
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import type { BookResponse, BookSummary, Id, SessionUser as User } from '@bookly/shared';
 import { ApiError, api } from './client';
 
@@ -66,12 +66,31 @@ export function useCreateBook() {
   });
 }
 
-/** One book aggregate with hints. */
-export function useBook(bookId: Id) {
-  return useQuery({ queryKey: ['book', bookId], queryFn: () => api<BookResponse>('GET', `/api/books/${bookId}`) });
+/** Polls every 2 s while the AI is on and any check is pending or running, otherwise not at all. */
+export function checksRefetchInterval(q: { state: { data: Pick<BookResponse, 'characterChecks' | 'ai'> | undefined } }): number | false {
+  const data = q.state.data;
+  if (!data?.ai.enabled) return false;
+  return data.characterChecks.some((c) => c.status === 'pending' || c.status === 'running') ? 2000 : false;
 }
 
-/** Generic book mutation; the BookResponse replaces the cached aggregate on success. */
+/**
+ * Cancels book fetches still in flight (e.g. a poll) so their older snapshot cannot overwrite a
+ * mutation result written to the cache; called before the mutation and again before the write.
+ */
+function cancelBookFetches(qc: QueryClient, bookId: Id): Promise<void> {
+  return qc.cancelQueries({ queryKey: ['book', bookId] });
+}
+
+/** One book aggregate with hints, polled while AI checks are in flight. */
+export function useBook(bookId: Id) {
+  return useQuery({
+    queryKey: ['book', bookId],
+    queryFn: () => api<BookResponse>('GET', `/api/books/${bookId}`),
+    refetchInterval: checksRefetchInterval,
+  });
+}
+
+/** Generic book mutation; the BookResponse replaces the cached aggregate on success, in-flight book fetches are cancelled. */
 export function useBookMutation<V>(
   bookId: Id,
   method: 'POST' | 'PATCH' | 'PUT' | 'DELETE',
@@ -81,7 +100,11 @@ export function useBookMutation<V>(
   const qc = useQueryClient();
   return useMutation<BookResponse, ApiError, V>({
     mutationFn: (vars) => api<BookResponse>(method, path(vars), body?.(vars)),
-    onSuccess: (res) => qc.setQueryData(['book', bookId], res),
+    onMutate: () => cancelBookFetches(qc, bookId),
+    onSuccess: async (res) => {
+      await cancelBookFetches(qc, bookId);
+      qc.setQueryData(['book', bookId], res);
+    },
   });
 }
 
@@ -90,7 +113,9 @@ export function useRenameBook() {
   const qc = useQueryClient();
   return useMutation<BookResponse, ApiError, { id: Id; title: string }>({
     mutationFn: (v) => api<BookResponse>('PATCH', `/api/books/${v.id}`, { title: v.title }),
-    onSuccess: (res) => {
+    onMutate: (v) => cancelBookFetches(qc, v.id),
+    onSuccess: async (res) => {
+      await cancelBookFetches(qc, res.book.id);
       qc.setQueryData(['book', res.book.id], res);
       return qc.invalidateQueries({ queryKey: ['books'] });
     },

@@ -4,6 +4,7 @@
  * Assumes the book already passed validation, so all references exist.
  */
 import type { Acknowledgement, Book, Connection, HintRule, Id, Storyline } from './domain.js';
+import { characterLabel } from './criteria.js';
 import { bounds, orderIndex, overlaps, touches } from './ranges.js';
 
 export interface Hint {
@@ -32,7 +33,7 @@ export function checkConnection(book: Book, c: Connection): Hint[] {
   const b = book.storylines.find((s) => s.id === c.toId);
   if (!a || !b) return [];
   const idx = orderIndex(book.timePoints);
-  const nameOf = (id: Id) => book.characters.find((ch) => ch.id === id)?.name ?? id;
+  const nameOf = (id: Id) => characterLabel(book.characters.find((ch) => ch.id === id));
   const hints: Hint[] = [];
   const add = (rule: HintRule, characterId: Id | null, message: string) =>
     hints.push({ connectionId: c.id, rule, characterId, message, acknowledged: false });

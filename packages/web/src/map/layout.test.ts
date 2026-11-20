@@ -9,7 +9,7 @@ const idx = orderIndex(timePoints);
 function make(id: string, kind: 'main' | 'side', s: number, e: number, title = id): Storyline {
   return {
     id, title, description: '', characterIds: [], range: { startId: `t${s}`, endId: `t${e}` },
-    kind, status: 'in_progress', color: '#2B59C3', note: null, sections: [],
+    kind, status: 'in_progress', color: '#2B59C3', note: null, additions: [], sections: [],
   };
 }
 

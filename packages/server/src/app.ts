@@ -1,6 +1,9 @@
 /** Fastify application factory. */
 import cookie from '@fastify/cookie';
 import Fastify, { type FastifyInstance } from 'fastify';
+import { additionRoutes } from './books/additions.js';
+import { aiRoutes } from './books/aiRoutes.js';
+import { decorateMutate } from './books/mutateWithChecks.js';
 import { authRoutes } from './auth/routes.js';
 import { bookRoutes } from './books/routes.js';
 import { characterRoutes } from './books/characters.js';
@@ -9,6 +12,7 @@ import { connectionRoutes } from './books/connections.js';
 import { sectionRoutes } from './books/sections.js';
 import { storylineRoutes } from './books/storylines.js';
 import { timePointRoutes } from './books/timepoints.js';
+import type { AiClient } from './ai/client.js';
 import { createDb } from './db/client.js';
 import { NotFoundError, ValidationError } from './errors.js';
 
@@ -18,6 +22,8 @@ export interface AppConfig {
   cookieSecure: boolean;
   /** Enables the Fastify logger (default true; tests pass false). */
   logger?: boolean;
+  /** AI client; null or absent disables AI features. */
+  ai?: AiClient | null;
 }
 
 /** Builds the Fastify app (does not listen and does not run migrations). */
@@ -26,6 +32,8 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   const db = createDb(config.databaseUrl);
   app.decorate('db', db);
   app.decorate('config', config);
+  app.decorate('ai', config.ai ?? null);
+  decorateMutate(app);
   app.addHook('onClose', async () => {
     await db.$client.end();
   });
@@ -42,8 +50,10 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   await app.register(timePointRoutes);
   await app.register(characterRoutes);
   await app.register(storylineRoutes);
+  await app.register(additionRoutes);
   await app.register(sectionRoutes);
   await app.register(connectionRoutes);
   await app.register(acknowledgementRoutes);
+  await app.register(aiRoutes);
   return app;
 }

@@ -7,11 +7,11 @@ import type { Id } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
 import type { Db } from '../db/client.js';
 import type { Tx } from '../db/loadBook.js';
-import { mutateBook } from '../db/mutate.js';
 import { sectionCharacters, sections, storylines } from '../db/schema.js';
 import { NotFoundError } from '../errors.js';
 import { assertInBook, assertKnownRefs } from './childId.js';
 import { bookGuard } from './guard.js';
+import { pruneUnlinkedAcks } from './warningAcks.js';
 
 
 /** Thrown inside a reorder when the ids are not a permutation of the strand's sections. */
@@ -32,13 +32,31 @@ async function assertSectionInBook(db: Db, sectionId: string, bookId: Id): Promi
   if (!row) throw new NotFoundError();
 }
 
-/** Replaces the character set of a section. */
-async function setCharacters(tx: Tx, sectionId: Id, characterIds: Id[]): Promise<void> {
+/** Characters linked by a section. */
+async function sectionCharacterIds(tx: Tx, sectionId: Id): Promise<Id[]> {
+  const rows = await tx.select({ id: sectionCharacters.characterId }).from(sectionCharacters).where(eq(sectionCharacters.sectionId, sectionId));
+  return rows.map((r) => r.id);
+}
+
+/**
+ * Replaces the character set of a section; acks of removed characters that the storyline no longer
+ * links anywhere are deleted.
+ */
+async function setCharacters(tx: Tx, storylineId: Id, sectionId: Id, characterIds: Id[]): Promise<void> {
+  const before = await sectionCharacterIds(tx, sectionId);
   await tx.delete(sectionCharacters).where(eq(sectionCharacters.sectionId, sectionId));
   const unique = [...new Set(characterIds)];
   if (unique.length > 0) {
     await tx.insert(sectionCharacters).values(unique.map((characterId) => ({ sectionId, characterId })));
   }
+  await pruneUnlinkedAcks(tx, storylineId, before.filter((id) => !unique.includes(id)));
+}
+
+/** Storyline of a section (the section must exist). */
+async function storylineOf(tx: Tx, sectionId: Id): Promise<Id> {
+  const [row] = await tx.select({ id: sections.storylineId }).from(sections).where(eq(sections.id, sectionId));
+  if (!row) throw new NotFoundError();
+  return row.id;
 }
 
 /** Registers section routes under /api/books/:bookId. */
@@ -53,7 +71,7 @@ export async function sectionRoutes(app: FastifyInstance): Promise<void> {
     await assertInBook(app.db, storylines, storylineId, bookId);
     const d = parsed.data;
     const id = randomUUID();
-    const result = await mutateBook(app.db, bookId, async (tx) => {
+    const result = await app.mutate(bookId, async (tx) => {
       await assertKnownRefs(tx, bookId, id, {
         timePointIds: [d.range.startId, d.range.endId],
         characterIds: d.characterIds,
@@ -70,7 +88,7 @@ export async function sectionRoutes(app: FastifyInstance): Promise<void> {
         note: d.note,
         order,
       });
-      await setCharacters(tx, id, d.characterIds);
+      await setCharacters(tx, storylineId, id, d.characterIds);
     });
     return reply.code(201).send(result);
   });
@@ -81,7 +99,7 @@ export async function sectionRoutes(app: FastifyInstance): Promise<void> {
     const { bookId, sectionId } = request.params as { bookId: string; sectionId: string };
     await assertSectionInBook(app.db, sectionId, bookId);
     const d = parsed.data;
-    return mutateBook(app.db, bookId, async (tx) => {
+    return app.mutate(bookId, async (tx) => {
       await assertKnownRefs(tx, bookId, sectionId, {
         timePointIds: d.range ? [d.range.startId, d.range.endId] : [],
         characterIds: d.characterIds ?? [],
@@ -95,15 +113,18 @@ export async function sectionRoutes(app: FastifyInstance): Promise<void> {
       }
       if (d.note !== undefined) set.note = d.note;
       if (Object.keys(set).length > 0) await tx.update(sections).set(set).where(eq(sections.id, sectionId));
-      if (d.characterIds !== undefined) await setCharacters(tx, sectionId, d.characterIds);
+      if (d.characterIds !== undefined) await setCharacters(tx, await storylineOf(tx, sectionId), sectionId, d.characterIds);
     });
   });
 
   app.delete(`${base}/sections/:sectionId`, guarded, async (request) => {
     const { bookId, sectionId } = request.params as { bookId: string; sectionId: string };
     await assertSectionInBook(app.db, sectionId, bookId);
-    return mutateBook(app.db, bookId, async (tx) => {
+    return app.mutate(bookId, async (tx) => {
+      const storylineId = await storylineOf(tx, sectionId);
+      const linked = await sectionCharacterIds(tx, sectionId);
       await tx.delete(sections).where(eq(sections.id, sectionId));
+      await pruneUnlinkedAcks(tx, storylineId, linked);
     });
   });
 
@@ -114,7 +135,7 @@ export async function sectionRoutes(app: FastifyInstance): Promise<void> {
     await assertInBook(app.db, storylines, storylineId, bookId);
     const { ids } = parsed.data;
     try {
-      return await mutateBook(app.db, bookId, async (tx) => {
+      return await app.mutate(bookId, async (tx) => {
         // Lock the strand so concurrent section changes cannot slip between check and write.
         await tx.select({ id: storylines.id }).from(storylines).where(eq(storylines.id, storylineId)).for('update');
         const rows = await tx

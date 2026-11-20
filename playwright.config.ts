@@ -13,7 +13,7 @@ export default defineConfig({
       command: 'npm -w packages/server run start',
       // Unauthenticated, so it answers 401: enough to prove the server is up.
       url: 'http://localhost:3100/api/auth/me',
-      env: { DATABASE_URL: e2eDb, PORT: '3100' },
+      env: { DATABASE_URL: e2eDb, PORT: '3100', AI_FAKE: '1' },
       reuseExistingServer: false,
     },
     {

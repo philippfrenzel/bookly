@@ -9,7 +9,7 @@ const none: MapFilter = { mainOnly: false, openOnly: false, range: null, charact
 function story(over: Partial<Storyline> & Pick<Storyline, 'id'>): Storyline {
   return {
     title: over.id, description: '', characterIds: [], range: { startId: 't1', endId: 't1' }, kind: 'side',
-    status: 'in_progress', color: '#8A94A6', note: null, sections: [], ...over,
+    status: 'in_progress', color: '#8A94A6', note: null, additions: [], sections: [], ...over,
   };
 }
 

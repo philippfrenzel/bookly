@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../test/render';
 import { server } from '../test/setup';
+import { bookResponse } from '../book/testFixtures';
 
 const user = { id: 'u1', email: 'a@b.de', displayName: 'Anna' };
 const meOk = http.get('/api/auth/me', () => HttpResponse.json({ user }));
@@ -25,7 +26,7 @@ describe('BookListPage', () => {
         const { title } = (await request.json()) as { title: string };
         books.push({ id: 'b2', title, storylineCount: 0 });
         const book = { id: 'b2', title, timePoints: [], characters: [], storylines: [], connections: [], acknowledgements: [] };
-        return HttpResponse.json({ book, hints: [] }, { status: 201 });
+        return HttpResponse.json(bookResponse(book), { status: 201 });
       }),
     );
     renderApp('/');
@@ -46,7 +47,7 @@ describe('BookListPage', () => {
         bodies.push(body);
         title = body.title;
         const book = { id: 'b1', title, timePoints: [], characters: [], storylines: [], connections: [], acknowledgements: [] };
-        return HttpResponse.json({ book, hints: [] });
+        return HttpResponse.json(bookResponse(book));
       }),
     );
     renderApp('/');

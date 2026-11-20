@@ -1,4 +1,5 @@
 /** Domain types and visual constants shared by server and web. */
+import type { CharacterCriterion } from './criteria.js';
 import type { Hint } from './hints.js';
 
 export type Id = string; // uuid
@@ -7,7 +8,17 @@ export type StorylineStatus = 'in_progress' | 'completed' | 'open';
 export type ConnectionType = 'character_switch' | 'time_jump' | 'merge' | 'flashback';
 
 export interface TimePoint { id: Id; name: string; position: number }
-export interface Character { id: Id; name: string; description: string | null }
+/** Character profile; every field is optional free text. */
+export interface Character {
+  id: Id;
+  name: string | null;
+  description: string | null;
+  behavior: string | null;
+  intentions: string | null;
+}
+
+/** Per storyline–character addition to the base profile (null when empty). */
+export interface CharacterAddition { characterId: Id; behavior: string | null; intentions: string | null }
 export interface TimeRange { startId: Id; endId: Id }
 
 export interface Section {
@@ -31,6 +42,7 @@ export interface Storyline {
   status: StorylineStatus;
   color: string;
   note: string | null;
+  additions: CharacterAddition[];
   sections: Section[];
 }
 
@@ -69,8 +81,34 @@ export interface SessionUser { id: Id; email: string; displayName: string }
 /** Entry of the book list. */
 export interface BookSummary { id: Id; title: string; storylineCount: number }
 
-/** Book aggregate plus current hints, returned by every book endpoint. */
-export interface BookResponse { book: Book; hints: Hint[] }
+/** AI warning about a contradiction between a storyline and a character. */
+export interface CharacterWarning {
+  id: Id;
+  storylineId: Id;
+  characterId: Id;
+  criterion: CharacterCriterion;
+  message: string;
+  acknowledged: boolean;
+}
+
+export type CheckStatus = 'pending' | 'running' | 'done' | 'failed';
+
+/** State of the latest AI check of one storyline. */
+export interface CharacterCheck {
+  storylineId: Id;
+  status: CheckStatus;
+  finishedAt: string | null;
+  error: string | null;
+}
+
+/** Book aggregate plus hints, AI warnings and check states, returned by every book endpoint. */
+export interface BookResponse {
+  book: Book;
+  hints: Hint[];
+  characterWarnings: CharacterWarning[];
+  characterChecks: CharacterCheck[];
+  ai: { enabled: boolean };
+}
 
 /** Label, color and symbol used to display each storyline status. */
 export const STATUS_STYLE: Record<StorylineStatus, { label: string; color: string; symbol: string }> = {

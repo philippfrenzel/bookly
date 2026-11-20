@@ -27,8 +27,8 @@ export async function seedStoryline(
   return row!.id;
 }
 
-/** Inserts a character and returns its id. */
-export async function seedCharacter(app: FastifyInstance, bookId: Id, name = 'Figur'): Promise<Id> {
+/** Inserts a character (name may be null for an unnamed one) and returns its id. */
+export async function seedCharacter(app: FastifyInstance, bookId: Id, name: string | null = 'Figur'): Promise<Id> {
   const [row] = await app.db.insert(characters).values({ bookId, name }).returning({ id: characters.id });
   return row!.id;
 }

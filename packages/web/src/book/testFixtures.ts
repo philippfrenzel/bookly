@@ -1,6 +1,6 @@
 /** Test fixtures: a small book and msw handlers for the book page. */
 import { http, HttpResponse } from 'msw';
-import type { Book } from '@bookly/shared';
+import type { Book, BookResponse } from '@bookly/shared';
 
 /** Signed-in user handler. */
 export const meOk = http.get('/api/auth/me', () =>
@@ -18,14 +18,14 @@ export function sampleBook(): Book {
       { id: 't3', name: 'Ende', position: 2 },
     ],
     characters: [
-      { id: 'c1', name: 'Mira', description: 'Kapitänin' },
-      { id: 'c2', name: 'Jon', description: null },
+      { id: 'c1', name: 'Mira', description: 'Kapitänin', behavior: null, intentions: null },
+      { id: 'c2', name: 'Jon', description: null, behavior: null, intentions: null },
     ],
     storylines: [
       {
         id: 's1', title: 'Hauptstrang', description: '', characterIds: ['c1'],
         range: { startId: 't1', endId: 't2' }, kind: 'main', status: 'in_progress',
-        color: '#2B59C3', note: null, sections: [],
+        color: '#2B59C3', note: null, additions: [], sections: [],
       },
     ],
     connections: [],
@@ -33,5 +33,11 @@ export function sampleBook(): Book {
   };
 }
 
+/** Full book response with no hints or warnings; override fields as needed. */
+export function bookResponse(book: Book, extra: Partial<Omit<BookResponse, 'book'>> = {}): BookResponse {
+  return { book, hints: [], characterWarnings: [], characterChecks: [], ai: { enabled: true }, ...extra };
+}
+
 /** GET handler serving the given book. */
-export const bookOk = (book: Book) => http.get('/api/books/b1', () => HttpResponse.json({ book, hints: [] }));
+export const bookOk = (book: Book, extra: Partial<Omit<BookResponse, 'book'>> = {}) =>
+  http.get('/api/books/b1', () => HttpResponse.json(bookResponse(book, extra)));

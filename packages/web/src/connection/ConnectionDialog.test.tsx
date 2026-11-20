@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import type { Book } from '@bookly/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { bookOk, meOk, sampleBook } from '../book/testFixtures';
+import { bookOk, meOk, sampleBook, bookResponse } from '../book/testFixtures';
 import { renderApp } from '../test/render';
 import { server } from '../test/setup';
 
@@ -13,7 +13,7 @@ function twoStrands(): Book {
   const book = sampleBook();
   book.storylines.push({
     id: 's2', title: 'Früh', description: '', characterIds: ['c1'], range: { startId: 't1', endId: 't1' },
-    kind: 'side', status: 'open', color: '#8A94A6', note: null, sections: [],
+    kind: 'side', status: 'open', color: '#8A94A6', note: null, additions: [], sections: [],
   });
   return book;
 }
@@ -37,7 +37,7 @@ describe('ConnectionDialog', () => {
       bookOk(twoStrands()),
       http.post('/api/books/b1/connections', async ({ request }) => {
         bodies.push(await request.json());
-        return HttpResponse.json({ book: twoStrands(), hints: [] }, { status: 201 });
+        return HttpResponse.json(bookResponse(twoStrands()), { status: 201 });
       }),
     );
     renderApp('/books/b1');
@@ -69,7 +69,7 @@ describe('ConnectionDialog', () => {
       bookOk(book),
       http.post('/api/books/b1/acknowledgements', async ({ request }) => {
         bodies.push(await request.json());
-        return HttpResponse.json({ book, hints: [] });
+        return HttpResponse.json(bookResponse(book));
       }),
     );
     renderApp('/books/b1');
@@ -93,7 +93,7 @@ describe('ConnectionDialog', () => {
       bookOk(book),
       http.delete('/api/books/b1/connections/k1', () => {
         deletes += 1;
-        return HttpResponse.json({ book: twoStrands(), hints: [] });
+        return HttpResponse.json(bookResponse(twoStrands()));
       }),
     );
     renderApp('/books/b1');
@@ -127,7 +127,7 @@ describe('ConnectionDialog', () => {
       bookOk(book),
       http.delete('/api/books/b1/acknowledgements', async ({ request }) => {
         bodies.push(await request.json());
-        return HttpResponse.json({ book, hints: [] });
+        return HttpResponse.json(bookResponse(book));
       }),
     );
     renderApp('/books/b1');

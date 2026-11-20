@@ -11,14 +11,14 @@ function section(id: string, start: string, end: string, over: Partial<Section> 
 function storyline(over: Partial<Storyline> = {}): Storyline {
   return {
     id: 's1', title: 'Annas Flucht', description: '', characterIds: ['c1'], range: { startId: 'T0', endId: 'T4' },
-    kind: 'main', status: 'in_progress', color: '#2B59C3', note: null, sections: [], ...over,
+    kind: 'main', status: 'in_progress', color: '#2B59C3', note: null, additions: [], sections: [], ...over,
   };
 }
 
 function book(over: Partial<Book> = {}): Book {
   return {
     id: 'b1', title: 'Buch', timePoints: [0, 1, 2, 3, 4].map(tp),
-    characters: [{ id: 'c1', name: 'Anna', description: null }],
+    characters: [{ id: 'c1', name: 'Anna', description: null, behavior: null, intentions: null }],
     storylines: [storyline({ sections: [section('x1', 'T0', 'T2', { title: 'Aufbruch' })] }), storyline({ id: 's2', title: 'Neben', kind: 'side' })],
     connections: [{ id: 'k1', fromId: 's1', toId: 's2', type: 'time_jump', label: null, characterId: null }],
     acknowledgements: [], ...over,

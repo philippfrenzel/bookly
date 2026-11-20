@@ -6,7 +6,7 @@ const tp = (i: number) => ({ id: `T${i}`, name: `Zeit ${i}`, position: i * 10 })
 const r = (s: number, e: number) => ({ startId: `T${s}`, endId: `T${e}` });
 
 function line(id: string, title: string, range: [number, number], characterIds: string[] = [], sections: Section[] = []): Storyline {
-  return { id, title, description: '', characterIds, range: r(...range), kind: 'main', status: 'in_progress', color: '#2B59C3', note: null, sections };
+  return { id, title, description: '', characterIds, range: r(...range), kind: 'main', status: 'in_progress', color: '#2B59C3', note: null, additions: [], sections };
 }
 
 function conn(type: Connection['type'], characterId: string | null = null): Connection {
@@ -17,8 +17,8 @@ function mk(a: Storyline, b: Storyline, c: Connection, acknowledgements: Acknowl
   return {
     id: 'b1', title: 'Buch', timePoints: [0, 1, 2, 3, 4, 5].map(tp),
     characters: [
-      { id: 'F1', name: 'Zora', description: null },
-      { id: 'F2', name: 'Anna', description: null },
+      { id: 'F1', name: 'Zora', description: null, behavior: null, intentions: null },
+      { id: 'F2', name: 'Anna', description: null, behavior: null, intentions: null },
     ],
     storylines: [a, b], connections: [c], acknowledgements,
   };

@@ -1,29 +1,44 @@
 /** Storyline routes: create, update (with main-to-side section conversion), delete. */
 import { randomUUID } from 'node:crypto';
-import { asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import { KIND_DEFAULT_COLOR, StorylineCreateBody, StorylinePatchBody } from '@bookly/shared';
+import { KIND_DEFAULT_COLOR, characterLabel, StorylineCreateBody, StorylinePatchBody } from '@bookly/shared';
 import type { Id } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
 import type { Tx } from '../db/loadBook.js';
-import { mutateBook } from '../db/mutate.js';
 import { characters, sectionCharacters, sections, storylineCharacters, storylines, timePoints } from '../db/schema.js';
 import { NotFoundError } from '../errors.js';
 import { assertInBook, assertKnownRefs } from './childId.js';
 import { bookGuard } from './guard.js';
+import { pruneUnlinkedAcks } from './warningAcks.js';
 
-/** Replaces the character set of a storyline. */
+/**
+ * Makes the storyline's character set equal to `characterIds`. New links are inserted, removed links
+ * are deleted together with their warning acknowledgements unless a section still links the
+ * character; retained links keep their additions.
+ */
 async function setCharacters(tx: Tx, storylineId: Id, characterIds: Id[]): Promise<void> {
-  await tx.delete(storylineCharacters).where(eq(storylineCharacters.storylineId, storylineId));
-  const unique = [...new Set(characterIds)];
-  if (unique.length > 0) {
-    await tx.insert(storylineCharacters).values(unique.map((characterId) => ({ storylineId, characterId })));
+  const wanted = new Set(characterIds);
+  const existing = (
+    await tx.select({ id: storylineCharacters.characterId }).from(storylineCharacters).where(eq(storylineCharacters.storylineId, storylineId))
+  ).map((r) => r.id);
+  const removed = existing.filter((id) => !wanted.has(id));
+  if (removed.length > 0) {
+    await tx
+      .delete(storylineCharacters)
+      .where(and(eq(storylineCharacters.storylineId, storylineId), inArray(storylineCharacters.characterId, removed)));
+    await pruneUnlinkedAcks(tx, storylineId, removed);
+  }
+  const have = new Set(existing);
+  const added = [...wanted].filter((id) => !have.has(id));
+  if (added.length > 0) {
+    await tx.insert(storylineCharacters).values(added.map((characterId) => ({ storylineId, characterId })));
   }
 }
 
 /**
- * Renders the storyline's sections as note blocks and deletes them. Returns the blocks joined by a
- * blank line, or null when there were no sections.
+ * Renders the storyline's sections as note blocks and deletes them (with the acks of characters
+ * only they linked). Returns the blocks joined by a blank line, or null when there were no sections.
  */
 async function sectionsToNote(tx: Tx, storylineId: Id, bookId: Id): Promise<string | null> {
   const rows = await tx.select().from(sections).where(eq(sections.storylineId, storylineId)).orderBy(asc(sections.order));
@@ -36,7 +51,7 @@ async function sectionsToNote(tx: Tx, storylineId: Id, bookId: Id): Promise<stri
   const ids = rows.map((s) => s.id);
   const charNames = new Map(
     (await tx.select({ id: characters.id, name: characters.name }).from(characters).where(eq(characters.bookId, bookId))).map(
-      (c) => [c.id, c.name] as const,
+      (c) => [c.id, characterLabel(c)] as const,
     ),
   );
   const charsBySection = new Map<Id, Id[]>();
@@ -47,13 +62,14 @@ async function sectionsToNote(tx: Tx, storylineId: Id, bookId: Id): Promise<stri
     const head = `Abschnitt: ${s.title} (${names.get(s.startId)} – ${names.get(s.endId)})`;
     const lines = [head];
     if (s.description !== '') lines.push(s.description);
-    const who = (charsBySection.get(s.id) ?? []).map((c) => charNames.get(c)).filter(Boolean);
+    const who = (charsBySection.get(s.id) ?? []).map((c) => charNames.get(c)).filter((n) => n !== undefined);
     if (who.length > 0) lines.push(`Figuren: ${who.join(', ')}`);
     if (s.note) lines.push(s.note);
     return lines.join('\n');
   });
   await tx.delete(sectionCharacters).where(inArray(sectionCharacters.sectionId, ids));
   await tx.delete(sections).where(eq(sections.storylineId, storylineId));
+  await pruneUnlinkedAcks(tx, storylineId, [...charsBySection.values()].flat());
   return blocks.join('\n\n');
 }
 
@@ -68,7 +84,7 @@ export async function storylineRoutes(app: FastifyInstance): Promise<void> {
     const { bookId } = request.params as { bookId: string };
     const d = parsed.data;
     const id = randomUUID();
-    const result = await mutateBook(app.db, bookId, async (tx) => {
+    const result = await app.mutate(bookId, async (tx) => {
       await assertKnownRefs(tx, bookId, id, {
         timePointIds: [d.range.startId, d.range.endId],
         characterIds: d.characterIds,
@@ -96,7 +112,7 @@ export async function storylineRoutes(app: FastifyInstance): Promise<void> {
     const { bookId, id } = request.params as { bookId: string; id: string };
     await assertInBook(app.db, storylines, id, bookId);
     const d = parsed.data;
-    return mutateBook(app.db, bookId, async (tx) => {
+    return app.mutate(bookId, async (tx) => {
       const [current] = await tx.select().from(storylines).where(eq(storylines.id, id));
       if (!current) throw new NotFoundError();
       await assertKnownRefs(tx, bookId, id, {
@@ -135,7 +151,7 @@ export async function storylineRoutes(app: FastifyInstance): Promise<void> {
     const { bookId, id } = request.params as { bookId: string; id: string };
     await assertInBook(app.db, storylines, id, bookId);
     // Sections, character links and connections are removed by foreign key cascades.
-    return mutateBook(app.db, bookId, async (tx) => {
+    return app.mutate(bookId, async (tx) => {
       await tx.delete(storylines).where(eq(storylines.id, id));
     });
   });

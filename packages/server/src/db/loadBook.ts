@@ -1,5 +1,5 @@
 /** Loads a complete book aggregate from the database. */
-import { asc, eq, inArray } from 'drizzle-orm';
+import { asc, eq, inArray, sql } from 'drizzle-orm';
 import type { Book, ConnectionType, HintRule, Id, StorylineKind, StorylineStatus } from '@bookly/shared';
 import { NotFoundError } from '../errors.js';
 import type { Db } from './client.js';
@@ -39,7 +39,7 @@ export async function loadBook(db: Db | Tx, bookId: Id): Promise<Book> {
     .select()
     .from(characters)
     .where(eq(characters.bookId, bookId))
-    .orderBy(asc(characters.name), asc(characters.id));
+    .orderBy(sql`${characters.name} asc nulls last`, asc(characters.id));
   const lines = await db
     .select()
     .from(storylines)
@@ -72,12 +72,23 @@ export async function loadBook(db: Db | Tx, bookId: Id): Promise<Book> {
     id: book.id,
     title: book.title,
     timePoints: tps.map((t) => ({ id: t.id, name: t.name, position: t.position })),
-    characters: chars.map((c) => ({ id: c.id, name: c.name, description: c.description })),
+    characters: chars.map((c) => ({
+      id: c.id,
+      name: c.name,
+      description: c.description,
+      behavior: c.behavior,
+      intentions: c.intentions,
+    })),
     storylines: lines.map((l) => ({
       id: l.id,
       title: l.title,
       description: l.description,
       characterIds: (lineCharsBy.get(l.id) ?? []).map((r) => r.characterId),
+      additions: (lineCharsBy.get(l.id) ?? []).map((r) => ({
+        characterId: r.characterId,
+        behavior: r.behavior,
+        intentions: r.intentions,
+      })),
       range: { startId: l.startId, endId: l.endId },
       kind: l.kind as StorylineKind,
       status: l.status as StorylineStatus,

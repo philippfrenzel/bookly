@@ -4,7 +4,6 @@ import type { FastifyInstance } from 'fastify';
 import { AcknowledgementBody, checkBook, hintKey } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
 import { loadBook } from '../db/loadBook.js';
-import { mutateBook } from '../db/mutate.js';
 import { acknowledgements, connections } from '../db/schema.js';
 import { assertInBook } from './childId.js';
 import { bookGuard } from './guard.js';
@@ -23,7 +22,7 @@ export async function acknowledgementRoutes(app: FastifyInstance): Promise<void>
     const wanted = hintKey(d);
     const hints = checkBook(await loadBook(app.db, bookId));
     if (!hints.some((h) => hintKey(h) === wanted)) return reply.code(400).send({ error: 'no_such_hint' });
-    return mutateBook(app.db, bookId, async (tx) => {
+    return app.mutate(bookId, async (tx) => {
       await tx
         .insert(acknowledgements)
         .values({ connectionId: d.connectionId, rule: d.rule, characterId: d.characterId })
@@ -37,7 +36,7 @@ export async function acknowledgementRoutes(app: FastifyInstance): Promise<void>
     const { bookId } = request.params as { bookId: string };
     const d = parsed.data;
     await assertInBook(app.db, connections, d.connectionId, bookId);
-    return mutateBook(app.db, bookId, async (tx) => {
+    return app.mutate(bookId, async (tx) => {
       await tx
         .delete(acknowledgements)
         .where(

@@ -2,11 +2,12 @@
 import { useState } from 'react';
 import {
   KIND_DEFAULT_COLOR, STATUS_STYLE, type Book, type Id, type Storyline, type StorylineKind, type StorylineStatus,
-  type TimeRange, type BookResponse,
+  type TimeRange, type BookResponse, type CharacterCheck,
 } from '@bookly/shared';
 import { useBookMutation } from '../api/hooks';
 import { useSaveFeedback } from '../book/saveFeedback';
 import { CharacterChecks } from './CharacterChecks';
+import { CheckStatus } from './CheckStatus';
 import { noteOrNull, validateWithStoryline } from './draft';
 import { ColorInput, TextInput } from './fields';
 import { RangePicker } from './RangePicker';
@@ -27,6 +28,9 @@ interface Props {
   onTarget: (target: PanelTarget) => void;
   /** Opens the connection dialog from the given storyline to another. */
   onConnect?: (fromId: Id, toId: Id) => void;
+  /** AI check rows of the book; the one of the shown storyline drives the status line. */
+  checks?: CharacterCheck[];
+  aiEnabled?: boolean;
 }
 
 /** Form values: the local draft when creating, a view of the stored storyline when editing. */
@@ -44,7 +48,7 @@ interface Draft {
 const DRAFT_ID = 'draft';
 
 /** Picks the form for the target, or a hint when nothing is selected. */
-export function StorylinePanel({ book, target, onTarget, onConnect }: Props) {
+export function StorylinePanel({ book, target, onTarget, onConnect, checks = [], aiEnabled = false }: Props) {
   if (target?.mode === 'create') {
     const first = [...book.timePoints].sort((a, b) => a.position - b.position)[0];
     if (!first) return <p className="muted">Lege zuerst Zeitpunkte an.</p>;
@@ -52,7 +56,7 @@ export function StorylinePanel({ book, target, onTarget, onConnect }: Props) {
     const draft: Draft = {
       title: '', description: '', kind: 'main', status: 'in_progress', color: nextLineColor(book, 'main'), range, characterIds: [], note: '',
     };
-    return <StorylineForm key={`new-${target.nonce}`} book={book} initial={draft} storyline={null} onTarget={onTarget} />;
+    return <StorylineForm key={`new-${target.nonce}`} book={book} initial={draft} storyline={null} onTarget={onTarget} aiEnabled={aiEnabled} />;
   }
   const storyline = target?.mode === 'edit' ? book.storylines.find((s) => s.id === target.id) : undefined;
   if (!storyline) return <p className="muted">Wähle eine Storyline in der Karte oder lege eine neue an.</p>;
@@ -60,7 +64,12 @@ export function StorylinePanel({ book, target, onTarget, onConnect }: Props) {
     title: storyline.title, description: storyline.description, kind: storyline.kind, status: storyline.status,
     color: storyline.color, range: storyline.range, characterIds: storyline.characterIds, note: storyline.note ?? '',
   };
-  return <StorylineForm key={storyline.id} book={book} initial={draft} storyline={storyline} onTarget={onTarget} onConnect={onConnect} />;
+  return (
+    <StorylineForm
+      key={storyline.id} book={book} initial={draft} storyline={storyline} onTarget={onTarget} onConnect={onConnect}
+      check={checks.find((c) => c.storylineId === storyline.id)} aiEnabled={aiEnabled}
+    />
+  );
 }
 
 interface FormProps {
@@ -70,11 +79,15 @@ interface FormProps {
   storyline: Storyline | null;
   onTarget: (target: PanelTarget) => void;
   onConnect?: (fromId: Id, toId: Id) => void;
+  check?: CharacterCheck;
+  aiEnabled: boolean;
 }
 
 /** The form itself; remounted (by key) whenever the target changes. Create: local draft + „Anlegen“. Edit: direct saves. */
-function StorylineForm({ book, initial, storyline, onTarget, onConnect }: FormProps) {
+function StorylineForm({ book, initial, storyline, onTarget, onConnect, check, aiEnabled }: FormProps) {
   const [draft, setDraft] = useState(initial);
+  // Bumped after a saved title/description/note change; open addition editors then ask for a new suggestion.
+  const [suggestTick, setSuggestTick] = useState(0);
   const fb = useSaveFeedback();
   const base = `/api/books/${book.id}/storylines`;
   const editing = storyline !== null;
@@ -112,7 +125,11 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect }: FormPr
       return;
     }
     fb.clear();
-    update.mutate(bodyOf(patch), { onError: fb.onError });
+    const textChange = patch.title !== undefined || patch.description !== undefined || patch.note !== undefined;
+    update.mutate(bodyOf(patch), {
+      onError: fb.onError,
+      onSuccess: () => { if (textChange) setSuggestTick((t) => t + 1); },
+    });
   };
 
   /** Create mode edits the draft; edit mode saves directly. */
@@ -140,7 +157,7 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect }: FormPr
     const title = draft.title.trim();
     const candidate: Storyline = {
       id: DRAFT_ID, title, description: draft.description, characterIds: draft.characterIds, range: draft.range,
-      kind: draft.kind, status: draft.status, color: draft.color, note: noteOrNull(draft.note), sections: [],
+      kind: draft.kind, status: draft.status, color: draft.color, note: noteOrNull(draft.note), additions: [], sections: [],
     };
     const found = validateWithStoryline(book, candidate);
     if (found.length > 0) {
@@ -236,7 +253,11 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect }: FormPr
         </div>
         <fieldset>
           <legend>Figuren</legend>
-          <CharacterChecks characters={book.characters} value={v.characterIds} onChange={(characterIds) => commit({ characterIds })} />
+          {storyline && <CheckStatus bookId={book.id} storylineId={storyline.id} check={check} aiEnabled={aiEnabled} />}
+          <CharacterChecks
+            characters={book.characters} value={v.characterIds} onChange={(characterIds) => commit({ characterIds })}
+            storyline={storyline ?? undefined} bookId={book.id} aiEnabled={aiEnabled} suggestTick={suggestTick}
+          />
         </fieldset>
         <label>
           Notiz
