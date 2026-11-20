@@ -18,7 +18,13 @@ export async function characterRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) return reply.code(400).send({ error: 'invalid_body', details: parsed.error.flatten() });
     const { bookId } = request.params as { bookId: string };
     const result = await mutateBook(app.db, bookId, async (tx) => {
-      await tx.insert(characters).values({ bookId, name: parsed.data.name, description: parsed.data.description ?? null });
+      await tx.insert(characters).values({
+        bookId,
+        name: parsed.data.name ?? null,
+        description: parsed.data.description ?? null,
+        behavior: parsed.data.behavior ?? null,
+        intentions: parsed.data.intentions ?? null,
+      });
     });
     return reply.code(201).send(result);
   });
@@ -29,8 +35,15 @@ export async function characterRoutes(app: FastifyInstance): Promise<void> {
     const { bookId, id } = request.params as { bookId: string; id: string };
     await assertInBook(app.db, characters, id, bookId);
     return mutateBook(app.db, bookId, async (tx) => {
-      const set: { name: string; description?: string | null } = { name: parsed.data.name };
-      if (parsed.data.description !== undefined) set.description = parsed.data.description;
+      // Omitted fields stay unchanged; null clears.
+      const { name, description, behavior, intentions } = parsed.data;
+      const set = {
+        ...(name !== undefined && { name }),
+        ...(description !== undefined && { description }),
+        ...(behavior !== undefined && { behavior }),
+        ...(intentions !== undefined && { intentions }),
+      };
+      if (Object.keys(set).length === 0) return;
       await tx.update(characters).set(set).where(eq(characters.id, id));
     });
   });

@@ -51,8 +51,10 @@ export const characters = pgTable('characters', {
   bookId: uuid('book_id')
     .notNull()
     .references(() => books.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(),
+  name: text('name'),
   description: text('description'),
+  behavior: text('behavior'),
+  intentions: text('intentions'),
 });
 
 export const storylines = pgTable('storylines', {
@@ -100,6 +102,8 @@ export const storylineCharacters = pgTable(
     characterId: uuid('character_id')
       .notNull()
       .references(() => characters.id, { onDelete: 'cascade' }),
+    behavior: text('behavior'),
+    intentions: text('intentions'),
   },
   (t) => [primaryKey({ columns: [t.storylineId, t.characterId] })],
 );
@@ -150,4 +154,47 @@ export const acknowledgements = pgTable(
       sql`coalesce(${t.characterId}, '00000000-0000-0000-0000-000000000000'::uuid)`,
     ),
   ],
+);
+
+/** Latest AI check state per storyline; `inputHash` is the hash of the last attempted input. */
+export const characterChecks = pgTable('character_checks', {
+  storylineId: uuid('storyline_id')
+    .primaryKey()
+    .references(() => storylines.id, { onDelete: 'cascade' }),
+  status: text('status').notNull(),
+  inputHash: text('input_hash'),
+  requestedAt: timestamp('requested_at', { withTimezone: true }).notNull().defaultNow(),
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  finishedAt: timestamp('finished_at', { withTimezone: true }),
+  error: text('error'),
+  model: text('model'),
+});
+
+/** AI warnings about a storyline contradicting a character profile. */
+export const characterWarnings = pgTable('character_warnings', {
+  id: id(),
+  storylineId: uuid('storyline_id')
+    .notNull()
+    .references(() => storylines.id, { onDelete: 'cascade' }),
+  characterId: uuid('character_id')
+    .notNull()
+    .references(() => characters.id, { onDelete: 'cascade' }),
+  criterion: text('criterion').notNull(),
+  message: text('message').notNull(),
+  createdAt: createdAt(),
+});
+
+/** Acknowledgements that dampen future warnings of one criterion for a character in a storyline. */
+export const characterWarningAcks = pgTable(
+  'character_warning_acks',
+  {
+    storylineId: uuid('storyline_id')
+      .notNull()
+      .references(() => storylines.id, { onDelete: 'cascade' }),
+    characterId: uuid('character_id')
+      .notNull()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    criterion: text('criterion').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.storylineId, t.characterId, t.criterion] })],
 );

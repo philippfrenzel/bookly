@@ -1,9 +1,10 @@
 /** Book routes: list, create, read, rename, delete. */
 import { asc, count, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import { BookBody, checkBook } from '@bookly/shared';
+import { BookBody } from '@bookly/shared';
 import type { BookResponse } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
+import { bookResponse } from '../db/bookResponse.js';
 import { loadBook } from '../db/loadBook.js';
 import { mutateBook } from '../db/mutate.js';
 import { books, storylines } from '../db/schema.js';
@@ -32,7 +33,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
       .values({ userId: request.user!.id, title: parsed.data.title })
       .returning({ id: books.id });
     const book = await loadBook(app.db, created!.id);
-    const body: BookResponse = { book, hints: checkBook(book) };
+    const body: BookResponse = await bookResponse(app.db, book, false);
     return reply.code(201).send(body);
   });
 
@@ -42,7 +43,7 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
     return app.db.transaction(
       async (tx) => {
         const book = await loadBook(tx, bookId);
-        return { book, hints: checkBook(book) };
+        return bookResponse(tx, book, false);
       },
       { isolationLevel: 'repeatable read', accessMode: 'read only' },
     );

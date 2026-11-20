@@ -1,9 +1,10 @@
 /** Transactional mutation pipeline: change, reload, validate, prune stale acknowledgements, hint. */
 import { and, eq, isNull, sql } from 'drizzle-orm';
-import { checkBook, staleAcknowledgements, validateBook } from '@bookly/shared';
+import { staleAcknowledgements, validateBook } from '@bookly/shared';
 import type { BookResponse, Id } from '@bookly/shared';
 import { ValidationError } from '../errors.js';
 import type { Db } from './client.js';
+import { bookResponse } from './bookResponse.js';
 import { loadBook, type Tx } from './loadBook.js';
 import { acknowledgements } from './schema.js';
 
@@ -36,6 +37,7 @@ export async function mutateBook(db: Db, bookId: Id, change: (tx: Tx) => Promise
       }
       book = await loadBook(tx, bookId);
     }
-    return { book, hints: checkBook(book) };
+    // Task 7 passes the real AI flag; until then AI is reported off.
+    return bookResponse(tx, book, false);
   });
 }

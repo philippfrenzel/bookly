@@ -29,7 +29,7 @@ describe('characters', () => {
     });
     expect(patched.json().book.characters[0]).toMatchObject({ name: 'Anna B.' });
     const bad = await app.inject({
-      method: 'POST', url: `/api/books/${bookId}/characters`, headers: { cookie }, payload: { name: '' },
+      method: 'POST', url: `/api/books/${bookId}/characters`, headers: { cookie }, payload: { name: 'x'.repeat(201) },
     });
     expect(bad.statusCode).toBe(400);
     const del = await app.inject({ method: 'DELETE', url: `/api/books/${bookId}/characters/${anna.id}`, headers: { cookie } });

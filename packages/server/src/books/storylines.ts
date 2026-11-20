@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import { asc, eq, inArray } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import { KIND_DEFAULT_COLOR, StorylineCreateBody, StorylinePatchBody } from '@bookly/shared';
+import { KIND_DEFAULT_COLOR, characterLabel, StorylineCreateBody, StorylinePatchBody } from '@bookly/shared';
 import type { Id } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
 import type { Tx } from '../db/loadBook.js';
@@ -36,7 +36,7 @@ async function sectionsToNote(tx: Tx, storylineId: Id, bookId: Id): Promise<stri
   const ids = rows.map((s) => s.id);
   const charNames = new Map(
     (await tx.select({ id: characters.id, name: characters.name }).from(characters).where(eq(characters.bookId, bookId))).map(
-      (c) => [c.id, c.name] as const,
+      (c) => [c.id, characterLabel(c)] as const,
     ),
   );
   const charsBySection = new Map<Id, Id[]>();
@@ -47,7 +47,7 @@ async function sectionsToNote(tx: Tx, storylineId: Id, bookId: Id): Promise<stri
     const head = `Abschnitt: ${s.title} (${names.get(s.startId)} – ${names.get(s.endId)})`;
     const lines = [head];
     if (s.description !== '') lines.push(s.description);
-    const who = (charsBySection.get(s.id) ?? []).map((c) => charNames.get(c)).filter(Boolean);
+    const who = (charsBySection.get(s.id) ?? []).map((c) => charNames.get(c)).filter((n) => n !== undefined);
     if (who.length > 0) lines.push(`Figuren: ${who.join(', ')}`);
     if (s.note) lines.push(s.note);
     return lines.join('\n');
