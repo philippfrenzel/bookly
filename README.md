@@ -17,7 +17,9 @@ createdb bookly_dev
 createdb bookly_test
 createdb bookly_e2e   # only needed for npm run e2e
 
-# Option B: Docker (creates bookly_dev and bookly_test; postgres/postgres)
+# Option B: Docker (creates bookly_dev, bookly_test and bookly_e2e; postgres/postgres).
+# Point the tests at it: DATABASE_URL / TEST_DATABASE_URL / E2E_DATABASE_URL, e.g.
+#   E2E_DATABASE_URL=postgres://postgres:postgres@localhost:5432/bookly_e2e npm run e2e
 docker compose up -d
 
 npm install
