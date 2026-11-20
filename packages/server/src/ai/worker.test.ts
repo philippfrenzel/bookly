@@ -199,6 +199,49 @@ describe('character check worker', () => {
     await s.app.close();
   });
 
+  test('check re-claimed during run keeps only the second result', async () => {
+    const s = await setup();
+    const second = fakeAi();
+    let release!: () => void;
+    let secondJob!: Promise<number>;
+    const secondStarted = new Promise<void>((resolve) => {
+      second.reply = () => {
+        resolve();
+        return new Promise((r) => {
+          release = () => r({ warnings: [{ characterId: s.charId, criterion: 'behavior_change', message: 'Zweiter.' }] });
+        });
+      };
+    });
+    s.ai.reply = async () => {
+      await s.app.db.delete(characterChecks).where(eq(characterChecks.storylineId, s.storylineId));
+      await enqueueForced(s.app.db, [s.storylineId]);
+      secondJob = createCheckWorker({ db: s.app.db, ai: second, log: silent, quietMs: 0 }).runOnce();
+      await secondStarted;
+      return { warnings: [{ characterId: s.charId, criterion: 'behavior_change', message: 'Erster.' }] };
+    };
+    await enqueue(s);
+    expect(await worker(s).runOnce()).toBe(1);
+    expect((await checkRow(s))?.status).toBe('running');
+    expect(await warningRows(s)).toEqual([]);
+    release();
+    expect(await secondJob).toBe(1);
+    expect((await checkRow(s))?.status).toBe('done');
+    expect(await warningRows(s)).toEqual([expect.objectContaining({ message: 'Zweiter.' })]);
+    await s.app.close();
+  });
+
+  test('claimed check without input is removed with its warnings', async () => {
+    const s = await setup();
+    await s.app.db.insert(characterChecks).values({ storylineId: s.storylineId, status: 'pending', requestedAt: new Date(Date.now() - 60_000) });
+    await s.app.db.insert(characterWarnings).values({ storylineId: s.storylineId, characterId: s.charId, criterion: 'behavior_change', message: 'Alt.' });
+    await s.app.db.delete(storylineCharacters).where(eq(storylineCharacters.storylineId, s.storylineId));
+    expect(await worker(s).runOnce()).toBe(1);
+    expect(await checkRow(s)).toBeUndefined();
+    expect(await warningRows(s)).toEqual([]);
+    expect(s.ai.calls).toBe(0);
+    await s.app.close();
+  });
+
   test('two workers claim a check only once', async () => {
     const s = await setup();
     await enqueue(s);

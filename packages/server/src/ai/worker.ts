@@ -8,7 +8,6 @@ import { characterChecks, characterWarnings, characters, storylines } from '../d
 import { NotFoundError } from '../errors.js';
 import { buildCheckInput, checkRequest, inputHash, parseCheckResponse, type ParsedWarning } from './checkPrompt.js';
 import { AiError, type AiClient } from './client.js';
-import { clearChecks } from './queue.js';
 
 /** Options of the check worker; defaults: poll 2 s, quiet period 5 s, 2 concurrent jobs. */
 export interface CheckWorkerOptions {
@@ -29,9 +28,16 @@ export interface CheckWorker {
 
 const STALE_SECS = 5 * 60;
 
-/** Matches the storyline's check row only while it is still claimed (`running`). */
-function isRunning(storylineId: Id) {
-  return and(eq(characterChecks.storylineId, storylineId), eq(characterChecks.status, 'running'));
+/** A claimed check: its storyline and the exact `started_at` the claim wrote (text, full precision). */
+interface Claim { storylineId: Id; claimedAt: string }
+
+/** Matches the check row only while it is still held by this claim (`running`, same `started_at`). */
+function isClaimed({ storylineId, claimedAt }: Claim) {
+  return and(
+    eq(characterChecks.storylineId, storylineId),
+    eq(characterChecks.status, 'running'),
+    sql`${characterChecks.startedAt} = ${claimedAt}::timestamptz`,
+  );
 }
 
 /** Creates a worker; `runOnce` claims and processes one batch and resolves with the job count. */
@@ -45,9 +51,9 @@ export function createCheckWorker(opts: CheckWorkerOptions): CheckWorker {
   let timer: NodeJS.Timeout | null = null;
   let ticking: Promise<unknown> = Promise.resolve();
 
-  /** Atomically marks up to `n` quiet pending checks as running and returns their storyline ids. */
-  async function claim(n: number): Promise<Id[]> {
-    const rows = await db.execute<{ storyline_id: Id }>(sql`
+  /** Atomically marks up to `n` quiet pending checks as running and returns the claims. */
+  async function claim(n: number): Promise<Claim[]> {
+    const rows = await db.execute<{ storyline_id: Id; claimed_at: string }>(sql`
       UPDATE character_checks SET status = 'running', started_at = now()
       WHERE storyline_id IN (
         SELECT storyline_id FROM character_checks
@@ -56,20 +62,21 @@ export function createCheckWorker(opts: CheckWorkerOptions): CheckWorker {
         LIMIT ${n}
         FOR UPDATE SKIP LOCKED
       )
-      RETURNING storyline_id`);
-    return rows.map((r) => r.storyline_id);
+      RETURNING storyline_id, started_at::text AS claimed_at`);
+    return rows.map((r) => ({ storylineId: r.storyline_id, claimedAt: r.claimed_at }));
   }
 
   /** Replaces the storyline's warnings and marks the check done, keeping only existing characters. */
-  async function saveResult(storylineId: Id, bookId: Id, warnings: ParsedWarning[]): Promise<void> {
+  async function saveResult(job: Claim, bookId: Id, warnings: ParsedWarning[]): Promise<void> {
+    const { storylineId } = job;
     await db.transaction(async (tx) => {
       // Share locks keep the storyline and characters from vanishing before the insert.
       const [line] = await tx.select({ id: storylines.id }).from(storylines).where(eq(storylines.id, storylineId)).for('share');
       if (!line) return;
-      // The check row may have been cleared or re-created while the model ran: then this result is stale.
-      const [check] = await tx.select({ status: characterChecks.status }).from(characterChecks)
-        .where(eq(characterChecks.storylineId, storylineId)).for('update');
-      if (check?.status !== 'running') return;
+      // The check row may have been cleared, re-created or re-claimed while the model ran: then this result is stale.
+      const [check] = await tx.select({ id: characterChecks.storylineId }).from(characterChecks)
+        .where(isClaimed(job)).for('update');
+      if (!check) return;
       const ids = [...new Set(warnings.map((w) => w.characterId))];
       const existing = ids.length
         ? await tx.select({ id: characters.id }).from(characters)
@@ -81,7 +88,7 @@ export function createCheckWorker(opts: CheckWorkerOptions): CheckWorker {
       if (rows.length) await tx.insert(characterWarnings).values(rows);
       await tx.update(characterChecks)
         .set({ status: 'done', finishedAt: new Date(), error: null })
-        .where(isRunning(storylineId));
+        .where(isClaimed(job));
     });
   }
 
@@ -102,7 +109,8 @@ export function createCheckWorker(opts: CheckWorkerOptions): CheckWorker {
   }
 
   /** Runs one claimed check; never rejects. */
-  async function runJob(storylineId: Id): Promise<void> {
+  async function runJob(job: Claim): Promise<void> {
+    const { storylineId } = job;
     let bookId: Id | undefined;
     let hash: string | undefined;
     try {
@@ -111,20 +119,21 @@ export function createCheckWorker(opts: CheckWorkerOptions): CheckWorker {
       bookId = line.bookId;
       const input = buildCheckInput(await loadBook(db, bookId), storylineId);
       if (!input) {
-        await clearChecks(db, [storylineId]);
+        const gone = await db.delete(characterChecks).where(isClaimed(job)).returning({ id: characterChecks.storylineId });
+        if (gone.length) await db.delete(characterWarnings).where(eq(characterWarnings.storylineId, storylineId));
         return;
       }
       hash = inputHash(input, ai.model);
-      await db.update(characterChecks).set({ inputHash: hash, model: ai.model }).where(isRunning(storylineId));
+      await db.update(characterChecks).set({ inputHash: hash, model: ai.model }).where(isClaimed(job));
       const warnings = parseCheckResponse(await ai.complete(checkRequest(input)), input);
-      await saveResult(storylineId, bookId, warnings);
+      await saveResult(job, bookId, warnings);
     } catch (err) {
       if (err instanceof NotFoundError) return; // book deleted meanwhile
       log.warn({ err, storylineId }, 'character check failed');
       const error = err instanceof AiError ? err.message : 'check failed';
       await db.update(characterChecks)
         .set({ status: 'failed', finishedAt: new Date(), error: error.slice(0, 200) })
-        .where(isRunning(storylineId))
+        .where(isClaimed(job))
         .catch((e: unknown) => log.error({ err: e, storylineId }, 'could not mark character check failed'));
     }
     if (bookId && hash) {
@@ -134,8 +143,8 @@ export function createCheckWorker(opts: CheckWorkerOptions): CheckWorker {
   }
 
   /** Starts a job and tracks it until it settles. */
-  function launch(storylineId: Id): Promise<void> {
-    const job = runJob(storylineId).finally(() => inFlight.delete(job));
+  function launch(claimed: Claim): Promise<void> {
+    const job = runJob(claimed).finally(() => inFlight.delete(job));
     inFlight.add(job);
     return job;
   }
