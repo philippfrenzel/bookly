@@ -27,4 +27,10 @@ describe('parseSuggestion', () => {
     expect(parseSuggestion({ behavior: 'a', intentions: 'b' })).toEqual({ behavior: 'a', intentions: 'b' });
     expect(() => parseSuggestion({ x: 1 })).toThrow(AiError);
   });
+
+  test('trims each field and clamps it to 2000 characters', () => {
+    const long = 'x'.repeat(2500);
+    expect(parseSuggestion({ behavior: `  mutig \n`, intentions: long })).toEqual({ behavior: 'mutig', intentions: 'x'.repeat(2000) });
+    expect(parseSuggestion({ behavior: '   ', intentions: '' })).toEqual({ behavior: '', intentions: '' });
+  });
 });

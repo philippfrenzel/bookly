@@ -6,14 +6,16 @@ import { KIND_DEFAULT_COLOR, characterLabel, StorylineCreateBody, StorylinePatch
 import type { Id } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
 import type { Tx } from '../db/loadBook.js';
-import { characterWarningAcks, characters, sectionCharacters, sections, storylineCharacters, storylines, timePoints } from '../db/schema.js';
+import { characters, sectionCharacters, sections, storylineCharacters, storylines, timePoints } from '../db/schema.js';
 import { NotFoundError } from '../errors.js';
 import { assertInBook, assertKnownRefs } from './childId.js';
 import { bookGuard } from './guard.js';
+import { pruneUnlinkedAcks } from './warningAcks.js';
 
 /**
  * Makes the storyline's character set equal to `characterIds`. New links are inserted, removed links
- * are deleted together with their warning acknowledgements; retained links keep their additions.
+ * are deleted together with their warning acknowledgements unless a section still links the
+ * character; retained links keep their additions.
  */
 async function setCharacters(tx: Tx, storylineId: Id, characterIds: Id[]): Promise<void> {
   const wanted = new Set(characterIds);
@@ -25,9 +27,7 @@ async function setCharacters(tx: Tx, storylineId: Id, characterIds: Id[]): Promi
     await tx
       .delete(storylineCharacters)
       .where(and(eq(storylineCharacters.storylineId, storylineId), inArray(storylineCharacters.characterId, removed)));
-    await tx
-      .delete(characterWarningAcks)
-      .where(and(eq(characterWarningAcks.storylineId, storylineId), inArray(characterWarningAcks.characterId, removed)));
+    await pruneUnlinkedAcks(tx, storylineId, removed);
   }
   const have = new Set(existing);
   const added = [...wanted].filter((id) => !have.has(id));
@@ -37,8 +37,8 @@ async function setCharacters(tx: Tx, storylineId: Id, characterIds: Id[]): Promi
 }
 
 /**
- * Renders the storyline's sections as note blocks and deletes them. Returns the blocks joined by a
- * blank line, or null when there were no sections.
+ * Renders the storyline's sections as note blocks and deletes them (with the acks of characters
+ * only they linked). Returns the blocks joined by a blank line, or null when there were no sections.
  */
 async function sectionsToNote(tx: Tx, storylineId: Id, bookId: Id): Promise<string | null> {
   const rows = await tx.select().from(sections).where(eq(sections.storylineId, storylineId)).orderBy(asc(sections.order));
@@ -69,6 +69,7 @@ async function sectionsToNote(tx: Tx, storylineId: Id, bookId: Id): Promise<stri
   });
   await tx.delete(sectionCharacters).where(inArray(sectionCharacters.sectionId, ids));
   await tx.delete(sections).where(eq(sections.storylineId, storylineId));
+  await pruneUnlinkedAcks(tx, storylineId, [...charsBySection.values()].flat());
   return blocks.join('\n\n');
 }
 

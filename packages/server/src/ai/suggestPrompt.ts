@@ -31,9 +31,16 @@ export function suggestRequest(ctx: SuggestContext): AiRequest {
   };
 }
 
-/** Validates the model reply; throws AiError('invalid_response') on a wrong shape. */
+/** Longest suggested field; matches the 2000-character limit of the character fields. */
+const MAX_FIELD = 2000;
+
+/**
+ * Validates the model reply and trims each field and clamps it to 2000 characters, so applying a
+ * suggestion always passes validation; throws AiError('invalid_response') on a wrong shape.
+ */
 export function parseSuggestion(raw: unknown): Suggestion {
   const parsed = SuggestionResult.safeParse(raw);
   if (!parsed.success) throw new AiError('invalid_response');
-  return parsed.data;
+  const clamp = (s: string) => s.trim().slice(0, MAX_FIELD).trim();
+  return { behavior: clamp(parsed.data.behavior), intentions: clamp(parsed.data.intentions) };
 }
