@@ -62,7 +62,14 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 
 /* Storyline map */
 .book-layout > main { overflow: hidden; }
-.storyline-map { overflow: auto; max-height: 75vh; }
+.storyline-map { position: relative; overflow: hidden; }
+.storyline-map .zoom-controls { display: flex; gap: 0.25rem; margin-bottom: 0.25rem; }
+.storyline-map .pan-area { cursor: grab; }
+.storyline-map .connection-stub line { stroke: var(--muted); stroke-width: 2; }
+.storyline-map .bar-note { font-size: 10px; fill: var(--muted); pointer-events: none; }
+.filter-bar { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; margin-bottom: 0.5rem; }
+.filter-bar fieldset { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; border: 1px solid var(--border); margin: 0; padding: 0.25rem 0.5rem; }
+.filter-bar .filter-count { color: var(--muted); margin-left: auto; }
 .storyline-map svg { display: block; font-family: var(--font); }
 .map-empty { margin: 0; padding: 3rem 1rem; text-align: center; color: var(--muted); }
 .storyline-map .main-band { fill: #eef2fb; }

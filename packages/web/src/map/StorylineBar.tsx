@@ -14,6 +14,8 @@ interface Props {
   lane: number;
   idx: OrderIndex;
   selected: boolean;
+  /** Show the storyline note under the bar. */
+  showNote?: boolean;
   onSelect: (id: string) => void;
 }
 
@@ -23,8 +25,27 @@ function fit(text: string, width: number): string {
   return text.length <= max ? text : `${text.slice(0, Math.max(1, max - 1))}…`;
 }
 
+/** Wraps text into at most two lines of roughly the given pixel width, ellipsising the overflow. */
+export function clampTwoLines(text: string, width: number): string[] {
+  const max = Math.max(4, Math.floor(width / 5.5));
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let cur = '';
+  for (const w of words) {
+    const next = cur ? `${cur} ${w}` : w;
+    if (next.length <= max || !cur) cur = next;
+    else {
+      lines.push(cur);
+      cur = w;
+    }
+  }
+  if (cur) lines.push(cur);
+  if (lines.length <= 2) return lines.map((l) => fit(l, width));
+  return [lines[0]!, fit(`${lines[1]} ${lines.slice(2).join(' ')}`, width)];
+}
+
 /** Renders a focusable, clickable bar for a storyline. */
-export function StorylineBar({ storyline: s, lane, idx, selected, onSelect }: Props) {
+export function StorylineBar({ storyline: s, lane, idx, selected, showNote = false, onSelect }: Props) {
   const { x, y, width } = barGeometry(s, lane, idx);
   const isMain = s.kind === 'main';
   const stroke = isMain ? MAIN_STROKE : SIDE_STROKE;
@@ -88,6 +109,16 @@ export function StorylineBar({ storyline: s, lane, idx, selected, onSelect }: Pr
       <text className="bar-title" x={left + 22} y={y - stroke / 2 - 8}>
         {fit(s.title, barWidth - 22)}
       </text>
+      {showNote && s.note && (
+        <text className="bar-note" x={left} y={y + stroke / 2 + 26}>
+          <title>{s.note}</title>
+          {clampTwoLines(s.note, barWidth).map((line, i) => (
+            <tspan key={i} x={left} dy={i === 0 ? 0 : 11}>
+              {line}
+            </tspan>
+          ))}
+        </text>
+      )}
       {/* The marker sits on the bar start, inside the lane, so it never reaches into neighbouring lanes. */}
       <circle className="status-ring" cx={left + 10} cy={y} r={9} stroke={status.color} />
       <text className="status-symbol" x={left + 10} y={y} fill={status.color}>

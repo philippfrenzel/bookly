@@ -86,3 +86,27 @@ export function ConnectionPath({ connection: c, from, to, fromLane, toLane, idx,
     </g>
   );
 }
+
+const STUB_LENGTH = 24;
+
+interface StubProps {
+  /** The visible storyline of the connection. */
+  visible: Storyline;
+  lane: number;
+  idx: OrderIndex;
+  /** Whether the visible storyline is the connection's source (stub leaves its end) or target (stub enters its start). */
+  visibleIs: 'from' | 'to';
+}
+
+/** Short dashed line from the visible end of a connection whose other storyline is filtered out. */
+export function ConnectionStub({ visible, lane, idx, visibleIs }: StubProps) {
+  const g = barGeometry(visible, lane, idx);
+  const x = visibleIs === 'from' ? g.x + g.width - INSET : g.x + INSET;
+  const x2 = visibleIs === 'from' ? x + STUB_LENGTH : x - STUB_LENGTH;
+  return (
+    <g className="connection-stub" role="img" aria-label="Verbindung zu ausgeblendeter Storyline">
+      <title>Verbindung zu ausgeblendeter Storyline</title>
+      <line x1={x} y1={g.y} x2={x2} y2={g.y} strokeDasharray="4 3" />
+    </g>
+  );
+}

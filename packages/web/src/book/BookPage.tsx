@@ -1,10 +1,12 @@
 /** Book page: header, storyline map slot and the side area with time point, character and storyline panels. */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import type { TimeRange } from '@bookly/shared';
+import type { Book, TimeRange } from '@bookly/shared';
 import { useBook } from '../api/hooks';
 import { ConnectionDialog, type ConnectionTarget } from '../connection/ConnectionDialog';
-import { StorylineMap } from '../map/StorylineMap';
+import { FilterBar } from '../map/FilterBar';
+import { applyFilters, toMapFilter, useStoredFilters } from '../map/filters';
+import { StorylineMap, type StorylineMapProps } from '../map/StorylineMap';
 import { StorylinePanel, type PanelTarget } from '../storyline/StorylinePanel';
 import { CharacterPanel } from './CharacterPanel';
 import { SidePanel } from './SidePanel';
@@ -53,7 +55,7 @@ export function BookPage() {
               </button>
             </div>
             <section aria-label="Storyline-Karte">
-              <StorylineMap
+              <FilteredMap
                 book={book}
                 hints={query.data?.hints ?? []}
                 selectedId={selectedId}
@@ -77,5 +79,19 @@ export function BookPage() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Filter bar plus map; filter state is remembered per book in localStorage. */
+function FilteredMap(props: Omit<StorylineMapProps, 'filter' | 'showNotes'> & { book: Book }) {
+  const { book } = props;
+  const [state, setState] = useStoredFilters(book.id, book);
+  const filter = useMemo(() => toMapFilter(state, book.timePoints), [state, book.timePoints]);
+  const visibleCount = useMemo(() => applyFilters(book, filter).size, [book, filter]);
+  return (
+    <>
+      <FilterBar book={book} state={state} onChange={setState} visibleCount={visibleCount} />
+      <StorylineMap {...props} filter={filter} showNotes={state.showNotes} />
+    </>
   );
 }
