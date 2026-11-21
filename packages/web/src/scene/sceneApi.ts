@@ -40,9 +40,12 @@ export function descriptionErrorMessage(error: unknown): string {
   return 'Beschreibung fehlgeschlagen.';
 }
 
+/** What a description request may name: the target it is for, and `sample` for a prose sample of the setting. */
+export interface DescriptionVars { sceneId: Id; sectionId?: Id; storylineId?: Id; kind?: 'assignment' | 'sample' }
+
 /** Asks the AI for a scene description from the scene's image and notes (FR-004); nothing is saved. */
 export function useSceneDescription(bookId: Id) {
-  return useMutation<SceneDescriptionResult, ApiError, { sceneId: Id; sectionId: Id | null }>({
-    mutationFn: (v) => api<SceneDescriptionResult>('POST', `/api/books/${bookId}/scenes/${v.sceneId}/description`, { sectionId: v.sectionId }),
+  return useMutation<SceneDescriptionResult, ApiError, DescriptionVars>({
+    mutationFn: ({ sceneId, ...body }) => api<SceneDescriptionResult>('POST', `/api/books/${bookId}/scenes/${sceneId}/description`, body),
   });
 }

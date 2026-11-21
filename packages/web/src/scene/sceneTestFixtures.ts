@@ -12,6 +12,16 @@ export function bookWithSections(): Book {
   return book;
 }
 
+/** `bookWithSections` plus the side strand „Erinnerung“ (s2), which has no sections. */
+export function bookWithSideStrand(): Book {
+  const book = bookWithSections();
+  book.storylines.push({
+    id: 's2', title: 'Erinnerung', description: '', characterIds: [], range: { startId: 't1', endId: 't2' },
+    kind: 'side', status: 'in_progress', color: '#E3B54A', note: null, additions: [], sections: [],
+  });
+  return book;
+}
+
 /** A scene; override fields as needed. */
 export function scene(over: Partial<Scene> = {}): Scene {
   return { id: 'sc1', name: 'Bergsee', image: null, notes: [], ...over };
@@ -19,5 +29,5 @@ export function scene(over: Partial<Scene> = {}): Scene {
 
 /** An assignment; override fields as needed. */
 export function assignment(over: Partial<SceneAssignment> = {}): SceneAssignment {
-  return { id: 'a1', sceneId: 'sc1', sectionId: 'sec1', description: '', updatedAt: '2026-11-01T00:00:00.000Z', ...over };
+  return { id: 'a1', sceneId: 'sc1', sectionId: 'sec1', storylineId: null, description: '', updatedAt: '2026-11-01T00:00:00.000Z', ...over };
 }

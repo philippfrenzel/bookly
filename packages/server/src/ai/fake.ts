@@ -20,7 +20,8 @@ export function createFakeAiClient(): AiClient {
       if (req.schemaName === 'scene_description') {
         const notes = (JSON.parse(req.user) as { notizen?: unknown[] }).notizen?.length ?? 0;
         const image = req.images && req.images.length > 0 ? 'mit Bild' : 'ohne Bild';
-        return { description: `KI-Szenenbeschreibung (${notes} Notizen, ${image})` };
+        const label = req.system.includes('Beispielpassage') ? 'KI-Beispielpassage' : 'KI-Szenenbeschreibung';
+        return { description: `${label} (${notes} Notizen, ${image})` };
       }
       if (req.schemaName === 'text_suggestions') {
         return { suggestions: ['KI-Vorschlag 1', 'KI-Vorschlag 2', 'KI-Vorschlag 3'] };

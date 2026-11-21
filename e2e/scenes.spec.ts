@@ -1,6 +1,7 @@
 /**
  * End-to-end flow: scene with image and note, assigned to a section, fake-AI description, second assignment
- * reuses it, an earlier description is put back into an existing assignment and the assignment is moved.
+ * reuses it, an earlier description is put back into an existing assignment and the assignment is moved,
+ * a sample passage is previewed on the scene card, and the scene is assigned to a side strand from there.
  */
 import { expect, test } from '@playwright/test';
 
@@ -48,6 +49,10 @@ test('scene management and assignment flow', async ({ page }) => {
   const note = page.getByLabel('Notiz 1 Szene Bergsee');
   await note.fill('Klarer See in den Alpen, leichter Nebel, wo die Morgensonne auftrifft.');
   await note.blur();
+
+  // Sample passage of the setting from image and note, preview only.
+  await page.getByRole('button', { name: 'Beispielbeschreibung' }).click();
+  await expect(page.getByRole('figure', { name: 'Beispielbeschreibung Szene Bergsee' })).toContainText('KI-Beispielpassage (1 Notizen, mit Bild)');
 
   // Main storyline with two sections.
   await page.getByRole('button', { name: 'Neue Storyline' }).click();
@@ -114,9 +119,25 @@ test('scene management and assignment flow', async ({ page }) => {
   await expect(sceneBlock.getByRole('button', { name: 'Übernehmen' })).toHaveCount(0);
 
   // Move the assignment to another section (AC-003); its description goes along.
-  await sceneBlock.getByLabel('Szene Bergsee in anderen Abschnitt verschieben').selectOption({ label: 'Rückkehr' });
+  await sceneBlock.getByLabel('Szene Bergsee verschieben').selectOption({ label: 'Rückkehr' });
   await expect(sceneBlock.getByLabel('Beschreibung Szene Bergsee')).toHaveCount(0);
   await panel.getByRole('button', { name: 'Fertig' }).click();
   await panel.getByRole('button', { name: 'Abschnitt „Rückkehr“ bearbeiten' }).click();
+  await expect(panel.getByRole('group', { name: 'Szenen' }).getByLabel('Beschreibung Szene Bergsee')).toHaveValue('Nebel über dem Bergsee.');
+  await panel.getByRole('button', { name: 'Fertig' }).click();
+
+  // A side strand has no sections: assign the scene from its card, then find it in the strand's „Szenen“ tab.
+  await page.getByRole('button', { name: 'Zurück zum Buch' }).click();
+  await page.getByRole('button', { name: 'Neue Storyline' }).click();
+  await panel.getByLabel('Titel', { exact: true }).fill('Erinnerung');
+  await panel.getByLabel('Nebenstrang').check();
+  await panel.getByLabel('Zeitraum Start').selectOption({ label: 'Tag 1' });
+  await panel.getByLabel('Zeitraum Ende').selectOption({ label: 'Tag 1' });
+  await panel.getByRole('button', { name: 'Anlegen' }).click();
+  await page.getByRole('button', { name: 'Zurück zum Buch' }).click();
+  await page.getByRole('tab', { name: 'Szenen' }).click();
+  await page.getByLabel('Szene Bergsee zuordnen').selectOption({ label: 'Erinnerung' });
+  await page.getByRole('button', { name: 'Storyline „Erinnerung“ öffnen' }).click();
+  await expect(panel.getByRole('tab', { name: 'Szenen' })).toHaveAttribute('aria-selected', 'true');
   await expect(panel.getByRole('group', { name: 'Szenen' }).getByLabel('Beschreibung Szene Bergsee')).toHaveValue('Nebel über dem Bergsee.');
 });

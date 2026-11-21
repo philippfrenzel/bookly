@@ -1,4 +1,4 @@
-/** Scene routes: scenes, their notes and image, section assignments and the AI scene description. */
+/** Scene routes: scenes, their notes and image, assignments to sections or storylines and the AI scene description. */
 import { and, asc, eq, max } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import {
@@ -15,6 +15,7 @@ import type { Id, SceneDescriptionResult, SceneImageType } from '@bookly/shared'
 import { requireUser } from '../auth/session.js';
 import { parseSceneDescription, sceneDescriptionRequest, selectNotes } from '../ai/scenePrompt.js';
 import type { Db } from '../db/client.js';
+import type { Tx } from '../db/loadBook.js';
 import { books, sceneAssignments, sceneImages, sceneNotes, scenes, sections, storylines } from '../db/schema.js';
 import { NotFoundError } from '../errors.js';
 import { requireAi } from './aiRoutes.js';
@@ -159,22 +160,31 @@ export async function sceneRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
+  /** 404 unless the target (section or storyline) belongs to the book. */
+  const assertTarget = async (t: { sectionId?: Id; storylineId?: Id }, bookId: Id) => {
+    if (t.sectionId) await assertSectionInBook(app.db, t.sectionId, bookId);
+    if (t.storylineId) await assertInBook(app.db, storylines, t.storylineId, bookId);
+  };
+
+  /** Throws AlreadyAssigned when the scene already sits at the target (other than in `except`). */
+  const assertFree = async (tx: Tx, sceneId: Id, t: { sectionId?: Id; storylineId?: Id }, except?: Id) => {
+    const at = t.sectionId ? eq(sceneAssignments.sectionId, t.sectionId) : eq(sceneAssignments.storylineId, t.storylineId!);
+    const [dup] = await tx.select({ id: sceneAssignments.id }).from(sceneAssignments).where(and(eq(sceneAssignments.sceneId, sceneId), at));
+    if (dup && dup.id !== except) throw new AlreadyAssigned();
+  };
+
   app.post(`${base}/scene-assignments`, guarded, async (request, reply) => {
     const parsed = SceneAssignmentCreateBody.safeParse(request.body);
     if (!parsed.success) return invalid(reply, parsed.error.flatten());
     const { bookId } = request.params as { bookId: string };
     const d = parsed.data;
     await assertInBook(app.db, scenes, d.sceneId, bookId);
-    await assertSectionInBook(app.db, d.sectionId, bookId);
+    await assertTarget(d, bookId);
     try {
       // The book row is locked by mutate, so the check and the insert cannot interleave with another assignment.
       const result = await app.mutate(bookId, async (tx) => {
-        const [dup] = await tx
-          .select({ id: sceneAssignments.id })
-          .from(sceneAssignments)
-          .where(and(eq(sceneAssignments.sceneId, d.sceneId), eq(sceneAssignments.sectionId, d.sectionId)));
-        if (dup) throw new AlreadyAssigned();
-        await tx.insert(sceneAssignments).values({ sceneId: d.sceneId, sectionId: d.sectionId, description: d.description });
+        await assertFree(tx, d.sceneId, d);
+        await tx.insert(sceneAssignments).values({ sceneId: d.sceneId, sectionId: d.sectionId ?? null, storylineId: d.storylineId ?? null, description: d.description });
       });
       return reply.code(201).send(result);
     } catch (error) {
@@ -188,23 +198,23 @@ export async function sceneRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) return invalid(reply, parsed.error.flatten());
     const { bookId, assignmentId } = request.params as { bookId: string; assignmentId: string };
     await assertAssignmentInBook(app.db, assignmentId, bookId);
-    const { description, sectionId } = parsed.data;
-    if (sectionId) await assertSectionInBook(app.db, sectionId, bookId);
+    const { description, sectionId, storylineId } = parsed.data;
+    const moving = sectionId !== undefined || storylineId !== undefined;
+    if (moving) await assertTarget({ sectionId, storylineId }, bookId);
     try {
-      // Moving (AC-003 „ändern“): the scene may sit in the target section only once; the book row lock serialises the check.
+      // Moving (AC-003 „ändern“): the scene may sit at the target only once; the book row lock serialises the check.
       return await app.mutate(bookId, async (tx) => {
-        if (sectionId) {
+        if (moving) {
           const [current] = await tx.select({ sceneId: sceneAssignments.sceneId }).from(sceneAssignments).where(eq(sceneAssignments.id, assignmentId));
-          const [dup] = await tx
-            .select({ id: sceneAssignments.id })
-            .from(sceneAssignments)
-            .where(and(eq(sceneAssignments.sceneId, current!.sceneId), eq(sceneAssignments.sectionId, sectionId)));
-          if (dup && dup.id !== assignmentId) throw new AlreadyAssigned();
+          await assertFree(tx, current!.sceneId, { sectionId, storylineId }, assignmentId);
         }
         await tx
           .update(sceneAssignments)
           // updatedAt dates the description (it orders earlier descriptions, FR-005), so a pure move keeps it.
-          .set({ ...(description !== undefined ? { description, updatedAt: new Date() } : {}), ...(sectionId ? { sectionId } : {}) })
+          .set({
+            ...(description !== undefined ? { description, updatedAt: new Date() } : {}),
+            ...(moving ? { sectionId: sectionId ?? null, storylineId: storylineId ?? null } : {}),
+          })
           .where(eq(sceneAssignments.id, assignmentId));
       });
     } catch (error) {
@@ -226,8 +236,9 @@ export async function sceneRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) return invalid(reply, parsed.error.flatten());
     const { bookId, sceneId } = request.params as { bookId: string; sceneId: string };
     await assertInBook(app.db, scenes, sceneId, bookId);
-    const { sectionId } = parsed.data;
+    const { sectionId, storylineId, kind } = parsed.data;
     if (sectionId) await assertSectionInBook(app.db, sectionId, bookId);
+    if (storylineId) await assertInBook(app.db, storylines, storylineId, bookId);
 
     const [scene] = await app.db.select({ name: scenes.name, bookTitle: books.title }).from(scenes).innerJoin(books, eq(books.id, scenes.bookId)).where(eq(scenes.id, sceneId));
     const notes = await app.db.select({ text: sceneNotes.text }).from(sceneNotes).where(eq(sceneNotes.sceneId, sceneId)).orderBy(asc(sceneNotes.position));
@@ -239,6 +250,9 @@ export async function sceneRoutes(app: FastifyInstance): Promise<void> {
           .innerJoin(storylines, eq(storylines.id, sections.storylineId))
           .where(eq(sections.id, sectionId))
       : [];
+    const [line] = storylineId
+      ? await app.db.select({ title: storylines.title, description: storylines.description, kind: storylines.kind }).from(storylines).where(eq(storylines.id, storylineId))
+      : [];
     const selection = selectNotes(notes.map((n) => n.text));
     if (selection.notes.length === 0 && !img) return reply.code(400).send({ error: 'empty_context' });
 
@@ -247,6 +261,8 @@ export async function sceneRoutes(app: FastifyInstance): Promise<void> {
       {
         sceneId,
         sectionId,
+        storylineId,
+        kind,
         notesSent: selection.notes.length,
         noteChars: selection.chars,
         notesOmitted: selection.omitted,
@@ -263,6 +279,8 @@ export async function sceneRoutes(app: FastifyInstance): Promise<void> {
           notes: selection.notes,
           image: img ? { mime: img.mime, data: img.data } : null,
           section: section ?? null,
+          storyline: line ?? null,
+          kind,
         }),
       );
       return { description: parseSceneDescription(raw) };

@@ -1,13 +1,14 @@
 /**
  * Side panel form for creating and editing a storyline (direct saves; „Anlegen“ when creating).
- * A stored storyline is split into the sub-tabs Storyline (facts, note, connections), Figuren and Zeitpunkte (sections).
+ * A stored storyline is split into the sub-tabs Storyline (facts, note, connections), Figuren, Zeitpunkte (sections) and Szenen.
  */
 import { useState } from 'react';
 import {
   KIND_DEFAULT_COLOR, STATUS_STYLE, type Book, type Id, type Storyline, type StorylineKind, type StorylineStatus,
   type TimeRange, type BookResponse, type CharacterCheck,
 } from '@bookly/shared';
-import { useBookMutation } from '../api/hooks';
+import { useBook, useBookMutation } from '../api/hooks';
+import { StorylineScenes, storylineSceneCount } from '../scene/StorylineScenes';
 import { useSaveFeedback } from '../book/saveFeedback';
 import { CharacterChecks } from './CharacterChecks';
 import { CheckStatus } from './CheckStatus';
@@ -213,6 +214,7 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect, check, a
     draft: () => ({ title: v.title, description: v.description, note: v.note, characterIds: v.characterIds }),
     enabled: aiEnabled,
   });
+  const sceneAssignments = useBook(book.id).data?.sceneAssignments ?? [];
   // A tab the storyline does not have (e.g. „Zeitpunkte“ of a side strand) falls back to the facts.
   const active: StorylineTab = storyline && storylineTabs(storyline).some((t) => t.id === tab) ? tab : 'details';
   /** Create mode shows everything at once; edit mode only the active group. */
@@ -220,7 +222,7 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect, check, a
   return (
     <section aria-label="Storyline bearbeiten" className="storyline-panel">
       {storyline && <StorylineHeader book={book} storyline={storyline} />}
-      {storyline && onTab && <StorylineTabBar storyline={storyline} active={active} onChange={onTab} />}
+      {storyline && onTab && <StorylineTabBar storyline={storyline} active={active} onChange={onTab} sceneCount={storylineSceneCount(storyline, sceneAssignments)} />}
       <div className="storyline-form" role={storyline ? 'tabpanel' : undefined}>
         {shows('details') && (<>
         <div className="field">
@@ -318,6 +320,9 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect, check, a
         <div className="actions storyline-delete">
           <button type="button" className="danger-quiet" onClick={confirmDelete}>Löschen</button>
         </div>
+      )}
+      {storyline && shows('scenes') && editing && (
+        <StorylineScenes book={book} storyline={storyline} aiEnabled={aiEnabled} onShowTimeline={onTab ? () => onTab('timeline') : undefined} />
       )}
       {storyline && storyline.kind === 'main' && shows('timeline') && (
         <SectionList

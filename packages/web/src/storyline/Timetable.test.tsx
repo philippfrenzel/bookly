@@ -67,7 +67,7 @@ describe('Timetable', () => {
   it('names the scenes assigned to a section on its card', async () => {
     server.use(meOk, bookOk(timetableBook(), {
       scenes: [{ id: 'sc1', name: 'Bergsee', image: null, notes: [] }],
-      sceneAssignments: [{ id: 'a1', sceneId: 'sc1', sectionId: 'x2', description: '', updatedAt: '2026-11-01T00:00:00.000Z' }],
+      sceneAssignments: [{ id: 'a1', sceneId: 'sc1', sectionId: 'x2', storylineId: null, description: '', updatedAt: '2026-11-01T00:00:00.000Z' }],
     }));
     renderApp('/books/b1');
     await select('Hauptstrang');

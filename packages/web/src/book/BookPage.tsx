@@ -65,6 +65,11 @@ export function BookPage() {
     open({ mode: 'edit', id: storylineId });
     showInPanel('timeline', sectionId);
   };
+  /** Opens a storyline on its „Szenen“ tab (e.g. from the scene list). */
+  const openStorylineScenes = (storylineId: Id) => {
+    open({ mode: 'edit', id: storylineId });
+    showInPanel('scenes');
+  };
   const selected = selectedId ? book?.storylines.find((s) => s.id === selectedId) : undefined;
   const storylineMode = tab === 'storyline' && target !== null;
   const startCreate = (range?: TimeRange) => {
@@ -160,7 +165,7 @@ export function BookPage() {
             tabs={[
               { id: 'timepoints', label: 'Zeitpunkte', content: <TimePointPanel book={book} /> },
               { id: 'characters', label: 'Figuren', content: <CharacterPanel book={book} aiEnabled={query.data?.ai.enabled ?? false} /> },
-              { id: 'scenes', label: 'Szenen', content: <ScenePanel book={book} scenes={query.data?.scenes ?? []} assignments={query.data?.sceneAssignments ?? []} onOpenSection={openSection} /> },
+              { id: 'scenes', label: 'Szenen', content: <ScenePanel book={book} scenes={query.data?.scenes ?? []} assignments={query.data?.sceneAssignments ?? []} aiEnabled={query.data?.ai.enabled ?? false} onOpenSection={openSection} onOpenStoryline={openStorylineScenes} /> },
               { id: 'storyline', label: 'Storyline', content: <StorylinePanel book={book} checks={query.data?.characterChecks ?? []} aiEnabled={query.data?.ai.enabled ?? false} target={target} onTarget={open} onConnect={(fromId, toId) => setConnection({ mode: 'create', fromId, toId })} tab={storylineTab} onTab={(t) => { setStorylineTab(t); setFocusSection(null); }} focusSection={focusSection} onOpenConnection={(id) => setConnection({ mode: 'edit', id })} /> },
             ]}
           />
