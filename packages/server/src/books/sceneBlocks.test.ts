@@ -3,9 +3,11 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
 import { sql } from 'drizzle-orm';
-import { joinBlocks } from '@bookly/shared';
+import { joinBlocks, SCENE_BLOCK_LIMITS } from '@bookly/shared';
 import type { SceneAssignment } from '@bookly/shared';
 import { registeredAgent, testApp } from '../test/helpers.js';
+import { NotFoundError } from '../errors.js';
+import { assertRevision } from './sceneBlocks.js';
 import { seedTimePoints } from '../test/fixtures.js';
 
 const MIGRATION = fileURLToPath(new URL('../../drizzle/0008_scene_blocks.sql', import.meta.url));
@@ -139,6 +141,84 @@ describe('PUT scene assignment blocks', () => {
       method: 'PUT', url: `/api/books/${book2}/scene-assignments/${a.id}/blocks`, headers: { cookie: other.cookie }, payload: { revision: 0, blocks: [{ text: 'x' }] },
     });
     expect(foreign.statusCode).toBe(404);
+    await app.close();
+  });
+});
+
+describe('PUT blocks body size', () => {
+  test('a body of about 1.5 MB (umlauts) is accepted', async () => {
+    const { app, sectionId, assign, put } = await setup();
+    const a = await assign({ sectionId }, 'A');
+    const blocks = Array.from({ length: 150 }, () => ({ text: 'ä'.repeat(5000) }));
+    expect(Buffer.byteLength(JSON.stringify({ revision: 0, blocks }))).toBeGreaterThan(1_500_000);
+    const res = await put(a.id, { revision: 0, blocks });
+    expect(res.statusCode).toBe(200);
+    await app.close();
+  });
+});
+
+describe('assertRevision', () => {
+  test('a missing assignment is NotFoundError, not stale', async () => {
+    const { app } = await setup();
+    await expect(app.db.transaction((tx) => assertRevision(tx, '00000000-0000-4000-8000-000000000000', 0))).rejects.toBeInstanceOf(NotFoundError);
+    await app.close();
+  });
+});
+
+describe('whole descriptions are split into blocks', () => {
+  const paras = [`Erster ${'a'.repeat(900)}`, `  Zweiter ${'b'.repeat(900)}`, `Dritter ${'c'.repeat(900)}`];
+  const long = joinBlocks(paras);
+
+  test('POST with a long three-paragraph text creates three exact blocks', async () => {
+    const { app, sectionId, assign } = await setup();
+    expect(long.length).toBeGreaterThan(2000);
+    const a = await assign({ sectionId }, long);
+    expect(a.blocks.map((b) => b.text)).toEqual(paras);
+    expect(a.description).toBe(long);
+    expect(a.revision).toBe(0);
+    await app.close();
+  });
+
+  test('PATCH with a long three-paragraph text replaces the blocks by three exact ones', async () => {
+    const { app, req, sectionId, assign, current } = await setup();
+    const a = await assign({ sectionId }, 'Eins');
+    const res = await req('PATCH', `/scene-assignments/${a.id}`, { description: long, revision: 0 });
+    expect(res.statusCode).toBe(200);
+    const p = await current(a.id);
+    expect(p.blocks.map((b) => b.text)).toEqual(paras);
+    expect(p.description).toBe(long);
+    expect(p.revision).toBe(1);
+    await app.close();
+  });
+
+  test('201 paragraphs become 200 blocks, the rest merged into the last; the text stays identical', async () => {
+    const { app, req, sectionId, assign, current } = await setup();
+    const many = joinBlocks(Array.from({ length: SCENE_BLOCK_LIMITS.count + 1 }, (_, i) => `Absatz ${i}`));
+    const a = await assign({ sectionId }, many);
+    expect(a.blocks).toHaveLength(SCENE_BLOCK_LIMITS.count);
+    expect(a.blocks.at(-1)!.text).toBe(`Absatz ${SCENE_BLOCK_LIMITS.count - 1}\n\nAbsatz ${SCENE_BLOCK_LIMITS.count}`);
+    expect(joinBlocks(a.blocks.map((b) => b.text))).toBe(many);
+    expect(a.description).toBe(many);
+    const b = await req('PATCH', `/scene-assignments/${a.id}`, { description: many, revision: 0 });
+    expect(b.statusCode).toBe(200);
+    const p = await current(a.id);
+    expect(p.blocks).toHaveLength(SCENE_BLOCK_LIMITS.count);
+    expect(p.description).toBe(many);
+    await app.close();
+  });
+
+  test('a paragraph longer than a block is 400 invalid_body and nothing is written', async () => {
+    const { app, req, sectionId, sceneId, assign, current } = await setup();
+    const tooLong = 'x'.repeat(SCENE_BLOCK_LIMITS.text + 1);
+    const created = await req('POST', '/scene-assignments', { sceneId, sectionId, description: tooLong });
+    expect(created.statusCode).toBe(400);
+    expect(created.json()).toMatchObject({ error: 'invalid_body' });
+    expect((await req('GET', '')).json().sceneAssignments).toEqual([]);
+    const a = await assign({ sectionId }, 'Bleibt');
+    const patched = await req('PATCH', `/scene-assignments/${a.id}`, { description: `kurz\n\n${tooLong}` });
+    expect(patched.statusCode).toBe(400);
+    expect(patched.json()).toMatchObject({ error: 'invalid_body' });
+    expect(await current(a.id)).toEqual(a);
     await app.close();
   });
 });

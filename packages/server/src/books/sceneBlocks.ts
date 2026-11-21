@@ -1,7 +1,7 @@
 /** Text blocks of scene assignments: the atomic "replace all blocks" route and the shared block writer. */
 import { and, eq, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import { joinBlocks, SceneBlocksBody, UUID_RE } from '@bookly/shared';
+import { descriptionToBlocks, joinBlocks, SCENE_BLOCK_LIMITS, SceneBlocksBody, UUID_RE } from '@bookly/shared';
 import type { Id } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
 import type { Db } from '../db/client.js';
@@ -35,10 +35,24 @@ export async function assertAssignmentInBook(db: Db, assignmentId: string, bookI
   if (!row) throw new NotFoundError();
 }
 
-/** Throws StaleRevision unless the assignment's stored revision equals `revision`. Call inside the book mutation. */
+/**
+ * Throws StaleRevision unless the assignment's stored revision equals `revision`, and NotFoundError when the
+ * assignment is gone (e.g. deleted by another request since the route's check). Call inside the book mutation.
+ */
 export async function assertRevision(tx: Tx, assignmentId: Id, revision: number): Promise<void> {
   const [row] = await tx.select({ revision: sceneAssignments.revision }).from(sceneAssignments).where(eq(sceneAssignments.id, assignmentId));
-  if (!row || row.revision !== revision) throw new StaleRevision();
+  if (!row) throw new NotFoundError();
+  if (row.revision !== revision) throw new StaleRevision();
+}
+
+/**
+ * The blocks a whole description („Zuordnen“, „Übernehmen“) is stored as (descriptionToBlocks, exact
+ * round-trip with joinBlocks); null when a block would exceed the block text limit, so nothing is written.
+ */
+export function descriptionBlocks(description: string): { text: string }[] | null {
+  const texts = descriptionToBlocks(description);
+  if (texts.some((t) => t.length > SCENE_BLOCK_LIMITS.text)) return null;
+  return texts.map((text) => ({ text }));
 }
 
 /**
@@ -66,9 +80,13 @@ export async function writeBlocks(tx: Tx, assignmentId: Id, texts: { id?: Id; te
     .where(eq(sceneAssignments.id, assignmentId));
 }
 
+/** Largest accepted body of the blocks PUT (4 MiB). */
+const BLOCKS_BODY_LIMIT = 4 * 1024 * 1024;
+
 /** Registers `PUT /api/books/:bookId/scene-assignments/:assignmentId/blocks`. */
 export async function sceneBlockRoutes(app: FastifyInstance): Promise<void> {
-  const guarded = { preHandler: [requireUser, bookGuard()] };
+  // 200 blocks of 10 000 characters exceed Fastify's 1 MiB default, the more so in UTF-8 (umlauts are 2 bytes).
+  const guarded = { preHandler: [requireUser, bookGuard()], bodyLimit: BLOCKS_BODY_LIMIT };
 
   app.put('/api/books/:bookId/scene-assignments/:assignmentId/blocks', guarded, async (request, reply) => {
     const { bookId, assignmentId } = request.params as { bookId: string; assignmentId: string };

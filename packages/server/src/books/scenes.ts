@@ -2,6 +2,7 @@
 import { and, asc, eq, max } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import {
+  SCENE_BLOCK_LIMITS,
   SCENE_IMAGE_MAX_BYTES,
   SCENE_IMAGE_TYPES,
   SceneAssignmentCreateBody,
@@ -21,7 +22,7 @@ import { NotFoundError } from '../errors.js';
 import { requireAi } from './aiRoutes.js';
 import { assertInBook } from './childId.js';
 import { bookGuard } from './guard.js';
-import { assertAssignmentInBook, assertRevision, StaleRevision, writeBlocks } from './sceneBlocks.js';
+import { assertAssignmentInBook, assertRevision, descriptionBlocks, StaleRevision, writeBlocks } from './sceneBlocks.js';
 import { assertSectionInBook } from './sections.js';
 
 /** Thrown inside a mutation when the scene is already assigned to the section. */
@@ -51,6 +52,7 @@ export async function sceneRoutes(app: FastifyInstance): Promise<void> {
   const aiGuarded = { preHandler: [requireUser, bookGuard(), requireAi] };
   const base = '/api/books/:bookId';
   const invalid = (reply: FastifyReply, details: unknown) => reply.code(400).send({ error: 'invalid_body', details });
+  const tooLongBlock = { formErrors: [], fieldErrors: { description: [`a paragraph is longer than ${SCENE_BLOCK_LIMITS.text} characters`] } };
 
   // Raw image bodies for the upload route; the parser is scoped to this plugin.
   app.addContentTypeParser([...SCENE_IMAGE_TYPES], { parseAs: 'buffer', bodyLimit: SCENE_IMAGE_MAX_BYTES }, (_req, body, done) => done(null, body));
@@ -168,6 +170,8 @@ export async function sceneRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) return invalid(reply, parsed.error.flatten());
     const { bookId } = request.params as { bookId: string };
     const d = parsed.data;
+    const blocks = descriptionBlocks(d.description);
+    if (!blocks) return invalid(reply, tooLongBlock);
     await assertInBook(app.db, scenes, d.sceneId, bookId);
     await assertTarget(d, bookId);
     try {
@@ -178,8 +182,8 @@ export async function sceneRoutes(app: FastifyInstance): Promise<void> {
           .insert(sceneAssignments)
           .values({ sceneId: d.sceneId, sectionId: d.sectionId ?? null, storylineId: d.storylineId ?? null, description: d.description })
           .returning({ id: sceneAssignments.id });
-        // A new assignment starts with one block holding its description.
-        await tx.insert(sceneAssignmentBlocks).values({ assignmentId: row!.id, position: 0, text: d.description });
+        // A new assignment starts with its description split into blocks (one per paragraph), at revision 0.
+        await tx.insert(sceneAssignmentBlocks).values(blocks.map((b, position) => ({ assignmentId: row!.id, position, text: b.text })));
       });
       return reply.code(201).send(result);
     } catch (error) {
@@ -194,6 +198,8 @@ export async function sceneRoutes(app: FastifyInstance): Promise<void> {
     const { bookId, assignmentId } = request.params as { bookId: string; assignmentId: string };
     await assertAssignmentInBook(app.db, assignmentId, bookId);
     const { description, sectionId, storylineId, revision } = parsed.data;
+    const blocks = description === undefined ? null : descriptionBlocks(description);
+    if (description !== undefined && !blocks) return invalid(reply, tooLongBlock);
     const moving = sectionId !== undefined || storylineId !== undefined;
     if (moving) await assertTarget({ sectionId, storylineId }, bookId);
     try {
@@ -206,10 +212,10 @@ export async function sceneRoutes(app: FastifyInstance): Promise<void> {
         if (moving) {
           await tx.update(sceneAssignments).set({ sectionId: sectionId ?? null, storylineId: storylineId ?? null }).where(eq(sceneAssignments.id, assignmentId));
         }
-        // Replacing the description replaces all blocks by one (and dates it, FR-005); a pure move keeps blocks, revision and updatedAt.
-        if (description !== undefined) {
+        // Replacing the description replaces all blocks by its paragraphs (and dates it, FR-005); a pure move keeps blocks, revision and updatedAt.
+        if (blocks) {
           if (revision !== undefined) await assertRevision(tx, assignmentId, revision);
-          await writeBlocks(tx, assignmentId, [{ text: description }]);
+          await writeBlocks(tx, assignmentId, blocks);
         }
       });
     } catch (error) {

@@ -1,6 +1,6 @@
 /** Tests for the scene bodies and pure scene rules. */
 import { describe, expect, test } from 'vitest';
-import { BLOCK_SEPARATOR, SceneBlocksBody, joinBlocks, splitBlockText, hasSceneContext, previousDescriptions, SceneAssignmentCreateBody, SceneAssignmentPatchBody, SceneBody, SceneNoteBody, parseTargetKey, targetKey, type SceneAssignment } from './scenes.js';
+import { BLOCK_SEPARATOR, SCENE_BLOCK_LIMITS, SceneBlocksBody, descriptionToBlocks, joinBlocks, splitBlockText, hasSceneContext, previousDescriptions, SceneAssignmentCreateBody, SceneAssignmentPatchBody, SceneBody, SceneNoteBody, parseTargetKey, targetKey, type SceneAssignment } from './scenes.js';
 
 const a = (id: string, sceneId: string, description: string, updatedAt: string): SceneAssignment =>
   ({ id, sceneId, sectionId: `sec-${id}`, storylineId: null, description, blocks: [{ id, text: description }], revision: 0, updatedAt });
@@ -40,10 +40,15 @@ describe('scene bodies', () => {
     expect(SceneNoteBody.parse({ text: ' ' })).toEqual({ text: '' });
   });
 
-  test('assignment description defaults to empty and is limited to 2000', () => {
+  test('assignment description defaults to empty and is limited to what the blocks can hold', () => {
     const ids = { sceneId: '11111111-1111-4111-8111-111111111111', sectionId: '22222222-2222-4222-8222-222222222222' };
+    const max = SCENE_BLOCK_LIMITS.count * (SCENE_BLOCK_LIMITS.text + 2);
     expect(SceneAssignmentCreateBody.parse(ids).description).toBe('');
-    expect(SceneAssignmentCreateBody.safeParse({ ...ids, description: 'x'.repeat(2001) }).success).toBe(false);
+    expect(SceneAssignmentCreateBody.safeParse({ ...ids, description: 'x'.repeat(2001) }).success).toBe(true);
+    expect(SceneAssignmentCreateBody.safeParse({ ...ids, description: 'x'.repeat(max) }).success).toBe(true);
+    expect(SceneAssignmentCreateBody.safeParse({ ...ids, description: 'x'.repeat(max + 1) }).success).toBe(false);
+    expect(SceneAssignmentPatchBody.safeParse({ description: 'x'.repeat(5000) }).success).toBe(true);
+    expect(SceneAssignmentPatchBody.safeParse({ description: 'x'.repeat(max + 1) }).success).toBe(false);
   });
 });
 
@@ -82,6 +87,32 @@ describe('scene blocks', () => {
     expect(parts![0] + parts![1]).toBe(text);
     expect(splitBlockText(text, 0)).toBeNull();
     expect(splitBlockText(text, text.length)).toBeNull();
+  });
+
+  test('splitBlockText refuses a non-integer caret and one inside a surrogate pair', () => {
+    const text = 'a😀b';
+    expect(splitBlockText(text, 1.5)).toBeNull();
+    expect(splitBlockText(text, Number.NaN)).toBeNull();
+    expect(splitBlockText(text, 2)).toBeNull();
+    expect(splitBlockText(text, 1)).toEqual(['a', '😀b']);
+    expect(splitBlockText(text, 3)).toEqual(['a😀', 'b']);
+  });
+
+  test('descriptionToBlocks splits on the separator and joins back exactly', () => {
+    expect(descriptionToBlocks('')).toEqual(['']);
+    expect(descriptionToBlocks('Ein See.')).toEqual(['Ein See.']);
+    expect(descriptionToBlocks('A\n\nB\nC\n\n\n\nD')).toEqual(['A', 'B\nC', '', 'D']);
+    for (const text of ['', 'A\n\nB', 'A\n\n\nB', '\n\nA\n\n', ' x \n\n y ']) expect(joinBlocks(descriptionToBlocks(text))).toBe(text);
+  });
+
+  test('descriptionToBlocks merges everything past the block limit into the last block', () => {
+    const parts = Array.from({ length: SCENE_BLOCK_LIMITS.count + 5 }, (_, i) => `P${i}`);
+    const text = joinBlocks(parts);
+    const blocks = descriptionToBlocks(text);
+    expect(blocks).toHaveLength(SCENE_BLOCK_LIMITS.count);
+    expect(blocks.slice(0, -1)).toEqual(parts.slice(0, SCENE_BLOCK_LIMITS.count - 1));
+    expect(blocks.at(-1)).toBe(joinBlocks(parts.slice(SCENE_BLOCK_LIMITS.count - 1)));
+    expect(joinBlocks(blocks)).toBe(text);
   });
 
   test('joinBlocks joins with the separator', () => {
