@@ -57,7 +57,12 @@ concrete scene and its own rhythm was preferred to generically smooth prose. Sep
   `anweisung` precedence sentence stays first; user payload unchanged.
 - `structureRequest`: system prompt gets a short rule that titles/synopses are concrete and in the work's `stil` when
   given, without stock phrases; structure/ID rules unchanged.
-- `textPrompt.ts`: keep e36a6cb line.
+- `textPrompt.ts`: keep e36a6cb line; add (after evaluation) "show feelings through concrete actions/details instead of
+  mood words; descriptions, notes and profiles read like precise working notes".
+- Draft additionally (after evaluation): do not repeat the previous text; dialogue in German quotation marks „…“;
+  avoid named body clichés "auch nicht verneint oder abgewandelt"; end on an action, image or line of dialogue instead of
+  an interpreting summary. The no-invention rule forbids contradictions and new main characters/plot-deciding events but
+  allows scenic details, gestures and dialogue.
 - Tests pin: the rules are present, style voice rule only with style, precedence order kept, payload unchanged.
 - UI: `<Icon name="wand" />` inside the button with `className="with-icon"`; accessible name stays
   „Beschreibung erzeugen“ (icon is `aria-hidden`). Tests assert the icon in section and side-strand use.

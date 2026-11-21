@@ -1,0 +1,310 @@
+{
+ "model": "google/gemini-3.1-flash-lite",
+ "date": "2026-11-21T14:25:21.753Z",
+ "prompts_commit": "33b7643",
+ "source": "OpenRouter gateway via packages/server/scripts/evalStyles.ts (synthetic contexts)",
+ "results": [
+  {
+   "kind": "draft",
+   "context": "faehre",
+   "style": "klassisch",
+   "label": "Klassisch erzählend",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Jetzt legte sich die Kälte des Abends schwer auf die Betonmole. Jonas rückte den Riemen seiner Tasche zurecht, ein Geräusch, das in der plötzlichen Stille wie ein mechanischer Fehler klang. Unter ihnen klatschte das Wasser in unregelmäßigen Abständen gegen die Pfeiler, schwarz und zäh. Mara betrachtete die hellen Schlieren, die der aufkommende Nebel auf die Wasseroberfläche legte, und verschränkte die Arme vor der Brust. „Du hättest mir Zeit lassen müssen“, sagte sie, ohne den Blick vom dunklen Sund abzuwenden. „Drei Wochen sind nichts, wenn man das Leben von Jahrzehnten in Umzugskartons packt.“ Jonas stieß einen kurzen, fast heiseren Laut aus, der als Lachen gemeint war. Er sah auf die Uhr, obwohl er genau wusste, dass die Fähre in wenigen Augenblicken das Signal geben würde. „Die Makler haben keine Geduld mit sentimentalen Anhängseln, Mara. Du weißt selbst, in welchem Zustand das Dach war. Es war eine Vernunftentscheidung, nichts weiter.“ Mara drehte sich zu ihm um. Ihr Gesicht lag im Schatten des rostigen Geländers, nur ihre Augen fingen einen schwachen Lichtreflex der entfernten Hafenlaternen ein. „Vernunft ist nur ein anderes Wort für Gleichgültigkeit, wenn es um das Haus geht, in dem wir aufgewachsen sind.“ Sie wollte noch mehr sagen, den Vorwurf der Verräterei aussprechen, der ihr seit Tagen auf der Zunge lag, doch das tief vibrierende Grollen der herannahenden Fähre schnitt jedes weitere Wort ab. Das Schiff schob sich wie eine graue Festung aus der Dunkelheit, das Licht der Suchscheinwerfer zerschnitt den Nebel und ließ die rostigen Stahlplatten der Mole für einen Moment aufleuchten. Jonas trat einen Schritt vor, die Distanz zwischen ihnen wuchs durch die bloße Erwartung der Abfahrt. Er stieg über die schmale Reling zur Gangway, die der Matrose gerade herabließ. Mara blieb zurück, die Hände fest in die Taschen ihrer Arbeitsjacke vergraben, die noch immer den herben Geruch von Buchenrauch an sich hatte. Das Schiff löste sich mit einem Quietschen von den Pollern, die Schrauben wühlten den Schlamm am Grund auf, und eine Fontäne aus Gischt legte sich wie ein feuchter Schleier über den Anleger. Gerade als die Distanz groß genug wurde, um die Stimmen verschlucken zu lassen, rief Mara über das Wasser: „Vergiss nicht, den Schlüssel unter der dritten Diele im Flur zu lassen, falls du noch einmal zurückkommst!“"
+    },
+    "ms": 3883
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "faehre",
+   "style": "knapp",
+   "label": "Modern und knapp",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Das Salz brannte in den kleinen Rissen ihrer Finger. Sie steckte die Hände in die Taschen ihrer Arbeitsjacke. Jonas stand neben ihr, den Rollkoffer fest am Griff umklammert. Das Metall des Anlegers ächzte unter der Dünung. Er sah zum dunklen Wasser hinüber, nicht zu ihr. „Das Haus war zu groß für dich allein“, sagte er. Er klang wie ein Geschäftsmann, der einen Restposten abwickelte. Mara starrte auf den Rost am Geländer. Ein Splitter löste sich und fiel in die Tiefe. „Es ging nicht um die Größe“, antwortete sie. Sie spürte, wie die Kälte durch ihre Kleidung drang. Dieselgeruch hing schwer in der Luft, vermischt mit dem fauligen Duft von angespültem Seetang. „Wir hätten den Sommer abwarten können“, fügte sie hinzu. Jonas hob den Kopf. Das Licht der nahen Laterne warf harte Schatten auf sein Gesicht. „Und dann? Ein weiteres Jahr mit Reparaturen, die wir uns nicht leisten können?“ Er zog den Reißverschluss seiner Jacke bis unters Kinn. Ein lautloses Signal. Die Fähre schob sich aus der Finsternis heran, die Scheinwerfer schnitten weiße Löcher in den Nebel. Das Stampfen des Motors vibrierte unter ihren Sohlen. Jonas trat einen Schritt zurück. Er sah sie kurz an, ein flüchtiger, fast entschuldigender Blick, bevor er sich zum Schiff drehte. Die Klappe senkte sich mit einem kreischenden Geräusch. Er hastete über die Rampe, ohne sich umzusehen. Erst als die Leinen losgeworfen wurden und der schmale Spalt zwischen Beton und Schiff sich weitete, riss Mara die Arme hoch. Die Kälte schnitt ihr in den Hals, als sie rief: „Vergiss den Schlüssel nicht im Briefkasten!“ Jonas stand am Heck, er hob kurz die Hand, dann verschlang ihn der Nebel."
+    },
+    "ms": 3067
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "faehre",
+   "style": "poetisch",
+   "label": "Poetisch",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Die Haut spannte an ihren Knöcheln, rau von der Lauge und dem Salz, als sie den schweren Jutesack neben sich auf dem Beton abstellte. Jonas rückte seine Tasche zurecht, den Blick starr auf das schwarze, brodelnde Wasser des Sunds gerichtet. Der Geruch von altem Diesel und brackigem Schlick hing schwer in der Luft, unterbrochen nur vom heiseren Schreien der letzten Möwen, die im schwindenden Licht wie zerrissene Papierfetzen wirkten. „Es war eine Entscheidung, Mara. Keine böse Absicht“, sagte er, und seine Stimme klang in der weitläufigen Stille der Mole fast zu laut, beinahe fremd. Mara presste die Lippen aufeinander. Das Haus – dieses klapprige Ding mit den feuchten Wänden und der Geschichte, die sie beide noch nicht hinter sich gelassen hatten – war nun eine Sache für Fremde, ein Objekt in einer Akte, die Jonas längst zugeklappt hatte. „Du hast es uns unter den Füßen weggerissen, während wir noch darauf standen“, erwiderte sie, und jedes Wort fühlte sich an wie ein Kieselstein, den sie in die Tiefe warf. Die Fähre schob sich wie ein leuchtender, metallischer Käfer aus dem Nebel, die Scheinwerfer schnitten gelbe Bahnen in die Dunstglocke. Jonas trat einen Schritt vor, die Absicht zu gehen in jede seiner Sehnen geschrieben. Er sah sie nicht an, als er die schmale Gangway betrat. Das metallische Klappern der Rampe hallte blechern über die Mole, ein unbarmherziger Takt. Erst als die Schiffsschrauben das Wasser aufpeitschten und sich das Boot langsam von der Kaimauer löste, eine dunkle Lücke zwischen ihnen aufklaffte, die mit jedem Meter wuchs, brach es aus ihr heraus. Mara trat an das rostige Geländer, ihre Finger klammerten sich in das raue Eisen. „Jonas!“, rief sie, und ihre Stimme trug kaum gegen das Rauschen der Maschinen, „nimm wenigstens den Schlüssel vom Dachboden mit.“"
+    },
+    "ms": 3429
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "faehre",
+   "style": "spannung",
+   "label": "Spannungsgeladen",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Jetzt peitschte er die Gischt gegen den Beton der Mole, dass es schmeckte wie altes Salz und Verfall. Jonas zog den Kragen seiner Windjacke hoch, der Reißverschluss klemmte auf halber Höhe. Er blickte nicht zu ihr, sondern starrte auf die schwarzen Wellen, die gegen die Pylone schlugen. „Du hättest nicht unterschreiben dürfen“, sagte Mara. Ihre Stimme klang rau, fast wie das Ächzen der Fender, die unter dem Gewicht der einlaufenden Fähre ächzten. Jonas lachte kurz auf, ein hartes, freudloses Geräusch, das im Dieselgestank unterging. „Es war kein Zuhause mehr, Mara. Nur noch ein Klotz, der uns beide nach unten gezogen hätte. Ich habe keine Lust, mein Leben in den Renovierungsstau einer Insel zu stecken, auf der die Zeit stehen bleibt.“ Die Fähre schob sich wie ein Ungetüm aus dem Nebel, die Scheinwerfer schnitten gelbe Bahnen durch die feuchte Luft. Über ihnen kreischte eine Möwe, die sich gegen den Wind stemmte. „Du verkaufst Erinnerungen wie Schrott“, warf Mara ein. Sie spürte, wie sich ihre Kiefermuskeln verhärteten. „Erinnerungen bezahlen keine Rechnungen“, entgegnete er und griff nach seinem Seesack. Die Rampe schlug mit einem dumpfen, metallischen Schlag auf das Holz der Anlegestelle. Ein Besatzungsmitglied in einem öligen Overall bedeutete ihnen mit einer knappen Geste, sich zu beeilen. Jonas machte einen Schritt nach vorn, ohne sie noch einmal anzusehen. Mara beobachtete, wie er das Deck betrat, die Schultern hochgezogen, den Kopf eingezogen gegen die Kälte. Das Schiff begann sich zu lösen, ein grollendes Vibrieren im Boden, das bis in ihre Knöchel kroch. Die Lücke zwischen der Kaimauer und dem Schiff wurde augenblicklich größer, das Wasser dazwischen schäumte auf, ein dunkler Schlund, der sich öffnete. Als das Heck der Fähre bereits die ersten Meter zurückgelegt hatte und der Nebel die Konturen seines Gesichts zu verwischen drohte, schrie sie ihm nach: „Der Schlüssel liegt unter der losen Diele im Flur, nimm ihn mit, du wirst ihn brauchen!“"
+    },
+    "ms": 3765
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "faehre",
+   "style": "humorvoll",
+   "label": "Humorvoll",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Es war ein eisiger Zug, der den Dieselgestank der Fähre wie eine persönliche Beleidigung in ihre Nasen trieb. Jonas rückte seinen Rucksack zurecht, als würde er sich gleich unter dem Gewicht der Familiengeschichte in die Tiefe stürzen. „Hättest du wenigstens den Dachboden entrümpelt, wäre das Haus doppelt so viel wert gewesen“, murmelte er und starrte auf den rostigen Poller, an dem das Schiff vertäut lag. Mara verschränkte die Arme vor der Brust, sodass ihre Arbeitsjacke knisterte. „Den Dachboden? Da oben lagern noch die alten Netze vom Opa. Die sind jetzt Vintage, Jonas. Das nennt man heute Erbe, nicht Sperrmüll.“ Er schnaubte und trat einen Kieselstein gegen das Geländer, das bei der Berührung ein hohles, gequältes Geräusch von sich gab. „Das nennt man Verfall, Mara. Das Haus hat mehr Rost an den Scharnieren als ein alter Kutter. Ich habe den Käufer fast angefleht, die Bausubstanz zu ignorieren.“ Mara wollte etwas über die Statik ihrer Kindheit sagen, doch das Signalhorn der Fähre übertönte sie mit einem heiseren Brüllen, das eine Gruppe Möwen in die trübe Luft aufscheuchte. Jonas drückte ihr kurz und etwas zu fest die Schulter, ein hastiger Akt der Versöhnung, der so gar nicht zu seiner rechthaberischen Art passte. Er stapfte über die metallene Rampe, die unter seinen Schritten hohl dröhnte, als wollte er den Abschied möglichst geräuschvoll gestalten. Die Fähre legte ab, das Wasser schäumte schwarz und dickflüssig auf, während die Distanz zwischen der Mole und dem Deck wuchs. Mara sah zu, wie Jonas sich an der Reling positionierte, den Kopf tief in den Kragen gezogen. Als er bereits auf dem dunklen Wasser schaukelte, trat sie einen Schritt vor und rief gegen den Wind an: „Vergiss nicht, den Schlüssel vom Schuppen abzugeben, sonst holt dich der Geist von Tante Trude!“"
+    },
+    "ms": 3266
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "faehre",
+   "style": "jugendbuch",
+   "label": "Jugendbuch",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Er blies in seine geballten Fäuste, als könnte er die Wärme dort einsperren. Neben ihnen peitschte das Wasser gegen den Beton, ein dumpfes, unregelmäßiges Grollen. Jonas rückte seinen Rucksack zurecht, der schwer und sperrig auf seinen Schultern saß. „Du hättest nicht unterschreiben müssen, Jonas. Nicht ohne mich zu fragen.“ Mara sah ihn direkt an, den Kopf leicht in den Nacken gelegt, damit ihr der Wind nicht die nassen Strähnen ins Gesicht trieb. Der Geruch von altem Diesel stieg vom Wasser auf, beißend und vertraut. Jonas wich ihrem Blick aus und trat einen Schritt näher zur Kante, wo das rostige Geländer wie eine kranke Rippe aus dem Boden ragte. „Es war mein Anteil genauso wie deiner. Irgendwer musste den Schlussstrich ziehen, bevor das Dach über uns zusammenbricht. Oder willst du ernsthaft behaupten, du hättest den Schimmel im Keller jemals saniert?“ Mara spannte ihre Kiefermuskeln an. Sie schmeckte das Salz auf ihren Lippen. Die Fähre war jetzt zu hören, ein tiefes Grollen, das den Boden unter ihren Füßen erzittern ließ, noch bevor das erste Licht das graue Wasser durchschnitt. „Es war unser Zuhause. Das verkauft man nicht wie eine alte Blechdose auf dem Flohmarkt.“ „Es war nur Holz und Stein, Mara. Mehr nicht.“ Das Schiff legte an, das Metall der Rampe knallte auf den Beton, ein Geräusch wie ein Peitschenhieb. Jonas ging, ohne sich noch einmal zu ihr umzudrehen. Er kletterte die Stufen nach oben, als wollte er den Abstand zwischen ihnen mit jedem Schritt vergrößern. Mara blieb stehen. Sie beobachtete, wie die Leinen gelöst wurden und das Schiff langsam den Kontakt zum Anleger verlor. Die Lücke zwischen der Kaimauer und dem schwarzen Rumpf wuchs unaufhaltsam. Als Jonas oben an der Reling erschien, kaum mehr als eine Silhouette im fahlen Licht der Decksstrahler, hob sie die Hand. „Denk an die Schlüssel für den Schuppen!“, schrie sie gegen den Wind an. Er hob kurz den Arm, doch ob er es gehört hatte, blieb in dem aufgewühlten Wasser verborgen."
+    },
+    "ms": 3712
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "faehre",
+   "style": "ich-perspektive",
+   "label": "Ich-Perspektive",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Jetzt peitschte er den Geruch von billigem Diesel über die Betonmole und mischte ihn mit dem fauligen Dunst der angeschwemmten Algen. Jonas stand am rostigen Geländer, die Hände tief in den Taschen seiner Jacke vergraben, die Schultern hochgezogen. Er sah nicht zu mir, sondern starrte in das aufgewühlte Grau des Sunds. „Es ist nur ein Gebäude, Mara. Ein Haufen Ziegel, der schon längst nachgegeben hätte, wenn ich nicht diesen Käufer gefunden hätte“, sagte er, ohne den Kopf zu drehen. Seine Stimme klang brüchig, fast schon entschuldigend, aber ich hörte nur das kühle Kalkül heraus. Ich trat einen Schritt näher, meine Stiefel knirschten auf dem unebenen Boden. „Das Elternhaus. Das waren vierzig Jahre, Jonas. Nicht einfach nur Ziegel.“ Er schnaubte, ein trockenes Geräusch, das im Heulen des Windes fast unterging. „Vierzig Jahre Arbeit, die wir beide hätten machen müssen. Ich gehe, damit ich nicht so ende wie ihr hier drüben.“ Das Grollen der ankommenden Fähre schob sich über das Wasser, ein dumpfer Rhythmus, der die Mole vibrieren ließ. Als die Heckklappe mit einem metallischen Quietschen auf die Rampe schlug, wirbelte eine Fontäne aus Gischt und aufgewirbeltem Dreck auf. Wir schwiegen, während die wenigen Passagiere an uns vorübergingen. Jonas klopfte mir hastig auf die Schulter, ein fremdes, kurzes Berühren, dann machte er sich auf den Weg zur Luke. Das Schiff löste sich vom Anleger, ein Spalt aus dunklem, schäumendem Wasser riss zwischen uns auf. Er blieb an der Reling stehen, winzig und entschlossen, das Festland im Rücken. Die Scheinwerfer der Fähre schnitten trübe Kegel in den Nebel, die schon nach wenigen Metern in der Schwärze verschwammen. „Denk an die Schlüssel für den Dachboden!“, rief ich, und meine Stimme klang plötzlich dünn und verloren gegen das Stampfen der Schiffsmotoren."
+    },
+    "ms": 3393
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "faehre",
+   "style": "team",
+   "label": "Team-Stil „Hausstil Küste“",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Jetzt beißt er in der Kälte, schneidet unter die Fingernägel, die noch immer nach Wacholder und Buchenholz riechen. Jonas tritt unruhig von einem Bein aufs andere, der Kragen seines Mantels ist hochgeschlagen. Er starrt auf das schwarze, unruhige Wasser, das gegen die Betonmole klatscht. „Es war nicht anders machbar, Mara“, sagt er, ohne den Kopf zu ihr zu drehen. Seine Stimme klingt flach, belegt vom nahen Abgas des Fährschiffs, das sich bereits langsam rückwärts vom Kai schiebt. Mara presst die Lippen aufeinander. Das Haus mit dem maroden Dachstuhl war für ihn nur ein Klotz, eine Last, die ihn an die Insel kettete, während sie darin die einzigen verbliebenen Spuren ihrer Kindheit sah. „Du hättest die Käufer wenigstens fragen können, ob sie den Garten erhalten“, antwortet sie. Ihr Blick bleibt an seinen Knöcheln hängen, die unter der Jeans hervorlugen. Sie ist stolz darauf, dass sie ihre Stimme unter Kontrolle behält, dass kein Vorwurf sie verrät. Das Schiff stößt ein tiefes, grollendes Signal aus, das durch die Dielen der Mole vibriert. Die Gischt spritzt hoch, vermischt mit dem beißenden Geruch von Diesel und salzigem Schlick. Jonas ist bereits auf dem Deck, eine kleine, einsame Gestalt zwischen den stählernen Aufbauten. Er hebt kurz die Hand, ein hastiges, fast flüchtiges Zeichen, das kaum gegen die Dunkelheit besteht. Die Lichter der Fähre ziehen einen flackernden Streifen über die Wellen. Erst als der Abstand zu groß wird, um gesehen zu werden, und die Reling nur noch ein schwarzer Schatten vor dem Horizont ist, löst sich die Spannung in Maras Schultern. Sie hebt die Hand, ihre Finger sind klamm und rauer als sein Leben es jemals zulassen würde. „Vergiss den Schlüssel nicht, du Idiot“, ruft sie gegen das Rauschen an, doch der Wind trägt ihre Stimme fort, noch bevor sie den Rand der Mole erreicht."
+    },
+    "ms": 3450
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "faehre",
+   "style": "kombi",
+   "label": "Kombination: Modern und knapp + Ergänzung des Autors",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Sie standen am Ende der Mole. Die Luft schmeckte nach Diesel und aufgewühltem Schlick. Jonas trat gegen den Betonsockel, bis sich ein Stück Abrieb löste. „Musstest du es echt so schnell verscherbeln?“, fragte sie. Er sah nicht zu ihr, sondern auf das dunkle Wasser, wo die Lichter des ankommenden Schiffes tanzten. „Es stand seit drei Jahren leer, Mara. Was soll ich da noch dran hängen?“ Er zog den Kragen seiner Jacke höher. „Ich bezahl die Reparatur vom Schuppen, abgemacht?“ Mara schnaubte. Das Geld war nicht das Problem, das wusste er genau. Sie starrte auf die rostige Stange des Geländers, die sich kalt unter ihren Fingern anfühlte. „Behalt den Kram einfach“, sagte sie. Ein Möwenschrei durchschnitt die Stille, schrill und fordernd. Die Fähre schob sich mit tiefem Grollen an den Anleger. Die Rampe krachte mit einem hohlen Scheppern auf das Metall. Jonas griff nach seiner Tasche, die Riemen schnitten in seine Schulter. „Ich meld mich, wenn ich in der Stadt bin“, sagte er. Mara antwortete nicht. Sie sah zu, wie er an Bord ging, den Rücken leicht gebeugt gegen den kalten Luftzug. Erst als die Leinen losgeworfen wurden und sich der Spalt zwischen Mole und Schiff unaufhaltsam verbreiterte, hob sie die Hand. „Vergiss nicht, die Schlüssel abzugeben!“, rief sie über das aufschäumende Wasser hinweg. Jonas hob kurz den Arm, ohne sich umzudrehen, dann verschlang ihn der Schatten des Aufbaus."
+    },
+    "ms": 2799
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "faehre",
+   "style": "ohne",
+   "label": "Kein Stil gesetzt",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Jetzt legte sich der Geruch von kaltem Diesel schwer über die Mole, vermischt mit dem fauligen Aroma von angespültem Seegras. Jonas schob seinen Koffer über die unebenen Betonplatten, die Rollen klackerten unerbittlich gegen die Kanten. Mara ging einen Schritt hinter ihm. Ihr Blick galt den dunklen Wellen, die unruhig gegen die Pfähle schlugen. „Du hättest mir mehr Zeit lassen müssen“, sagte sie, ohne den Kopf zu drehen. Jonas hielt abrupt an, sodass sie fast gegen seinen Rücken prallte. Er drehte sich um, sein Gesicht im fahlen Licht der einzigen Laterne nur eine Ansammlung aus Schatten und harten Winkeln. „Drei Jahre, Mara. Drei Jahre stand das Haus leer, während du dich geweigert hast, auch nur einen Entrümpeler anzurufen. Was hättest du denn noch gebraucht? Eine Einladung zum Verfall?“ Mara verschränkte die Arme vor der Brust. Sie spürte die raue Haut ihrer Finger, gezeichnet vom Salz und dem Rauch der Räucherkammer. „Es war nicht nur dein Haus“, erwiderte sie leise. „Du hast es für einen Spottpreis an jemanden verschenkt, der dort Ferienwohnungen einrichten will. Das war kein Verkauf, das war eine Auslöschung.“ Jonas atmete hörbar aus, ein kurzes, stoßweises Geräusch, das im Heulen des Windes fast unterging. Er griff nach dem Griff seines Koffers, die Knöchel traten unter der dünnen Haut hervor. „Ich brauche mein Leben zurück, Mara. Ich kann hier nicht in der Vergangenheit ersticken.“ Er wandte sich ab und trat auf die Stahlrampe zu, die wie eine zitternde Zunge auf das schwarze Wasser des Sundes hinausragte. Die Fähre stieß ein tiefes, vibrierendes Signal aus, das durch die Sohlen ihrer Schuhe drang. Jonas ging an Bord, ohne sich noch einmal umzublicken. Die Klappe hob sich mit einem kreischenden metallischen Protest. Erst als das Schiff sich langsam vom Anleger löste und ein breiter, schäumender Kielstreifen zwischen der Mole und dem Rumpf aufbrach, machte Mara einen Schritt nach vorn. Die Lücke wurde größer. Das ferne Licht des Steuerhauses wanderte bereits abseits der Kaimauer. „Jonas!“, rief sie, und ihre Stimme klang dünn und spröde in der Weite des Hafens. „Vergiss den Schlüssel unter der dritten Stufe nicht.“ Sie sah, wie er an der Reling eine kurze Bewegung machte, bevor das Schiff endgültig im dichten Dunst des Sundes verschwand."
+    },
+    "ms": 3799
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "werkstatt",
+   "style": "klassisch",
+   "label": "Klassisch erzählend",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Der Geruch von altem Maschinenöl und Metallstaub klebte noch immer in den Wänden der kleinen Werkstatt, als hätte der Großvater den Raum erst vor wenigen Minuten verlassen, um eine Lieferung in der Bäckerei unter ihnen zu prüfen. Lio strich über die staubige Oberfläche der massiven Eichenwerkbank. Die Lupenlampen hingen wie erstarrte Insekten von der Decke, ihre vergilbten Kabel wirkten spröde in der kühlen Winterluft. Seit Tagen sortierte sie das Erbe der kleinteiligen Welt: winzige Federn, Zahnräder, die kaum größer als Linsen waren, und Schachteln voll mit feinen, gebläuten Zeigern. Ihr Blick blieb an einer silbernen Taschenuhr hängen, deren Sprungdeckel hartnäckig klemmte. Lio setzte sich auf den schmalen Hocker, der unter ihrem Gewicht leise ächzte, und führte eine kleine Pinzette in den Spalt am Rand. Mit einer vorsichtigen Drehung des Handgelenks gab das Metall nach. Die Uhr war leer. Kein Werk, kein Ticken, nur ein hohler Raum, der nach abgestandener Zeit roch. Als sie das Gehäuse schüttelte, löste sich aus dem Gehäuseboden ein gefaltetes Stück Papier, das sich mit einem trockenen Geräusch auf dem Holztisch entrollte. Die Schrift war eng und kantig, eine Handschrift, die Lio aus den kurzen Notizen auf den Werkstattplänen kannte, doch die Anrede ließ sie zögern. Liebe Elara, stand dort in verblichener Tinte. Ein Name, den sie nie gehört hatte, weder in den langen Erzählungen ihres Großvaters über die Mechanik der Welt noch in den Gesprächen ihrer Eltern. Sie strich mit dem Daumen über das Papier, dessen Ränder bereits zu bröckeln begannen. Draußen vor dem Fenster verdeckte ein Vorhang aus dichtem Schneegestöber die Dächer der Gasse, sodass das Licht im Raum ein fahles, bläuliches Leuchten annahm. Lio faltete das Blatt wieder zusammen, wobei das Papier unter ihren Fingern leise knisterte, und legte es in die Tasche ihrer Strickjacke."
+    },
+    "ms": 3852
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "werkstatt",
+   "style": "knapp",
+   "label": "Modern und knapp",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Die Luft in der Werkstatt roch nach altem Öl und Metall. Lio strich über die staubige Werkbank. Der Geruch der Bäckerei unter ihr war längst verflogen. Hier oben roch es nur noch nach Großvater. Sie öffnete die oberste Schublade. Darin lagen verstreut winzige Zahnräder, die im fahlen Licht der Lupenlampe stumpf glänzten. Sie schob die Kleinteile beiseite und griff nach der schweren Taschenuhr. Das Gehäuse war kühl. Der Deckel klemmte, wie immer. Mit dem Fingernagel fand sie die winzige Kerbe an der Seite. Ein leises Klicken, dann sprang das Metall auf. Statt des üblichen Räderwerks sah sie Papier. Ein eng gefalteter Zettel, vergilbt an den Kanten. Sie zog ihn mit zwei Fingern heraus. Der Brief war kurz. Lio las den Namen, den sie noch nie gehört hatte. Klara. Sie faltete den Zettel wieder zusammen. Die Buchstaben waren in einer schnellen, fast gehetzten Handschrift geschrieben. Sie legte die Taschenuhr zurück in die Schublade und hielt das Papier in der Hand. Die Werkstatt wirkte plötzlich fremd. Sie trat zum Fenster und sah hinaus auf die verschneite Straße. Unten kehrte jemand den Gehweg. Lio steckte den Zettel in die Tasche ihrer Jacke."
+    },
+    "ms": 1968
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "werkstatt",
+   "style": "poetisch",
+   "label": "Poetisch",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Der Staub in der Werkstatt war kein gewöhnlicher Staub, sondern ein feiner Niederschlag aus der Zeit selbst, der sich auf den Messinggehäusen und den ausgebreiteten Federblättern abgesetzt hatte. Lio spürte den kühlen Hauch der Winterluft, die durch die Ritzen der alten Dielen drang, doch die vertraute Schwere des Raumes wog schwerer. Sie atmete den Geruch von Harz und dem herben Öl ein, das tief in das Eichenholz des Arbeitstisches eingezogen war. Als sie die silberne Taschenuhr in die Hand nahm, fühlte sie sich in ihrer kalten Glätte fremd an, als hätte sie nicht mehr in diese vertraute Umgebung gehört. Mit den spitzen Fingern einer Uhrmacherlehrling-Tochter öffnete sie den Deckel, der mit einem leisen, fast unhörbaren Klicken nachgab. Statt des gewohnten Rhythmus aus feinen Zahnrädern und der ruhenden Unruh stieß sie auf einen Widerstand, der den hohlen Raum dahinter blockierte. Ein zusammengefaltetes Stück Pergament, vergilbt wie die Haut einer alten Frucht, lag fest eingeklemmt im Gehäuse. Lio zog es mit der Pinzette hervor, ihre Bewegungen waren so behutsam, als würde sie ein verletztes Insekt berühren. Das Papier knisterte, als sie es entfaltete, ein Geräusch wie das Brechen von trockenem Herbstlaub unter einem schweren Schritt. Die Tinte war verblasst, wirkte wie ein schwacher Schatten, der sich hartnäckig an die Oberfläche klammerte. Sie las den Namen – Elara – und sprach ihn leise vor sich hin, doch er klang fremd, ein Wort, das noch nie zwischen diesen Werkbänken und den aufgereihten Lupenlampen hallte. Draußen drang das ferne Klappern der Backbleche aus dem Erdgeschoss nach oben, ein rhythmisches Pochen, das so gar nicht zu der Stille passte, die nun aus diesem kleinen, geheimen Fund in ihrer Hand aufstieg. Sie ließ den Blick über die Regale schweifen, über die unzähligen, nun verstummten Uhrwerke, die in der Dunkelheit auf ihren nächsten Aufzug warteten. Sie legte den Brief zurück auf den Tisch, direkt unter das gelbe Licht ihrer Schreibtischlampe, und berührte mit dem Daumen den rauen Rand des Papiers."
+    },
+    "ms": 3850
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "werkstatt",
+   "style": "spannung",
+   "label": "Spannungsgeladen",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Der Geruch von altem Maschinenöl hing schwer in der Luft der Werkstatt, vermischt mit der abgestandenen Wärme der Bäckerei aus dem Untergeschoss. Lio strich mit dem Ärmel über den schweren Eichenarbeitstisch. Die Staubschicht war grau und dick, wie ein Leichentuch über den Dingen, die ihr Großvater hinterlassen hatte. Ihre Finger tasteten nach dem kleinen hölzernen Kasten, den sie vorhin unter dem Haufen aus Federstahl und abgebrochenen Unruhen gefunden hatte. Er war schwer, fast zu schwer für seine Größe. Sie hob das Gehäuse einer Taschenuhr, eine alte Sprungdeckeluhr aus schwerem Messing, die längst keinen Ton mehr von sich gab. Lio versuchte, den Deckel zu öffnen, doch er klemmte. Mit dem Fingernagel schabte sie an der feinen Spalte, bis der Verschluss mit einem trockenen, metallischen Schnalzen nachgab. In dem winzigen Hohlraum, dort wo eigentlich das Uhrwerk ticken sollte, steckte ein gefaltetes Stück Pergament. Sie hielt inne. Das Herz klopfte ihr hart gegen die Rippen, ein rhythmisches Pochen, das den Raum zwischen den Regalen auszufüllen schien. Vorsichtig zog sie das Papier mit einer Pinzette heraus. Es war so brüchig, dass es an den Kanten zu splittern drohte. Sie entfaltete es auf der Werkbank. Die Handschrift war flüchtig, hastig hingeworfen, die Tinte ins Papier eingesogen wie eine alte Wunde. „Elias“, begann der Satz, doch der Name der Frau, an die er gerichtet war, ließ ihre Finger erstarren. Es war kein Name aus dem Dorf, kein Name, der je in den Erzählungen ihres Großvaters gefallen war. Sie las die erste Zeile erneut, das Wort ‚Verrat‘ stach ihr wie ein Splitter in die Augen. Lio hörte ein Knarren auf der Treppe hinter sich."
+    },
+    "ms": 3160
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "werkstatt",
+   "style": "humorvoll",
+   "label": "Humorvoll",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Lio wusste, dass das Aufräumen von Opa Friedrichs Werkstatt ein Unterfangen war, das eher einer archäologischen Expedition in einem Minenfeld glich als einer simplen Reinigungsaktion. Über der Bäckerei roch es nicht nach frisch gebackenen Brötchen, sondern hartnäckig nach Maschinenöl, altem Messing und einer Prise Pfeifentabak, die sich vermutlich für die nächsten hundert Jahre im Gebälk festgesetzt hatte. Mit einer Pinzette, die sie aus einem Haufen feinmechanischer Kleinteile gefischt hatte, manövrierte sie durch die Schubladen, in denen Friedrich offenbar alles aufbewahrt hatte, was er seit 1974 für potenziell nützlich hielt. Dass er dabei auch drei halbfertige Taschenuhren und eine Packung verschrumpelter Lakritzstangen in einen einzigen Hohlraum gequetscht hatte, entsprach ganz seinem speziellen Sinn für Ordnung. Als sie die schwere goldene Taschenuhr aus einem verstaubten Samtbeutel zog, spürte sie einen unnatürlichen Widerstand im Gehäuse. Ein leises Klicken, ein kurzes Schaben, und plötzlich sprang der Deckel auf, als wolle die Uhr ihr mit Gewalt ein Geheimnis ins Gesicht schleudern. Anstelle des gewohnten tickenden Herzschlags kam ein sorgfältig gefalteter Papierstreifen zum Vorschein. Lio fischte das Stück Papier hervor, das sich beim Entfalten ein wenig störrisch sträubte, als hätte es sich an die Enge gewöhnt. Der Name stand dort oben, in einer Handschrift, die so elegant und schwungvoll wirkte, dass sie gar nicht zu Opas brummiger Art passen konnte: Eine gewisse Elara, von der in den unzähligen Geschichten am Küchentisch nie die Rede gewesen war. „Elara? Wer zum Kuckuck soll das denn sein?“, murmelte Lio und ließ den Blick über die verstaubten Werkbänke schweifen, als ob der alte Mann gleich hinter einem der Zahnradstapel hervorspringen und sie wegen Schnüffelei maßregeln würde. Der Brief enthielt keine technischen Anleitungen, sondern nur eine Zeile, die so mysteriös klang, dass sie die nächste Schublade mit einer Mischung aus Neugier und leichter Genervtheit aufzog. Sie hielt das Papier gegen das Licht der Lupenlampe, wobei sie fast mit dem Ellenbogen einen Stapel winziger Schrauben vom Tisch fegte. Vorsichtig legte sie den Brief beiseite, griff nach der nächsten Uhr und stellte fest, dass die Arbeit im Nachlass ihres Großvaters plötzlich deutlich weniger wie eine Pflichtaufgabe und mehr wie eine sehr späte, sehr verwirrende Nachricht von einem Toten wirkte."
+    },
+    "ms": 3393
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "werkstatt",
+   "style": "jugendbuch",
+   "label": "Jugendbuch",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Der Geruch in der Werkstatt war noch immer derselbe: ein schweres Gemisch aus altem Öl, Metallstaub und dem süßen, fast aufdringlichen Backaroma, das durch den Boden nach oben kroch. Lio strich mit dem Ärmel über den Arbeitstisch, doch der feine Schmutz wollte einfach nicht weichen. Alles hier wirkte wie eingefroren, als hätte ihr Großvater nur kurz den Raum verlassen, um frisches Brot zu holen. Sie zog die schwere Schublade mit den kleinsten Zahnrädern auf. Es klirrte leise, ein Geräusch, das sie früher immer beruhigt hatte. Zwischen den winzigen, golden glänzenden Scheiben lag die Taschenuhr mit dem gesprungenen Glas, die er immer in der Westentasche getragen hatte. Lio hob sie vorsichtig auf. Das Gehäuse fühlte sich kühl und fremd an. Als sie den Deckel aufdrückte, erwartete sie das gewohnte Ticken, doch das Uhrwerk blieb stumm. Statt der feinen Mechanik sah sie ein Stück dünnes, vergilbtes Papier, das in den leeren Raum zwischen den Zeigern gepresst war. Ihre Finger zitterten leicht, als sie es mit der Pinzette herauszog und entfaltete. Die Schrift war eng und hastig, eine Tinte, die ins Braune verblasst war. »An Elena«, las sie leise vor, und der Name schmeckte ungewohnt auf ihrer Zunge. Es war kein Name aus ihrer Familie, keine der Frauen, die an den Sonntagen Kaffee getrunken hatten. Sie las den ersten Satz noch einmal, während sie sich auf den Hocker sinken ließ, dessen Bein unter ihr kurz ächzte. Elena. Die Buchstaben sahen aus wie Spinnenbeine auf dem Papier. Lio drehte das Blatt im Licht der Lupenlampe hin und her, bis die Schatten der Werkzeuge an der Wand tanzten. Da war noch ein Satz am Ende, unterstrichen mit einem Schwung, der fast das Papier durchtrennt hätte: »Ich habe das Versprechen nie gebrochen, auch wenn der Winter niemals endet.« Lio legte das Papier auf den Tisch, direkt neben die Schraubendreher, und starrte auf die fremde Handschrift."
+    },
+    "ms": 3422
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "werkstatt",
+   "style": "ich-perspektive",
+   "label": "Ich-Perspektive",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Der Geruch von altem Öl und Metall liegt schwer in der Luft, fast so, als hätte die Zeit hier oben über dem Bäckerladen angehalten. Ich fahre mit der Hand über die Werkbank, auf der noch immer die feinen Späne liegen, die Opa zuletzt hinterlassen hat. Alles wirkt unberührt, fast so, als käme er jeden Moment durch die Tür, um seine Lupe zurechtzurücken. Mein Blick bleibt an einer silbernen Taschenuhr hängen, die halb hinter einem Haufen kleiner Zahnräder unter der Lupenlampe verborgen liegt. Das Gehäuse ist stumpf geworden, und der Federdeckel klemmt ein wenig, als ich versuche, ihn mit dem Fingernagel zu hebeln. Ein kurzer Druck, ein leises metallisches Schnappen, und das Innenleben liegt offen vor mir. Doch statt des gewohnten tickenden Uhrwerks entdecke ich einen winzigen, mehrfach gefalteten Zettel, der sich wie eine Fremdkörper zwischen die Räder geklemmt hat. Meine Finger zittern leicht, als ich das Papier herausziehe. Es ist vergilbt, der Rand an einer Stelle ausgefranst. Mit vorsichtigen Bewegungen entfalte ich es. Die Handschrift ist schwungvoll, absolut nicht wie die sonst so akkuraten Notizen auf seinen Werkstattplänen. Der Brief ist an eine gewisse Clara adressiert. Ich wiederhole den Namen leise, aber er passt nicht zu den Gesichtern, die ich aus Opas Leben kenne. Es gibt keine Clara in unserem Haus, keine Clara in seinen Erzählungen, die immer von mechanischen Herausforderungen handelten, nie von Personen, die ihn so hätten schreiben lassen. Ich drehe das Papier im Licht der Lupenlampe hin und her, während der Geruch der Backstube von unten durch die Dielenritzen hochdringt, süßlich und fremd in dieser staubigen Stille. Was hatte er in dieser Uhr versteckt, die er sonst so penibel gepflegt hat? Ich lege das kleine Papier auf den Tisch, direkt neben die Pinzette, und starre auf den ersten Satz."
+    },
+    "ms": 3519
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "werkstatt",
+   "style": "team",
+   "label": "Team-Stil „Hausstil Küste“",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Der Geruch nach altem Öl und Metall liegt schwer in der Luft, vermischt mit dem süßlichen Nachhall des Backofens aus dem Erdgeschoss. Lio streicht über die raue Holzplatte des Arbeitstisches. Unter ihren Fingern sammelt sich feiner Metallabrieb, grau und kühl. Draußen peitscht der winterliche Nordwind gegen die schmalen Fensterscheiben, lässt das Glas in den bleiernen Rahmen zittern. Sie schiebt die schwere Lupenlampe beiseite, deren Gelenke ein trockenes, protesthaftes Knirschen von sich geben. In einer der flachen Holzschubladen, zwischen winzigen Zahnrädern, die wie erstarrte Insekten glitzern, liegt die Taschenuhr. Sie ist schwerer, als sie aussieht, das Gehäuse aus dunklem Silber wirkt matt und stumpf. Lio öffnet den Deckel, der Widerstand leistet. Anstatt des erwarteten komplexen Geflechts aus Federn und Unruhen blickt sie auf einen schmalen Spalt im Gehäuseboden. Ein Stück Papier, mehrfach gefaltet, klemmt fest zwischen der Messingplatte und dem äußeren Ring. Mit den Spitzen ihrer Pinzette zieht sie es hervor. Das Papier ist spröde und riecht muffig. Sie entfaltet es behutsam. Die Schrift ist flüchtig, eilig hingeworfen, die Tinte bereits ins Bläuliche verblichen. „Für Elena“, liest sie leise, und das Wort hallt in der vollgestopften Werkstatt seltsam fremd nach. Elena. Der Name gehört nicht in diesen Raum, nicht in die Welt zwischen Federn und Zeigern, die ihr Großvater hinterlassen hat. Sie beugt sich tiefer über das Blatt, während draußen ein Schneeschauer gegen die Scheibe peitscht. Lios Atem bildet eine winzige Wolke in der kalten Werkstattluft. Sie dreht den Zettel im gedämpften Licht der Lampe hin und her, bis die ersten Worte unter ihrem Blick Gestalt annehmen."
+    },
+    "ms": 3420
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "werkstatt",
+   "style": "kombi",
+   "label": "Kombination: Modern und knapp + Ergänzung des Autors",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Die Werkstatt roch noch immer nach Öl und altem Messing. Lio strich über die staubige Werkbank. Unter den Fingern fühlte sich das Holz rau an, vertraut. Großvater hätte jetzt gesagt, dass man Unordnung nicht mit Putzen bekämpft, sondern mit Geduld. Er war ein sturer Kopf gewesen, aber seine Uhren liefen präziser als alles, was man heute kaufen konnte. Lio öffnete eine der kleinen Schubladen. Sie war randvoll mit Zahnrädern, Federn und winzigen Schrauben. Ein Durcheinander, das nur er durchschaute. Hinten im Eck lag eine Taschenuhr, deren Glas einen Sprung hatte. Sie wirkte schwerer als die anderen. Lio hob sie hoch. Die Kette baumelte träge. Sie versuchte das Gehäuse zu öffnen, der Verschluss klemmte. Mit dem Fingernagel hebelte sie vorsichtig an der Kante, bis es mit einem leisen Klicken nachgab. Kein Uhrwerk kam zum Vorschein. Stattdessen steckte dort ein zusammengefalteter Zettel, vergilbt und mehrmals geknickt. Lio entfaltete das Papier auf der Werkbank. Die Handschrift war flüchtig, aber klar. \"Für Elena\", stand dort. Nur dieser Name. Keine Datumsangabe, kein Absender. Lio las die wenigen Zeilen zweimal. Ihr Großvater hatte nie von einer Elena gesprochen. Sie kannte jede seiner Geschichten über die Zeit, über Pendel und den Lauf der Gestirne, aber von dieser Frau wusste sie nichts. Die Stille in der Werkstatt wirkte plötzlich anders. Schwerer. Sie legte den Brief zurück in die Uhr und schloss den Deckel. Ein kalter Luftzug kam durch den Spalt unter der Tür. Lio schob die Uhr in ihre Hosentasche und griff nach dem Besen."
+    },
+    "ms": 3122
+   }
+  },
+  {
+   "kind": "draft",
+   "context": "werkstatt",
+   "style": "ohne",
+   "label": "Kein Stil gesetzt",
+   "result": {
+    "ok": true,
+    "raw": {
+     "text": "Das Ticken der Wanduhren war in den Wochen seit seinem Tod verstummt, doch der Raum roch noch immer so vertraut nach Maschinenöl, altem Holz und dem scharfen, metallischen Unterton von Messing. Lio strich mit dem Ärmel über die staubige Werkbank, an der er so oft gesessen hatte, den Kopf in eine der Lupenlampen gedrückt, die Hände ruhig wie Stein. Sie schob eine der kleinen, hölzernen Schubladen auf. Darin ruhten wie kleine, glänzende Inseln hunderte Zahnräder, Federn und winzige Schrauben. Ihre Finger gruben sich durch den metallischen Kram, bis sie auf eine schwere Taschenuhr stieß, deren Gehäuse einen Sprung hatte, der sich wie ein Blitz über das Silber zog. Sie drückte den Auslöser, aber der Deckel blieb fest verschlossen, als würde er sich wehren. Erst als sie mit dem Fingernagel in die schmale Fuge fuhr und kräftig hebelte, sprang er mit einem leisen Klicken auf. Die Zeiger standen still, doch im Inneren, dort, wo eigentlich das Uhrwerk hätte schlagen müssen, war nur ein zusammengefalteter Streifen Papier eingeklemmt. Lio zögerte, legte die Uhr beiseite und zog den Zettel mit zwei Fingern heraus. Das Papier fühlte sich spröde an, fast wie eine vertrocknete Haut. Sie entfaltete es vorsichtig, in der Erwartung, auf eine Reparaturanleitung oder eine Liste von Ersatzteilen zu stoßen. Stattdessen sah sie eine Handschrift, die sie kannte, aber die Worte waren ihr fremd. Ein einziger Satz stand da, direkt an eine gewisse Elara gerichtet, deren Namen Lio noch nie zuvor gehört hatte. Sie las die Zeilen zweimal, dreimal, während das fahle Nachmittagslicht durch das Fenster fiel und die Staubpartikel in der Luft in Bewegung setzte. Der Boden unter ihr knarrte, als sie einen Schritt auf das Fensterbrett zuging, um den Text besser lesen zu können. Draußen wirbelten die ersten Schneeflocken über die Dächer der Bäckerei und klebten an der Scheibe fest. Wer war diese Frau, und warum hatte ihr Großvater seine Worte in einem toten Instrument versteckt, das niemand mehr aufziehen würde? Lio faltete den Brief nicht wieder zusammen. Sie schob die Uhr beiseite, bis sie klappernd gegen einen Stapel Pinzetten stieß, und hielt das Papier so fest, dass ihre Knöchel weiß hervortraten, während ihr Blick an dem Namen am Ende des Briefes hängen blieb."
+    },
+    "ms": 3889
+   }
+  },
+  {
+   "kind": "text",
+   "action": "polish",
+   "input": "Mara bringt Jonas zur Fähre. Sie streiten über das Haus. Dann fährt er weg und sie ist traurig.",
+   "result": {
+    "ok": true,
+    "raw": {
+     "suggestions": [
+      "Mara begleitet Jonas zur Anlegestelle, doch der Streit über das Haus schwelt noch immer zwischen ihnen. Als die Fähre ablegt und er schließlich an Bord verschwindet, bleibt sie allein auf dem Kai zurück und starrt auf das aufgewühlte Kielwasser.",
+      "Der Weg zur Fähre ist geprägt von ihrer hitzigen Diskussion über das Haus. Sobald das Schiff ablegt, verstummt der Lärm, und Mara sieht ihm mit schwerem Herzen nach, während das Schiff in der Ferne kleiner wird.",
+      "Während sie gemeinsam zur Fähre gehen, entbrennt erneut die Debatte um das Haus. Als er schließlich an Bord geht und die Leinen gelöst werden, fühlt sich Mara mit einem Schlag wie abgeschnitten von der Welt."
+     ]
+    },
+    "ms": 1580
+   },
+   "suggestions": [
+    "Mara begleitet Jonas zur Anlegestelle, doch der Streit über das Haus schwelt noch immer zwischen ihnen. Als die Fähre ablegt und er schließlich an Bord verschwindet, bleibt sie allein auf dem Kai zurück und starrt auf das aufgewühlte Kielwasser.",
+    "Der Weg zur Fähre ist geprägt von ihrer hitzigen Diskussion über das Haus. Sobald das Schiff ablegt, verstummt der Lärm, und Mara sieht ihm mit schwerem Herzen nach, während das Schiff in der Ferne kleiner wird.",
+    "Während sie gemeinsam zur Fähre gehen, entbrennt erneut die Debatte um das Haus. Als er schließlich an Bord geht und die Leinen gelöst werden, fühlt sich Mara mit einem Schlag wie abgeschnitten von der Welt."
+   ]
+  },
+  {
+   "kind": "text",
+   "action": "generate",
+   "input": "",
+   "result": {
+    "ok": true,
+    "raw": {
+     "suggestions": [
+      "Das leise Echo der ablegenden Fähre verhallt zwischen den Felsen, während Mara allein am verlassenen Kai zurückbleibt.",
+      "Sie beobachtet, wie die letzten Lichter der Boote am Horizont schrumpfen und die Insel in eine tiefe, endgültige Stille hüllen.",
+      "Mit beiden Händen umklammert sie den kalten Holzpfosten des Stegs und spürt, wie das letzte Schiff die Insel für immer freigibt."
+     ]
+    },
+    "ms": 1867
+   },
+   "suggestions": [
+    "Das leise Echo der ablegenden Fähre verhallt zwischen den Felsen, während Mara allein am verlassenen Kai zurückbleibt.",
+    "Sie beobachtet, wie die letzten Lichter der Boote am Horizont schrumpfen und die Insel in eine tiefe, endgültige Stille hüllen.",
+    "Mit beiden Händen umklammert sie den kalten Holzpfosten des Stegs und spürt, wie das letzte Schiff die Insel für immer freigibt."
+   ]
+  }
+ ]
+}
