@@ -1,4 +1,7 @@
-/** Book page: header, storyline map slot and the side area with time point, character and storyline panels. */
+/**
+ * Book page: header, storyline map with the selected storyline's timetable below it, and the side area with
+ * time point, character and storyline panels. A selected storyline fills the side area (with a way back to the book).
+ */
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { Book, Id, TimeRange } from '@bookly/shared';
@@ -9,7 +12,10 @@ import { FilterBar } from '../map/FilterBar';
 import { LineLegend } from '../map/LineLegend';
 import { applyFilters, toMapFilter, useStoredFilters } from '../map/filters';
 import { StorylineMap, type StorylineMapProps } from '../map/StorylineMap';
-import { StorylinePanel, type PanelTarget } from '../storyline/StorylinePanel';
+import { StorylinePanel, type PanelTarget, type SectionFocus } from '../storyline/StorylinePanel';
+import type { StorylineTab } from '../storyline/StorylineHeader';
+import { Timetable } from '../storyline/Timetable';
+import { Icon } from '../ui/Icon';
 import { BookHints } from './BookHints';
 import { CharacterPanel } from './CharacterPanel';
 import { SidePanel } from './SidePanel';
@@ -21,17 +27,40 @@ export function BookPage() {
   const query = useBook(bookId);
   const book = query.data?.book;
   const [target, setTarget] = useState<PanelTarget>(null);
-  const [tab, setTab] = useState('timepoints');
+  const [tab, setTabState] = useState('timepoints');
+  // The book tab to return to when leaving a storyline.
+  const [bookTab, setBookTab] = useState('timepoints');
+  const [storylineTab, setStorylineTab] = useState<StorylineTab>('details');
+  const [focusSection, setFocusSection] = useState<SectionFocus | null>(null);
   const [connection, setConnection] = useState<ConnectionTarget | null>(null);
   const [hintConnectionId, setHintConnectionId] = useState<Id | null>(null);
   const [nonce, setNonce] = useState(0);
   const selectedId = target?.mode === 'edit' ? target.id : null;
 
+  const setTab = (id: string) => {
+    setTabState(id);
+    if (id !== 'storyline') setBookTab(id);
+  };
   /** Shows a storyline target in the storyline tab. */
   const open = (next: PanelTarget) => {
     setTarget(next);
-    if (next) setTab('storyline');
+    setFocusSection(null);
+    if (next) setTabState('storyline');
   };
+  /** Leaves the storyline and returns to the book tab used before. */
+  const back = () => {
+    setTarget(null);
+    setFocusSection(null);
+    setTabState(bookTab);
+  };
+  /** Opens one group (and optionally a section) of the selected storyline from the timetable. */
+  const showInPanel = (group: StorylineTab, sectionId?: Id | null) => {
+    setTabState('storyline');
+    setStorylineTab(group);
+    setFocusSection(sectionId === undefined ? null : { id: sectionId, nonce: Date.now() });
+  };
+  const selected = selectedId ? book?.storylines.find((s) => s.id === selectedId) : undefined;
+  const storylineMode = tab === 'storyline' && target !== null;
   const startCreate = (range?: TimeRange) => {
     setNonce((n) => n + 1);
     open({ mode: 'create', range, nonce: nonce + 1 });
@@ -82,6 +111,20 @@ export function BookPage() {
                 highlightConnectionId={hintConnectionId}
               />
             </section>
+            {selected ? (
+              <Timetable
+                book={book}
+                storyline={selected}
+                warnings={query.data?.characterWarnings ?? []}
+                onOpenSection={(id) => showInPanel('timeline', id)}
+                onOpenCharacters={() => showInPanel('characters')}
+                onOpenConnection={(id) => setConnection({ mode: 'edit', id })}
+              />
+            ) : (
+              <p className="timetable-placeholder muted">
+                Wähle eine Linie in der Karte, dann siehst du hier ihren Fahrplan: Abschnitte, Figuren und Verbindungen über die Zeitpunkte.
+              </p>
+            )}
           </main>
           <SidePanel
             top={
@@ -100,10 +143,16 @@ export function BookPage() {
             }
             activeId={tab}
             onActiveChange={setTab}
+            bar={storylineMode ? (
+              <button type="button" className="panel-back" onClick={back}>
+                <Icon name="back" />
+                Zurück zum Buch
+              </button>
+            ) : undefined}
             tabs={[
               { id: 'timepoints', label: 'Zeitpunkte', content: <TimePointPanel book={book} /> },
               { id: 'characters', label: 'Figuren', content: <CharacterPanel book={book} aiEnabled={query.data?.ai.enabled ?? false} /> },
-              { id: 'storyline', label: 'Storyline', content: <StorylinePanel book={book} checks={query.data?.characterChecks ?? []} aiEnabled={query.data?.ai.enabled ?? false} target={target} onTarget={open} onConnect={(fromId, toId) => setConnection({ mode: 'create', fromId, toId })} /> },
+              { id: 'storyline', label: 'Storyline', content: <StorylinePanel book={book} checks={query.data?.characterChecks ?? []} aiEnabled={query.data?.ai.enabled ?? false} target={target} onTarget={open} onConnect={(fromId, toId) => setConnection({ mode: 'create', fromId, toId })} tab={storylineTab} onTab={(t) => { setStorylineTab(t); setFocusSection(null); }} focusSection={focusSection} onOpenConnection={(id) => setConnection({ mode: 'edit', id })} /> },
             ]}
           />
           {connection && <ConnectionDialog book={book} target={connection} aiEnabled={query.data?.ai.enabled ?? false} onClose={() => setConnection(null)} />}

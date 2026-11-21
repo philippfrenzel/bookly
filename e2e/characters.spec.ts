@@ -51,6 +51,7 @@ test('character profile with AI warning flow', async ({ page }) => {
   await page.getByRole('button', { name: 'Storyline „Annas Flucht“' }).click();
 
   // Edit mode saves on change, so the checkbox only flips after the round trip (no .check()).
+  await panel.getByRole('tab', { name: 'Figuren' }).click();
   const linked = panel.getByRole('group', { name: 'Figuren' }).getByRole('checkbox', { name: 'Anna' });
   await linked.click();
   await expect(linked).toBeChecked();
@@ -67,6 +68,7 @@ test('character profile with AI warning flow', async ({ page }) => {
   await addition.blur();
 
   // A storyline text with the fake AI trigger starts a check after the quiet period.
+  await panel.getByRole('tab', { name: 'Storyline' }).click();
   const description = panel.locator('textarea').first()  // the storyline's own description, above the section form;
   await description.fill('Anna flieht. FAKE-WIDERSPRUCH');
   await description.blur();

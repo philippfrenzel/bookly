@@ -1,4 +1,7 @@
-/** Side panel form for creating and editing a storyline (direct saves; „Anlegen“ when creating), with its sections. */
+/**
+ * Side panel form for creating and editing a storyline (direct saves; „Anlegen“ when creating).
+ * A stored storyline is split into the sub-tabs Storyline (facts, note, connections), Figuren and Zeitpunkte (sections).
+ */
 import { useState } from 'react';
 import {
   KIND_DEFAULT_COLOR, STATUS_STYLE, type Book, type Id, type Storyline, type StorylineKind, type StorylineStatus,
@@ -12,8 +15,13 @@ import { noteOrNull, validateWithStoryline } from './draft';
 import { ColorInput, TextInput } from './fields';
 import { RangePicker } from './RangePicker';
 import { SectionList } from './SectionList';
+import { StorylineConnections } from './StorylineConnections';
+import { StorylineHeader, StorylineTabBar, storylineTabs, type StorylineTab } from './StorylineHeader';
 import { StatusGlyph } from '../map/icons';
 import { LINE_PALETTE, nextLineColor } from '../map/linePalette';
+
+/** A request from outside (the timetable) to open one section, or the add form when `id` is null. */
+export interface SectionFocus { id: Id | null; nonce: number }
 
 /** What the panel shows: nothing, a blank form (optionally with a prefilled range) or an existing storyline. */
 export type PanelTarget =
@@ -31,6 +39,13 @@ interface Props {
   /** AI check rows of the book; the one of the shown storyline drives the status line. */
   checks?: CharacterCheck[];
   aiEnabled?: boolean;
+  /** Shown sub-tab of a stored storyline; uncontrolled when omitted. */
+  tab?: StorylineTab;
+  onTab?: (tab: StorylineTab) => void;
+  /** Section to open for editing in the „Zeitpunkte“ tab (null id: the add form); a new nonce opens it again. */
+  focusSection?: SectionFocus | null;
+  /** Opens an existing connection. */
+  onOpenConnection?: (connectionId: Id) => void;
 }
 
 /** Form values: the local draft when creating, a view of the stored storyline when editing. */
@@ -48,7 +63,8 @@ interface Draft {
 const DRAFT_ID = 'draft';
 
 /** Picks the form for the target, or a hint when nothing is selected. */
-export function StorylinePanel({ book, target, onTarget, onConnect, checks = [], aiEnabled = false }: Props) {
+export function StorylinePanel({ book, target, onTarget, onConnect, checks = [], aiEnabled = false, tab, onTab, focusSection, onOpenConnection }: Props) {
+  const [ownTab, setOwnTab] = useState<StorylineTab>('details');
   if (target?.mode === 'create') {
     const first = [...book.timePoints].sort((a, b) => a.position - b.position)[0];
     if (!first) return <p className="muted">Lege zuerst Zeitpunkte an.</p>;
@@ -68,6 +84,8 @@ export function StorylinePanel({ book, target, onTarget, onConnect, checks = [],
     <StorylineForm
       key={storyline.id} book={book} initial={draft} storyline={storyline} onTarget={onTarget} onConnect={onConnect}
       check={checks.find((c) => c.storylineId === storyline.id)} aiEnabled={aiEnabled}
+      tab={tab ?? ownTab} onTab={(t) => { setOwnTab(t); onTab?.(t); }} focusSection={focusSection ?? null}
+      onOpenConnection={onOpenConnection}
     />
   );
 }
@@ -81,10 +99,14 @@ interface FormProps {
   onConnect?: (fromId: Id, toId: Id) => void;
   check?: CharacterCheck;
   aiEnabled: boolean;
+  tab?: StorylineTab;
+  onTab?: (tab: StorylineTab) => void;
+  focusSection?: SectionFocus | null;
+  onOpenConnection?: (connectionId: Id) => void;
 }
 
 /** The form itself; remounted (by key) whenever the target changes. Create: local draft + „Anlegen“. Edit: direct saves. */
-function StorylineForm({ book, initial, storyline, onTarget, onConnect, check, aiEnabled }: FormProps) {
+function StorylineForm({ book, initial, storyline, onTarget, onConnect, check, aiEnabled, tab = 'details', onTab, focusSection = null, onOpenConnection }: FormProps) {
   const [draft, setDraft] = useState(initial);
   const fb = useSaveFeedback();
   const base = `/api/books/${book.id}/storylines`;
@@ -191,9 +213,16 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect, check, a
     draft: () => ({ title: v.title, description: v.description, note: v.note, characterIds: v.characterIds }),
     enabled: aiEnabled,
   });
+  // A tab the storyline does not have (e.g. „Zeitpunkte“ of a side strand) falls back to the facts.
+  const active: StorylineTab = storyline && storylineTabs(storyline).some((t) => t.id === tab) ? tab : 'details';
+  /** Create mode shows everything at once; edit mode only the active group. */
+  const shows = (group: StorylineTab) => !editing || active === group;
   return (
-    <section aria-label="Storyline bearbeiten">
-      <div className="storyline-form">
+    <section aria-label="Storyline bearbeiten" className="storyline-panel">
+      {storyline && <StorylineHeader book={book} storyline={storyline} />}
+      {storyline && onTab && <StorylineTabBar storyline={storyline} active={active} onChange={onTab} />}
+      <div className="storyline-form" role={storyline ? 'tabpanel' : undefined}>
+        {shows('details') && (<>
         <div className="field">
           <span>Titel</span>
           <TextInput {...text} ariaLabel="Titel" ai={aiFor('title')} value={v.title} maxLength={200} onCommit={(title) => commit({ title })} />
@@ -255,6 +284,8 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect, check, a
           <span>Zeitraum</span>
           <RangePicker label="Zeitraum" timePoints={book.timePoints} value={v.range} onChange={(range) => commit({ range })} />
         </div>
+        </>)}
+        {shows('characters') && (
         <fieldset>
           <legend>Figuren</legend>
           {storyline && <CheckStatus bookId={book.id} storylineId={storyline.id} check={check} aiEnabled={aiEnabled} />}
@@ -263,6 +294,8 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect, check, a
             storyline={storyline ?? undefined} bookId={book.id} aiEnabled={aiEnabled}
           />
         </fieldset>
+        )}
+        {shows('details') && (
         <div className="field">
           <span>Notiz</span>
           <TextInput
@@ -270,17 +303,29 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect, check, a
             onCommit={(note) => commit({ note })}
           />
         </div>
+        )}
         {fb.feedback}
-        <div className="actions">
-          {editing ? (
-            <button type="button" onClick={confirmDelete}>Löschen</button>
-          ) : (
+        {!editing && (
+          <div className="actions">
             <button type="button" onClick={submitCreate}>Anlegen</button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
-      {storyline && onConnect && <ConnectPicker book={book} fromId={storyline.id} onConnect={onConnect} />}
-      {storyline && storyline.kind === 'main' && <SectionList book={book} storyline={storyline} aiEnabled={aiEnabled} />}
+      {storyline && shows('details') && onConnect && (
+        <StorylineConnections book={book} storylineId={storyline.id} onConnect={onConnect} onOpen={onOpenConnection} />
+      )}
+      {storyline && shows('details') && (
+        <div className="actions storyline-delete">
+          <button type="button" className="danger-quiet" onClick={confirmDelete}>Löschen</button>
+        </div>
+      )}
+      {storyline && storyline.kind === 'main' && shows('timeline') && (
+        <SectionList
+          key={focusSection ? `${focusSection.id ?? 'new'}-${focusSection.nonce}` : 'none'}
+          book={book} storyline={storyline} aiEnabled={aiEnabled}
+          focusId={focusSection?.id ?? null} startAdding={focusSection !== null && focusSection.id === null}
+        />
+      )}
     </section>
   );
 }
@@ -291,23 +336,4 @@ function draftOf(s: Storyline): Draft {
     title: s.title, description: s.description, kind: s.kind, status: s.status, color: s.color, range: s.range,
     characterIds: s.characterIds, note: s.note ?? '',
   };
-}
-
-/** Accessible alternative to dragging a bar handle: pick the target strand and open the connection dialog. */
-function ConnectPicker({ book, fromId, onConnect }: { book: Book; fromId: Id; onConnect: (fromId: Id, toId: Id) => void }) {
-  const [toId, setToId] = useState('');
-  return (
-    <div className="connect-picker inline">
-      <label>
-        Verbinden mit …
-        <select value={toId} onChange={(e) => setToId(e.target.value)}>
-          <option value="" />
-          {book.storylines.filter((s) => s.id !== fromId).map((s) => (
-            <option key={s.id} value={s.id}>{s.title}</option>
-          ))}
-        </select>
-      </label>
-      <button type="button" disabled={!toId} onClick={() => onConnect(fromId, toId)}>Verbinden</button>
-    </div>
-  );
 }

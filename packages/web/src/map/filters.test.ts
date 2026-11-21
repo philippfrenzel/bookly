@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Book, Storyline } from '@bookly/shared';
 import { sampleBook } from '../book/testFixtures';
 import { applyFilters, defaultFilterState, loadFilterState, sanitizeFilterState, saveFilterState, toMapFilter, type MapFilter } from './filters';
+import { memoryStorage } from '../test/setup';
 
 const none: MapFilter = { mainOnly: false, openOnly: false, range: null, characterIds: [] };
 
@@ -57,19 +58,6 @@ describe('toMapFilter', () => {
     expect(toMapFilter({ ...defaultFilterState(), toId: 't2' }, tps).range).toEqual({ startId: 't1', endId: 't2' });
   });
 });
-
-/** In-memory Storage; Node 26 exposes a broken global localStorage that shadows jsdom's. */
-function memoryStorage(): Storage {
-  const m = new Map<string, string>();
-  return {
-    get length() { return m.size; },
-    clear: () => m.clear(),
-    getItem: (k) => m.get(k) ?? null,
-    key: (i) => [...m.keys()][i] ?? null,
-    removeItem: (k) => void m.delete(k),
-    setItem: (k, v) => void m.set(k, String(v)),
-  };
-}
 
 describe('filter persistence', () => {
   beforeEach(() => {

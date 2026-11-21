@@ -14,6 +14,8 @@ const PATHS = {
   close: 'M4 4l8 8M12 4l-8 8',
   pencil: 'M10.5 3l2.5 2.5-7 7H3.5V10z',
   arrow: 'M3 8h10M9 4l4 4-4 4',
+  back: 'M13 8H3M7 4L3 8l4 4',
+  check: 'M3.5 8.5l3 3 6-7',
 } as const;
 
 export type IconName = keyof typeof PATHS;
