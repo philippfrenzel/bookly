@@ -1,10 +1,9 @@
-/** Per-storyline behavior and intentions of one character, with the base profile and AI suggestions. */
+/** Per-storyline behavior and intentions of one character, with the base profile and an AI wand per field. */
 import { useEffect, useRef, type FocusEvent } from 'react';
 import { characterLabel, type Character, type CharacterAddition, type Id } from '@bookly/shared';
 import { useBookMutation } from '../api/hooks';
 import { useSaveFeedback } from '../book/saveFeedback';
-import { SuggestionBox } from '../character/SuggestionBox';
-import { useSuggestion } from '../character/useSuggestion';
+import { MagicWand } from '../ai/MagicWand';
 
 type Field = 'behavior' | 'intentions';
 
@@ -18,13 +17,12 @@ interface Props {
   registerLive?: (getter: (() => { behavior: string; intentions: string }) | null) => void;
 }
 
-/** Two textareas saved on blur (PUT addition), the greyed base profile and the suggestion UI. */
+/** Two textareas saved on blur (PUT addition), the greyed base profile and the AI wands. */
 export function AdditionEditor({ bookId, storylineId, character: c, addition, aiEnabled, registerLive }: Props) {
   const label = characterLabel(c);
   const base = `/api/books/${bookId}/storylines/${storylineId}/characters/${c.id}`;
   const fb = useSaveFeedback();
   const save = useBookMutation<Partial<Record<Field, string>>>(bookId, 'PUT', () => `${base}/addition`, (x) => x);
-  const { suggestion, loading, error, request, dismiss } = useSuggestion(`${base}/suggestion`);
   const areas = useRef<Partial<Record<Field, HTMLTextAreaElement | null>>>({});
 
   useEffect(() => {
@@ -42,46 +40,40 @@ export function AdditionEditor({ bookId, storylineId, character: c, addition, ai
   };
 
   const profile = [c.behavior, c.intentions].filter((p): p is string => !!p && p.trim() !== '').join(' · ');
-  const textarea = (field: Field, title: string) => (
-    <label>
-      {title}
-      <textarea
-        aria-label={`${title} Ergänzung ${label}`}
-        key={`${field}-${stored(field)}-${fb.resetKey}`}
-        maxLength={2000}
-        ref={(el) => { areas.current[field] = el; }}
-        defaultValue={stored(field)}
-        onBlur={onBlur(field)}
-      />
-    </label>
-  );
+  const live = () => ({ behavior: areas.current.behavior?.value ?? '', intentions: areas.current.intentions?.value ?? '' });
+  const textarea = (field: Field, title: string) => {
+    const ariaLabel = `${title} Ergänzung ${label}`;
+    return (
+      <div className="field">
+        <span>{title}</span>
+        <div className="wand-field">
+          <textarea
+            aria-label={ariaLabel}
+            key={`${field}-${stored(field)}-${fb.resetKey}`}
+            maxLength={2000}
+            ref={(el) => { areas.current[field] = el; }}
+            defaultValue={stored(field)}
+            onBlur={onBlur(field)}
+          />
+          <MagicWand
+            getField={() => areas.current[field] ?? null}
+            bookId={bookId}
+            target={{ kind: 'addition', storylineId, characterId: c.id, field }}
+            draft={live}
+            enabled={aiEnabled}
+            fieldLabel={ariaLabel}
+          />
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="addition-editor">
       {profile && <p className="muted">Grundprofil: {profile}</p>}
       {textarea('behavior', 'Verhalten')}
       {textarea('intentions', 'Absichten')}
-      <button
-        type="button"
-        disabled={!aiEnabled || loading}
-        title={aiEnabled ? undefined : 'KI nicht eingerichtet'}
-        onClick={() => request({})}
-      >
-        Vorschlagen
-      </button>
       {fb.feedback}
-      {error && <p className="muted" role="alert">{error}</p>}
-      {suggestion && (
-        <SuggestionBox
-          suggestion={suggestion}
-          fields={{
-            behavior: () => areas.current.behavior?.value ?? stored('behavior'),
-            intentions: () => areas.current.intentions?.value ?? stored('intentions'),
-          }}
-          onApply={write}
-          onDismiss={dismiss}
-        />
-      )}
     </div>
   );
 }

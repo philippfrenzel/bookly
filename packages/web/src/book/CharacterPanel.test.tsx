@@ -35,7 +35,6 @@ describe('CharacterPanel', () => {
     server.use(
       meOk,
       bookOk(sampleBook()),
-      http.post('/api/books/b1/characters/c2/suggestion', () => HttpResponse.json({ behavior: '', intentions: '' })),
       http.patch('/api/books/b1/characters/c2', async ({ request }) => {
         bodies.push(await request.json());
         return HttpResponse.json(bookResponse(sampleBook()));
@@ -89,7 +88,6 @@ describe('CharacterPanel', () => {
     server.use(
       meOk,
       http.get('/api/books/b1', () => HttpResponse.json(bookResponse(stored))),
-      http.post('/api/books/b1/characters/c2/suggestion', () => HttpResponse.json({ behavior: '', intentions: '' })),
       http.patch('/api/books/b1/characters/c2', async ({ request }) => {
         const body = (await request.json()) as { name?: string; description?: string };
         stored.characters[1] = { ...stored.characters[1]!, ...body };
@@ -101,6 +99,7 @@ describe('CharacterPanel', () => {
     await userEvent.clear(name);
     await userEvent.type(name, 'Jonas');
     await userEvent.tab();
+    await userEvent.tab(); // skips the name field's wand button
     const description = screen.getByLabelText(/^Beschreibung Figur Jon/);
     expect(description).toHaveFocus();
     await userEvent.type(description, 'Schmied');
@@ -186,112 +185,44 @@ describe('CharacterPanel', () => {
     expect(bodies).toEqual([{ behavior: 'ruhig' }, { intentions: 'Rache' }]);
   });
 
-  it('requests exactly one suggestion after a changed description and none on mount', async () => {
-    const suggestions: unknown[] = [];
+  it('no request on description blur', async () => {
+    const calls: string[] = [];
     server.use(
       meOk,
       bookOk(sampleBook()),
       http.patch('/api/books/b1/characters/c2', () => HttpResponse.json(bookResponse(sampleBook()))),
-      http.post('/api/books/b1/characters/c2/suggestion', async ({ request }) => {
-        suggestions.push(await request.json());
-        return HttpResponse.json({ behavior: 'mutig', intentions: 'Heimkehr' });
-      }),
+      http.post('/api/books/b1/ai/text', () => { calls.push('text'); return HttpResponse.json({ suggestions: ['A1', 'A2', 'A3'] }); }),
     );
     await openPanel();
-    expect(suggestions).toEqual([]);
     await userEvent.type(screen.getByLabelText('Beschreibung Figur Jon'), 'Schmied');
     await userEvent.tab();
-    expect(await screen.findByText('mutig')).toBeInTheDocument();
-    expect(suggestions).toEqual([{ name: 'Jon', description: 'Schmied', behavior: null, intentions: null }]);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(calls).toEqual([]);
   });
 
-  it('applies a suggestion into an empty field without asking, via PATCH', async () => {
-    const confirm = vi.spyOn(window, 'confirm');
+  it('wand on Verhalten inserts and saves on blur', async () => {
     const bodies: unknown[] = [];
     server.use(
       meOk,
       bookOk(sampleBook()),
-      http.post('/api/books/b1/characters/c2/suggestion', () => HttpResponse.json({ behavior: 'mutig', intentions: 'Heimkehr' })),
+      http.post('/api/books/b1/ai/text', () => HttpResponse.json({ suggestions: ['A1', 'A2', 'A3'] })),
       http.patch('/api/books/b1/characters/c2', async ({ request }) => {
         bodies.push(await request.json());
         return HttpResponse.json(bookResponse(sampleBook()));
       }),
     );
     await openPanel();
-    await userEvent.click(screen.getAllByRole('button', { name: 'Vorschlagen' })[1]!);
-    const apply = await screen.findAllByRole('button', { name: 'Übernehmen' });
-    await userEvent.click(apply[0]!);
-    expect(confirm).not.toHaveBeenCalled();
-    expect(bodies).toEqual([{ behavior: 'mutig' }]);
+    await userEvent.click(screen.getByRole('button', { name: 'KI-Assistent: Verhalten Figur Jon' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Vorschlagen' }));
+    await screen.findByText('1/3');
+    await userEvent.tab();
+    await vi.waitFor(() => expect(bodies).toEqual([{ behavior: 'A1' }]));
   });
 
-  it('asks before replacing a non-empty field with a suggestion', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const bodies: unknown[] = [];
-    const book = sampleBook();
-    book.characters[1]!.behavior = 'alt';
-    server.use(
-      meOk,
-      bookOk(book),
-      http.post('/api/books/b1/characters/c2/suggestion', () => HttpResponse.json({ behavior: 'mutig', intentions: 'Heimkehr' })),
-      http.patch('/api/books/b1/characters/c2', async ({ request }) => {
-        bodies.push(await request.json());
-        return HttpResponse.json(bookResponse(book));
-      }),
-    );
-    await openPanel();
-    await userEvent.click(screen.getAllByRole('button', { name: 'Vorschlagen' })[1]!);
-    await userEvent.click((await screen.findAllByRole('button', { name: 'Übernehmen' }))[0]!);
-    expect(confirm).toHaveBeenCalledWith('Vorhandenen Text ersetzen?');
-    expect(bodies).toEqual([{ behavior: 'mutig' }]);
-  });
-
-  it('dismisses a suggestion with Verwerfen', async () => {
-    server.use(
-      meOk,
-      bookOk(sampleBook()),
-      http.post('/api/books/b1/characters/c2/suggestion', () => HttpResponse.json({ behavior: 'mutig', intentions: 'Heimkehr' })),
-    );
-    await openPanel();
-    await userEvent.click(screen.getAllByRole('button', { name: 'Vorschlagen' })[1]!);
-    await userEvent.click(await screen.findByRole('button', { name: 'Verwerfen' }));
-    expect(screen.queryByText('mutig')).not.toBeInTheDocument();
-  });
-
-  it('shows a short message when the suggestion fails', async () => {
-    server.use(
-      meOk,
-      bookOk(sampleBook()),
-      http.post('/api/books/b1/characters/c2/suggestion', () => HttpResponse.json({ error: 'ai_failed' }, { status: 502 })),
-    );
-    await openPanel();
-    await userEvent.click(screen.getAllByRole('button', { name: 'Vorschlagen' })[1]!);
-    expect(await screen.findByText('Vorschlag fehlgeschlagen.')).toBeInTheDocument();
-  });
-
-  it('disables Vorschlagen when the AI is not configured', async () => {
+  it('wand disabled when AI is off', async () => {
     server.use(meOk, bookOk(sampleBook(), { ai: { enabled: false } }));
     await openPanel();
-    const button = screen.getAllByRole('button', { name: 'Vorschlagen' })[0]!;
-    expect(button).toBeDisabled();
-    expect(button).toHaveAttribute('title', 'KI nicht eingerichtet');
-  });
-
-  it('does not request a suggestion after a description change when the AI is off', async () => {
-    let posts = 0;
-    server.use(
-      meOk,
-      bookOk(sampleBook(), { ai: { enabled: false } }),
-      http.patch('/api/books/b1/characters/c2', () => HttpResponse.json(bookResponse(sampleBook()))),
-      http.post('/api/books/b1/characters/c2/suggestion', () => {
-        posts += 1;
-        return HttpResponse.json({}, { status: 503 });
-      }),
-    );
-    await openPanel();
-    await userEvent.type(screen.getByLabelText('Beschreibung Figur Jon'), 'x');
-    await userEvent.tab();
-    expect(posts).toBe(0);
+    expect(screen.getByRole('button', { name: 'KI-Assistent: Verhalten Figur Jon' })).toBeDisabled();
   });
 
   it('polls the book again while a check is pending', async () => {
@@ -308,36 +239,4 @@ describe('CharacterPanel', () => {
     await vi.waitFor(() => expect(gets).toBeGreaterThanOrEqual(2), { timeout: 5000 });
   }, 8000);
 
-  it('asks before overwriting typed but unsaved text and keeps it when declined', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
-    const bodies: unknown[] = [];
-    server.use(
-      meOk,
-      bookOk(sampleBook()),
-      http.post('/api/books/b1/characters/c2/suggestion', () => HttpResponse.json({ behavior: 'mutig', intentions: 'Heimkehr' })),
-      http.patch('/api/books/b1/characters/c2', async ({ request }) => {
-        bodies.push(await request.json());
-        return HttpResponse.json(bookResponse(sampleBook()));
-      }),
-    );
-    await openPanel();
-    await userEvent.click(screen.getAllByRole('button', { name: 'Vorschlagen' })[1]!);
-    const apply = await screen.findAllByRole('button', { name: 'Übernehmen' });
-    await userEvent.type(screen.getByLabelText('Verhalten Figur Jon'), 'getippt');
-    await userEvent.click(apply[0]!);
-    expect(confirm).toHaveBeenCalledWith('Vorhandenen Text ersetzen?');
-    expect(bodies).not.toContainEqual({ behavior: 'mutig' });
-    expect(screen.getByLabelText('Verhalten Figur Jon')).toHaveValue('getippt');
-  });
-  it('offers no „Übernehmen“ for an empty suggested field', async () => {
-    server.use(
-      meOk,
-      bookOk(sampleBook()),
-      http.post('/api/books/b1/characters/c2/suggestion', () => HttpResponse.json({ behavior: '', intentions: 'Heimkehr' })),
-    );
-    await openPanel();
-    await userEvent.click(screen.getAllByRole('button', { name: 'Vorschlagen' })[1]!);
-    expect(await screen.findByText('Heimkehr')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Übernehmen' })).toHaveLength(1);
-  });
 });

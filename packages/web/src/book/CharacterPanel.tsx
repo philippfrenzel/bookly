@@ -1,93 +1,96 @@
-/** Character management: add, edit profile fields, ask for AI suggestions, delete with confirmation. */
+/** Character management: add, edit profile fields, AI wand on each field, delete with confirmation. */
 import { useRef, type FocusEvent } from 'react';
 import type { Book, Character, Id } from '@bookly/shared';
 import { characterLabel } from '@bookly/shared';
 import { useBookMutation } from '../api/hooks';
-import { SuggestionBox } from '../character/SuggestionBox';
-import { useSuggestion } from '../character/useSuggestion';
+import { MagicWand } from '../ai/MagicWand';
 import { useSaveFeedback, type SaveFeedback } from './saveFeedback';
 import { Icon } from '../ui/Icon';
 
 type TextField = 'description' | 'behavior' | 'intentions';
+type Field = TextField | 'name';
 type Patch = { id: Id } & Partial<Record<TextField, string>> & { name?: string | null };
 
 interface ItemProps {
   character: Character;
-  base: string;
+  bookId: Id;
   aiEnabled: boolean;
   fb: SaveFeedback;
   save: (patch: Patch) => void;
   onDelete: (c: Character) => void;
 }
 
-/** One character: four profile fields saved on blur, suggestion button and box, delete button. */
-function CharacterItem({ character: c, base, aiEnabled, fb, save, onDelete }: ItemProps) {
+/** One character: four profile fields saved on blur, each with an AI wand, delete button. */
+function CharacterItem({ character: c, bookId, aiEnabled, fb, save, onDelete }: ItemProps) {
   const label = characterLabel(c);
-  const { suggestion, loading, error, request, dismiss } = useSuggestion(`${base}/${c.id}/suggestion`);
+  const areas = useRef<Partial<Record<Field, HTMLInputElement | HTMLTextAreaElement | null>>>({});
 
-  const areas = useRef<Partial<Record<TextField, HTMLTextAreaElement | null>>>({});
-
-  const draft = (over: Partial<Record<TextField, string>> = {}) => ({
-    name: c.name, description: c.description, behavior: c.behavior, intentions: c.intentions, ...over,
+  /** Current (possibly unsaved) values of the four fields, as context for the AI. */
+  const draft = () => ({
+    name: areas.current.name?.value ?? c.name ?? '',
+    description: areas.current.description?.value ?? c.description ?? '',
+    behavior: areas.current.behavior?.value ?? c.behavior ?? '',
+    intentions: areas.current.intentions?.value ?? c.intentions ?? '',
   });
 
-  /** Saves a changed text field on blur; the description also asks the AI for a suggestion. */
+  /** Saves a changed text field on blur. */
   const onBlurField = (field: TextField) => (e: FocusEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     if (value === (c[field] ?? '')) return;
     save({ id: c.id, [field]: value });
-    if (field === 'description' && aiEnabled) request(draft({ description: value }));
   };
 
-  const textarea = (field: TextField, title: string) => (
-    <textarea
-      aria-label={`${title} Figur ${label}`}
-      key={`${field}-${c[field] ?? ''}-${fb.resetKey}`}
-      maxLength={2000}
-      placeholder={title}
-      ref={(el) => { areas.current[field] = el; }}
-      defaultValue={c[field] ?? ''}
-      onBlur={onBlurField(field)}
+  const wand = (field: Field, fieldLabel: string) => (
+    <MagicWand
+      getField={() => areas.current[field] ?? null}
+      bookId={bookId}
+      target={{ kind: 'character', characterId: c.id, field }}
+      draft={draft}
+      enabled={aiEnabled}
+      fieldLabel={fieldLabel}
     />
   );
 
+  const textarea = (field: TextField, title: string) => {
+    const ariaLabel = `${title} Figur ${label}`;
+    return (
+      <div className="wand-field">
+        <textarea
+          aria-label={ariaLabel}
+          key={`${field}-${c[field] ?? ''}-${fb.resetKey}`}
+          maxLength={2000}
+          placeholder={title}
+          ref={(el) => { areas.current[field] = el; }}
+          defaultValue={c[field] ?? ''}
+          onBlur={onBlurField(field)}
+        />
+        {wand(field, ariaLabel)}
+      </div>
+    );
+  };
+
+  const nameLabel = `Name Figur ${label}`;
   return (
     <li>
-      <input
-        aria-label={`Name Figur ${label}`}
-        key={`${c.name ?? ''}-${fb.resetKey}`}
-        maxLength={200}
-        placeholder="Unbenannte Figur"
-        defaultValue={c.name ?? ''}
-        onBlur={(e) => {
-          const name = e.target.value.trim();
-          if (name !== (c.name ?? '')) save({ id: c.id, name: name === '' ? null : name });
-        }}
-      />
+      <div className="wand-field">
+        <input
+          aria-label={nameLabel}
+          key={`${c.name ?? ''}-${fb.resetKey}`}
+          maxLength={200}
+          placeholder="Unbenannte Figur"
+          ref={(el) => { areas.current.name = el; }}
+          defaultValue={c.name ?? ''}
+          onBlur={(e) => {
+            const name = e.target.value.trim();
+            if (name !== (c.name ?? '')) save({ id: c.id, name: name === '' ? null : name });
+          }}
+        />
+        {wand('name', nameLabel)}
+      </div>
       {textarea('description', 'Beschreibung')}
       {textarea('behavior', 'Verhalten')}
       {textarea('intentions', 'Absichten')}
-      <button
-        type="button"
-        disabled={!aiEnabled || loading}
-        title={aiEnabled ? undefined : 'KI nicht eingerichtet'}
-        onClick={() => request(draft())}
-      >
-        Vorschlagen
-      </button>
       <button type="button" aria-label={`Figur „${label}“ löschen`} title="Löschen" className="icon-button" onClick={() => onDelete(c)}><Icon name="trash" /></button>
-      {error && <p className="muted" role="alert">{error}</p>}
-      {suggestion && (
-        <SuggestionBox
-          suggestion={suggestion}
-          fields={{
-            behavior: () => areas.current.behavior?.value ?? c.behavior ?? '',
-            intentions: () => areas.current.intentions?.value ?? c.intentions ?? '',
-          }}
-          onApply={(field, value) => save({ id: c.id, [field]: value })}
-          onDismiss={dismiss}
-        />
-      )}
     </li>
   );
 }
@@ -118,7 +121,7 @@ export function CharacterPanel({ book, aiEnabled }: { book: Book; aiEnabled: boo
       {fb.feedback}
       <ul className="panel-list">
         {book.characters.map((c) => (
-          <CharacterItem key={c.id} character={c} base={base} aiEnabled={aiEnabled} fb={fb} save={save} onDelete={confirmDelete} />
+          <CharacterItem key={c.id} character={c} bookId={book.id} aiEnabled={aiEnabled} fb={fb} save={save} onDelete={confirmDelete} />
         ))}
       </ul>
     </section>

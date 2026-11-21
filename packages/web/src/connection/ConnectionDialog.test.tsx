@@ -150,4 +150,39 @@ describe('ConnectionDialog', () => {
     await userEvent.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
+
+  describe('label wand', () => {
+    const textHandler = (bodies: Record<string, unknown>[] = []) =>
+      http.post('/api/books/b1/ai/text', async ({ request }) => {
+        bodies.push((await request.json()) as Record<string, unknown>);
+        return HttpResponse.json({ suggestions: ['A1', 'A2', 'A3'] });
+      });
+
+    it('label wand sends the connection target', async () => {
+      const bodies: Record<string, unknown>[] = [];
+      server.use(meOk, bookOk(twoStrands()), textHandler(bodies));
+      renderApp('/books/b1');
+      const dialog = await openDialog();
+      await userEvent.click(within(dialog).getByRole('button', { name: 'KI-Assistent: Beschriftung' }));
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Vorschlagen' }));
+      await screen.findByText('1/3');
+      expect(within(dialog).getByLabelText('Beschriftung')).toHaveValue('A1');
+      expect(bodies[0]).toMatchObject({ target: { kind: 'connection', fromId: 's1', toId: 's2', field: 'label' } });
+    });
+
+    it('Escape closes the bar but not the dialog', async () => {
+      server.use(meOk, bookOk(twoStrands()), textHandler());
+      renderApp('/books/b1');
+      const dialog = await openDialog();
+      await userEvent.click(within(dialog).getByRole('button', { name: 'KI-Assistent: Beschriftung' }));
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Vorschlagen' }));
+      await screen.findByText('1/3');
+      await userEvent.keyboard('{Escape}');
+      expect(within(dialog).getByLabelText('Beschriftung')).toHaveValue('');
+      expect(screen.getByRole('dialog', { name: 'Verbindung' })).toBeInTheDocument();
+      expect(screen.queryByText('1/3')).not.toBeInTheDocument();
+      await userEvent.keyboard('{Escape}');
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
 });
