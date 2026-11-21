@@ -35,6 +35,9 @@ export async function loadScenes(db: Db | Tx, bookId: Id): Promise<{ scenes: Sce
       sectionId: a.sectionId,
       storylineId: a.storylineId,
       description: a.description,
+      // Task 2 replaces this with the stored blocks and revision.
+      blocks: [{ id: a.id, text: a.description }],
+      revision: 0,
       updatedAt: a.updatedAt.toISOString(),
     })),
   };

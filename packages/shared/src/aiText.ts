@@ -1,5 +1,6 @@
 /** Request/response schemas and pure text-insertion helpers for the AI "magic wand" on text fields. */
 import { z } from 'zod';
+import { LengthChoiceSchema } from './length.js';
 
 const Id = z.string().uuid();
 const ConnType = z.enum(['character_switch', 'time_jump', 'merge', 'flashback']);
@@ -19,6 +20,7 @@ export const AiTextTarget = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('section'), storylineId: Id, sectionId: Id.nullable(), field: z.enum(['title', 'description', 'note']) }),
   z.object({ kind: z.literal('character'), characterId: Id, field: z.enum(['name', 'description', 'behavior', 'intentions']) }),
   z.object({ kind: z.literal('addition'), storylineId: Id, characterId: Id, field: z.enum(['behavior', 'intentions']) }),
+  z.object({ kind: z.literal('sceneBlock'), assignmentId: Id, blockId: Id, field: z.literal('text') }),
   z.object({ kind: z.literal('connection'), fromId: Id, toId: Id, type: ConnType, characterId: Id.nullable(), field: z.literal('label') }),
 ]);
 export type AiTextTarget = z.infer<typeof AiTextTarget>;
@@ -48,6 +50,8 @@ export function fieldLimit(target: AiTextTarget): { max: number; singleLine: boo
       return target.field === 'name' ? { max: 200, singleLine: true } : { max: 2000, singleLine: false };
     case 'addition':
       return { max: 2000, singleLine: false };
+    case 'sceneBlock':
+      return { max: 10000, singleLine: false };
     case 'connection':
       return { max: 200, singleLine: true };
   }
@@ -61,6 +65,8 @@ export const AiTextBody = z
     text: z.string().max(10000),
     selection: z.object({ start: z.number().int(), end: z.number().int() }).nullable(),
     draft: AiTextDraft.default({}),
+    /** Wanted length of a generated scene block. */
+    length: LengthChoiceSchema.optional(),
   })
   .superRefine((b, ctx) => {
     const fail = (path: string, message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });

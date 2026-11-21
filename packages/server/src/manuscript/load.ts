@@ -156,7 +156,7 @@ export async function loadManuscript(
       })),
   ].sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
   return {
-    book: book!,
+    book: { ...book!, targetWords: null }, // Task 2 loads the stored target range.
     role: access.role,
     rights: access.rights,
     chapters: chapterList,

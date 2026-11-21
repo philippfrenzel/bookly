@@ -187,7 +187,7 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
     el.focus();
     // The live value replaces a possibly stale stored one of the target field in the context.
     const context: AiTextDraft = { ...(draft?.() ?? {}) };
-    if (target.field !== 'label') context[target.field] = text;
+    if (target.field !== 'label' && target.field !== 'text') context[target.field] = text;
     const body: AiTextBody = { target, action, text, selection, draft: context };
     let result: AiTextResult;
     try {

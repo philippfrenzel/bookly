@@ -7,6 +7,7 @@
  */
 import { z } from 'zod';
 import type { Id } from './domain.js';
+import { LengthChoiceSchema, type WordRange } from './length.js';
 
 /** Rights a reviewer (Lektor) can be granted per book (BR-001). `read` is always granted. */
 export const REVIEWER_RIGHTS = ['read', 'comment', 'suggest', 'edit', 'delete', 'structure'] as const;
@@ -165,7 +166,7 @@ export interface ManuscriptContext {
 
 /** Everything the manuscript page needs; every manuscript mutation answers with it. */
 export interface ManuscriptResponse {
-  book: { id: Id; title: string };
+  book: { id: Id; title: string; targetWords: WordRange | null };
   role: 'author' | 'reviewer';
   /** The caller's rights; the author has all. */
   rights: ReviewerRight[];
@@ -247,6 +248,10 @@ export type ReviewerCreateBody = z.infer<typeof ReviewerCreateBody>;
 
 export const ReviewerPatchBody = z.object({ rights: Rights });
 export type ReviewerPatchBody = z.infer<typeof ReviewerPatchBody>;
+
+/** Request of an AI draft for one scene block. */
+export const BlockDraftBody = z.object({ length: LengthChoiceSchema.optional() });
+export type BlockDraftBody = z.infer<typeof BlockDraftBody>;
 
 export const ProposalRequestBody = z.object({
   /** Optional wish of the author, e.g. "kürzere Kapitel". */

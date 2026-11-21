@@ -1,9 +1,9 @@
 /** Tests for the scene bodies and pure scene rules. */
 import { describe, expect, test } from 'vitest';
-import { hasSceneContext, previousDescriptions, SceneAssignmentCreateBody, SceneAssignmentPatchBody, SceneBody, SceneNoteBody, parseTargetKey, targetKey, type SceneAssignment } from './scenes.js';
+import { BLOCK_SEPARATOR, SceneBlocksBody, joinBlocks, splitBlockText, hasSceneContext, previousDescriptions, SceneAssignmentCreateBody, SceneAssignmentPatchBody, SceneBody, SceneNoteBody, parseTargetKey, targetKey, type SceneAssignment } from './scenes.js';
 
 const a = (id: string, sceneId: string, description: string, updatedAt: string): SceneAssignment =>
-  ({ id, sceneId, sectionId: `sec-${id}`, storylineId: null, description, updatedAt });
+  ({ id, sceneId, sectionId: `sec-${id}`, storylineId: null, description, blocks: [{ id, text: description }], revision: 0, updatedAt });
 
 describe('scene bodies', () => {
   test('assignment patch changes the description, the section, or both, but not nothing', () => {
@@ -68,5 +68,41 @@ describe('previousDescriptions', () => {
     ];
     expect(previousDescriptions('s', list)).toEqual(['Neu', 'Alt']);
     expect(previousDescriptions('none', list)).toEqual([]);
+  });
+});
+
+describe('scene blocks', () => {
+  const id1 = '00000000-0000-4000-8000-000000000001';
+  const id2 = '00000000-0000-4000-8000-000000000002';
+
+  test('splitBlockText splits at the caret without trimming', () => {
+    const text = 'Mara fragte. „Jon antwortete.“';
+    const parts = splitBlockText(text, 13);
+    expect(parts).toEqual(['Mara fragte. ', '„Jon antwortete.“']);
+    expect(parts![0] + parts![1]).toBe(text);
+    expect(splitBlockText(text, 0)).toBeNull();
+    expect(splitBlockText(text, text.length)).toBeNull();
+  });
+
+  test('joinBlocks joins with the separator', () => {
+    expect(BLOCK_SEPARATOR).toBe('\n\n');
+    expect(joinBlocks(['a'])).toBe('a');
+    expect(joinBlocks(['a', 'b'])).toBe('a\n\nb');
+  });
+
+  test('SceneBlocksBody enforces counts, length and unique ids, and keeps spaces', () => {
+    const ok = (blocks: unknown[]) => SceneBlocksBody.safeParse({ revision: 0, blocks }).success;
+    expect(ok([])).toBe(false);
+    expect(ok(Array.from({ length: 201 }, () => ({ text: 'x' })))).toBe(false);
+    expect(ok(Array.from({ length: 200 }, () => ({ text: 'x' })))).toBe(true);
+    expect(ok([{ text: 'x'.repeat(10001) }])).toBe(false);
+    expect(ok([{ id: id1, text: 'a' }, { id: id1, text: 'b' }])).toBe(false);
+    expect(ok([{ id: id1, text: 'a' }, { id: id2, text: 'b' }, { text: 'c' }, { text: 'd' }])).toBe(true);
+    expect(SceneBlocksBody.parse({ revision: 3, blocks: [{ text: '  hi  ' }] }).blocks[0]!.text).toBe('  hi  ');
+    expect(SceneBlocksBody.safeParse({ revision: -1, blocks: [{ text: 'a' }] }).success).toBe(false);
+  });
+
+  test('assignment patch accepts an optional revision', () => {
+    expect(SceneAssignmentPatchBody.parse({ description: 'x', revision: 2 })).toEqual({ description: 'x', revision: 2 });
   });
 });

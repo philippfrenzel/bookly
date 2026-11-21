@@ -85,6 +85,9 @@ export function buildTextContext(book: Book, body: AiTextBody): TextContext {
   const findCharacter = (id: string) => need(book.characters.find((c) => c.id === id));
 
   switch (target.kind) {
+    // Scene blocks get their context from a dedicated loader.
+    case 'sceneBlock':
+      throw new NotFoundError();
     case 'storyline': {
       const stored = target.storylineId === null ? undefined : findStoryline(target.storylineId);
       const merged: AiTextDraft = {

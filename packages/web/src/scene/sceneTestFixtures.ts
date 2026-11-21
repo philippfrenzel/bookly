@@ -29,5 +29,5 @@ export function scene(over: Partial<Scene> = {}): Scene {
 
 /** An assignment; override fields as needed. */
 export function assignment(over: Partial<SceneAssignment> = {}): SceneAssignment {
-  return { id: 'a1', sceneId: 'sc1', sectionId: 'sec1', storylineId: null, description: '', updatedAt: '2026-11-01T00:00:00.000Z', ...over };
+  return { id: 'a1', sceneId: 'sc1', sectionId: 'sec1', storylineId: null, description: '', blocks: [{ id: 'blk1', text: '' }], revision: 0, updatedAt: '2026-11-01T00:00:00.000Z', ...over };
 }

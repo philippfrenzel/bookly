@@ -18,7 +18,7 @@ function block(over: Partial<ManuscriptBlock> = {}): ManuscriptBlock {
 
 function manuscript(over: Partial<ManuscriptResponse> = {}): ManuscriptResponse {
   return {
-    book: { id: 'b1', title: 'Sturmland' },
+    book: { id: 'b1', title: 'Sturmland', targetWords: null },
     role: 'author',
     rights: [...REVIEWER_RIGHTS],
     chapters: [{ id: 'c1', position: 0, title: 'Aufbruch', blocks: [block()] }],

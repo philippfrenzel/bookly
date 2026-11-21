@@ -9,6 +9,10 @@ export type SceneImageType = (typeof SCENE_IMAGE_TYPES)[number];
 export const SCENE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 /** Field limits of scenes. */
 export const SCENE_LIMITS = { name: 200, note: 10000, description: 2000 } as const;
+/** Limits of the text blocks of a scene assignment. */
+export const SCENE_BLOCK_LIMITS = { text: 10000, count: 200 } as const;
+/** Blocks are joined with this separator into one text. */
+export const BLOCK_SEPARATOR = '\n\n';
 /** Most note characters handed to the AI per request; later notes are left out. */
 export const SCENE_AI_NOTE_BUDGET = 20000;
 
@@ -18,11 +22,13 @@ export interface SceneImageInfo { mime: SceneImageType; size: number; version: s
 export interface SceneNote { id: Id; text: string }
 /** A place or setting with an optional image and any number of notes. */
 export interface Scene { id: Id; name: string; image: SceneImageInfo | null; notes: SceneNote[] }
+/** One text block (paragraph-sized passage) of a scene assignment. */
+export interface SceneBlock { id: Id; text: string }
 /**
  * A scene assigned to a section of a main strand or to a whole storyline (e.g. a side strand, which has
  * no sections); exactly one of `sectionId` and `storylineId` is set. Carries the scene description there.
  */
-export interface SceneAssignment { id: Id; sceneId: Id; sectionId: Id | null; storylineId: Id | null; description: string; updatedAt: string }
+export interface SceneAssignment { id: Id; sceneId: Id; sectionId: Id | null; storylineId: Id | null; description: string; blocks: SceneBlock[]; revision: number; updatedAt: string }
 /** Where an assignment points: a section or a whole storyline. */
 export type SceneTarget = { sectionId: Id } | { storylineId: Id };
 /** Result of the AI scene description request. */
@@ -48,10 +54,39 @@ export type SceneAssignmentCreateBody = z.infer<typeof SceneAssignmentCreateBody
 
 /** Change an assignment's description, move it to another section or storyline, or both. */
 export const SceneAssignmentPatchBody = z
-  .object({ description: description.optional(), sectionId: Id.optional(), storylineId: Id.optional() })
+  .object({ description: description.optional(), sectionId: Id.optional(), storylineId: Id.optional(), revision: z.number().int().min(0).optional() })
   .refine((b) => !(b.sectionId && b.storylineId), { message: 'at most one target' })
   .refine((b) => b.description !== undefined || b.sectionId !== undefined || b.storylineId !== undefined, { message: 'nothing to change' });
 export type SceneAssignmentPatchBody = z.infer<typeof SceneAssignmentPatchBody>;
+
+/** Replace all blocks of an assignment; `revision` is the one the editor started from (stale saves are 409). Text is kept as typed. */
+export const SceneBlocksBody = z
+  .object({
+    revision: z.number().int().min(0),
+    blocks: z
+      .array(z.object({ id: Id.optional(), text: z.string().max(SCENE_BLOCK_LIMITS.text) }))
+      .min(1)
+      .max(SCENE_BLOCK_LIMITS.count),
+  })
+  .refine(
+    (b) => {
+      const ids = b.blocks.flatMap((x) => (x.id ? [x.id] : []));
+      return new Set(ids).size === ids.length;
+    },
+    { message: 'duplicate block ids' },
+  );
+export type SceneBlocksBody = z.infer<typeof SceneBlocksBody>;
+
+/** Joins block texts into one text. */
+export function joinBlocks(texts: string[]): string {
+  return texts.join(BLOCK_SEPARATOR);
+}
+
+/** Splits a block text at the caret into two halves that concatenate to the original; null unless the caret is strictly inside. */
+export function splitBlockText(text: string, caret: number): [string, string] | null {
+  if (!(caret > 0 && caret < text.length)) return null;
+  return [text.slice(0, caret), text.slice(caret)];
+}
 
 /**
  * Optional section or storyline the description is meant for (added as context). `sample` asks for a short
