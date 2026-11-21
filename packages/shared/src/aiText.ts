@@ -1,6 +1,7 @@
 /** Request/response schemas and pure text-insertion helpers for the AI "magic wand" on text fields. */
 import { z } from 'zod';
 import { LengthChoiceSchema } from './length.js';
+import { MANUSCRIPT_LIMITS } from './manuscript.js';
 
 const Id = z.string().uuid();
 const ConnType = z.enum(['character_switch', 'time_jump', 'merge', 'flashback']);
@@ -24,6 +25,7 @@ export const AiTextTarget = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('character'), characterId: Id, field: z.enum(['name', 'description', 'behavior', 'intentions']) }),
   z.object({ kind: z.literal('addition'), storylineId: Id, characterId: Id, field: z.enum(['behavior', 'intentions']) }),
   z.object({ kind: z.literal('sceneBlock'), assignmentId: Id, blockId: Id, field: z.literal('text') }),
+  z.object({ kind: z.literal('manuscriptBlock'), blockId: Id, field: z.enum(['text', 'synopsis']) }),
   z.object({ kind: z.literal('connection'), fromId: Id, toId: Id, type: ConnType, characterId: Id.nullable(), field: z.literal('label') }),
 ]);
 export type AiTextTarget = z.infer<typeof AiTextTarget>;
@@ -55,6 +57,8 @@ export function fieldLimit(target: AiTextTarget): { max: number; singleLine: boo
       return { max: 2000, singleLine: false };
     case 'sceneBlock':
       return { max: 10000, singleLine: false };
+    case 'manuscriptBlock':
+      return { max: MANUSCRIPT_LIMITS[target.field], singleLine: false };
     case 'connection':
       return { max: 200, singleLine: true };
   }
@@ -65,7 +69,8 @@ export const AiTextBody = z
   .object({
     target: AiTextTarget,
     action: AiTextActionSchema,
-    text: z.string().max(10000),
+    /** Longest field text (a manuscript block); fieldLimit narrows it per target. */
+    text: z.string().max(MANUSCRIPT_LIMITS.text),
     selection: z.object({ start: z.number().int(), end: z.number().int() }).nullable(),
     draft: AiTextDraft.default({}),
     /** Wanted length of a generated scene block. */
@@ -134,6 +139,10 @@ export function draftHasText(target: AiTextTarget, draft: AiTextDraft): boolean 
   }
   if (target.kind === 'character') {
     return (['name', 'description', 'behavior', 'intentions'] as const).filter((f) => f !== target.field).some((f) => has(draft[f]));
+  }
+  if (target.kind === 'manuscriptBlock') {
+    // Block title (draft.title) and, for the text, the plan (draft.description).
+    return has(draft.title) || (target.field === 'text' && has(draft.description));
   }
   return true;
 }

@@ -56,7 +56,7 @@ export function BlockCard({ bookId, ms, chapter, block, index, chapterEdit = 0 }
   return (
     <li className={`ms-block${foreignLock ? ' is-locked' : ''}`} aria-label={`Baustein ${block.title}`}>
       {editing ? (
-        <BlockEditor bookId={bookId} block={block} mode={editing} onClose={(msg) => { setEditing(null); setInfo(msg ?? null); }} />
+        <BlockEditor bookId={bookId} block={block} aiEnabled={ms.ai.enabled} mode={editing} onClose={(msg) => { setEditing(null); setInfo(msg ?? null); }} />
       ) : (
         <>
           <div className="ms-block-head">

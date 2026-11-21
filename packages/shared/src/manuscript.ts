@@ -162,6 +162,8 @@ export interface ManuscriptContext {
   storylines: { id: Id; title: string; color: string }[];
   sections: { id: Id; title: string; storylineId: Id }[];
   scenes: { id: Id; name: string }[];
+  /** Named characters of the book, offered after "@" in the editor. */
+  characters: { id: Id; name: string }[];
 }
 
 /** Everything the manuscript page needs; every manuscript mutation answers with it. */

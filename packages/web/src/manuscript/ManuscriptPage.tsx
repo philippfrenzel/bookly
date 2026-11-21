@@ -7,6 +7,7 @@ import { Link, useParams } from 'react-router-dom';
 import { MANUSCRIPT_LIMITS } from '@bookly/shared';
 import { ApiError } from '../api/client';
 import { SidePanel, type SideTab } from '../book/SidePanel';
+import { MentionNamesProvider } from '../editor/MentionNames';
 import { Icon } from '../ui/Icon';
 import { ChapterSection } from './ChapterSection';
 import { manuscriptError, useManuscript, useManuscriptMutation } from './manuscriptApi';
@@ -43,7 +44,10 @@ export function ManuscriptPage() {
     : [];
   const blockCount = ms?.chapters.reduce((n, c) => n + c.blocks.length, 0) ?? 0;
 
+  const characterNames = ms?.context.characters.map((c) => c.name) ?? [];
+
   return (
+    <MentionNamesProvider names={characterNames}>
     <div className="book-page">
       <header className="app-header">
         <Link to="/" className="wordmark">Bookly</Link>
@@ -99,5 +103,6 @@ export function ManuscriptPage() {
         </div>
       )}
     </div>
+    </MentionNamesProvider>
   );
 }

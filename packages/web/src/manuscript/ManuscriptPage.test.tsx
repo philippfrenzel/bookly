@@ -1,5 +1,5 @@
 /** Tests for the manuscript page: AI proposal decision, editing under a lock, lock badge and unlock, reviewer rights. */
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
@@ -25,7 +25,7 @@ function manuscript(over: Partial<ManuscriptResponse> = {}): ManuscriptResponse 
     trash: [],
     proposals: [],
     reviewers: [],
-    context: { storylines: [{ id: 's1', title: 'Hauptstrang', color: '#2B59C3' }], sections: [], scenes: [] },
+    context: { storylines: [{ id: 's1', title: 'Hauptstrang', color: '#2B59C3' }], sections: [], scenes: [], characters: [] },
     style: { presetKeys: [], teamStyleIds: [], addition: '' },
     teamStyles: [],
     ai: { enabled: true },
@@ -89,6 +89,35 @@ describe('ManuscriptPage', () => {
     await userEvent.click(within(editor).getByRole('button', { name: 'Speichern' }));
     expect(await screen.findByText('Neu.')).toBeInTheDocument();
     expect(bodies).toEqual([{ baseVersion: 1, title: 'Ankunft', synopsis: 'Mira erreicht den See.', text: 'Neu.' }]);
+  });
+
+  it('offers the magic wand on text and plan while editing; it asks the manuscript route of the block', async () => {
+    const bodies: unknown[] = [];
+    const locked = manuscript({ chapters: [{ id: 'c1', position: 0, title: 'Aufbruch', blocks: [block({ lock: { mine: true, expiresAt: '2026-11-21T10:30:00Z' } })] }], ai: { enabled: true } });
+    server.use(
+      meOk,
+      msOk(manuscript({ ai: { enabled: true } })),
+      http.post('/api/books/b1/manuscript/blocks/k1/lock', () => HttpResponse.json(locked)),
+      http.post('/api/books/b1/manuscript/blocks/k1/ai-text', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({ suggestions: ['Es war ganz still.'] });
+      }),
+    );
+    renderApp('/books/b1/manuskript');
+    await userEvent.click(await screen.findByRole('button', { name: 'Bearbeiten' }));
+    const editor = await screen.findByRole('form', { name: 'Baustein Ankunft bearbeiten' });
+    expect(within(editor).getByRole('button', { name: 'KI-Assistent: Inhalt (Plan)' })).toBeEnabled();
+    await userEvent.click(within(editor).getByLabelText('Text'));
+    await userEvent.click(within(editor).getByRole('button', { name: 'KI-Assistent: Text' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Stil verbessern' }));
+    await waitFor(() => expect(within(editor).getByLabelText('Text')).toHaveValue('Es war ganz still.'));
+    expect(bodies).toEqual([{
+      target: { kind: 'manuscriptBlock', blockId: 'k1', field: 'text' },
+      action: 'polish',
+      text: 'Es war still.',
+      selection: null,
+      draft: { title: 'Ankunft', description: 'Mira erreicht den See.' },
+    }]);
   });
 
   it('shows a foreign lock only as locked; the author can release it', async () => {

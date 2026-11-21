@@ -7,19 +7,23 @@ import { useEffect, useRef, useState } from 'react';
 import { MANUSCRIPT_LIMITS } from '@bookly/shared';
 import type { Id, LengthChoice, ManuscriptBlock } from '@bookly/shared';
 import { LengthSelect } from '../ai/LengthSelect';
+import { MagicWand } from '../ai/MagicWand';
 import { Icon } from '../ui/Icon';
 import { isLocked, manuscriptError, useBlockDraft, useManuscriptMutation } from './manuscriptApi';
 import { ProseField } from '../editor/ProseField';
+import type { ProseHandle } from '../editor/ProseField';
 
 interface Props {
   bookId: Id;
   block: ManuscriptBlock;
   mode: 'edit' | 'suggest';
+  /** ManuscriptResponse.ai.enabled; the magic wand on text and plan is offered while editing. */
+  aiEnabled?: boolean;
   onClose: (notice?: string) => void;
 }
 
 /** Shows the editor form. */
-export function BlockEditor({ bookId, block, mode, onClose }: Props) {
+export function BlockEditor({ bookId, block, mode, aiEnabled = false, onClose }: Props) {
   const mutate = useManuscriptMutation(bookId);
   const draft = useBlockDraft(bookId);
   const [title, setTitle] = useState(block.title);
@@ -30,6 +34,8 @@ export function BlockEditor({ bookId, block, mode, onClose }: Props) {
   const [aiText, setAiText] = useState<string | null>(null);
   const [length, setLength] = useState<LengthChoice>('book');
   const [warning, setWarning] = useState<string | null>(null);
+  const textRef = useRef<ProseHandle>(null);
+  const synopsisRef = useRef<ProseHandle>(null);
   const base = useRef(block.version);
   const lostHandled = useRef(false);
   const dirty = title !== block.title || synopsis !== block.synopsis || text !== block.text;
@@ -78,6 +84,19 @@ export function BlockEditor({ bookId, block, mode, onClose }: Props) {
     if (mode === 'edit' && block.lock?.mine) mutate.mutate({ method: 'DELETE', path: `/blocks/${block.id}/lock` });
     onClose();
   };
+  /** Magic wand for `field` (edit mode only); the block's title and plan are its context. */
+  const wand = (field: 'text' | 'synopsis', fieldLabel: string) =>
+    mode === 'edit' && (
+      <MagicWand
+        getField={() => (field === 'text' ? textRef : synopsisRef).current}
+        bookId={bookId}
+        target={{ kind: 'manuscriptBlock', blockId: block.id, field }}
+        draft={() => ({ title, description: synopsis })}
+        enabled={aiEnabled}
+        fieldLabel={fieldLabel}
+        endpoint={`/api/books/${bookId}/manuscript/blocks/${block.id}/ai-text`}
+      />
+    );
   const label = mode === 'edit' ? `Baustein ${block.title} bearbeiten` : `Vorschlag für ${block.title}`;
 
   return (
@@ -87,20 +106,26 @@ export function BlockEditor({ bookId, block, mode, onClose }: Props) {
         Titel
         <input value={title} maxLength={MANUSCRIPT_LIMITS.title} onChange={(e) => setTitle(e.target.value)} />
       </label>
-      <label>
-        Inhalt (Plan)
-        <ProseField ariaLabel="Inhalt (Plan)" rows={2} value={synopsis} maxLength={MANUSCRIPT_LIMITS.synopsis} onChange={(value) => setSynopsis(value)} />
-      </label>
+      <div className="field">
+        <span>Inhalt (Plan)</span>
+        <div className="wand-field">
+          <ProseField ref={synopsisRef} ariaLabel="Inhalt (Plan)" rows={2} value={synopsis} maxLength={MANUSCRIPT_LIMITS.synopsis} onChange={(value) => setSynopsis(value)} />
+          {wand('synopsis', 'Inhalt (Plan)')}
+        </div>
+      </div>
       {mode === 'edit' && (
         <label>
           Anweisung für diesen Baustein
           <ProseField ariaLabel="Anweisung für diesen Baustein" rows={2} value={instruction} maxLength={MANUSCRIPT_LIMITS.instruction} onChange={(value) => setInstruction(value)} placeholder="z. B. aus Miras Sicht, kurze Sätze, endet mit einem Cliffhanger" />
         </label>
       )}
-      <label>
-        Text
-        <ProseField ariaLabel="Text" className="ms-text-input" rows={12} value={text} onChange={(value) => setText(value)} />
-      </label>
+      <div className="field">
+        <span>Text</span>
+        <div className="wand-field">
+          <ProseField ref={textRef} ariaLabel="Text" className="ms-text-input" rows={12} value={text} onChange={(value) => setText(value)} />
+          {wand('text', 'Text')}
+        </div>
+      </div>
       {mode === 'suggest' && (
         <label>
           Notiz an den Autor (optional)
