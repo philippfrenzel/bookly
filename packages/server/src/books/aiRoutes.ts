@@ -15,7 +15,7 @@ import { assertInBook } from './childId.js';
 import { bookGuard } from './guard.js';
 
 /** preHandler: replies 503 `{ error: 'ai_disabled' }` when no AI client is configured. */
-async function requireAi(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+export async function requireAi(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   if (!request.server.ai) await reply.code(503).send({ error: 'ai_disabled' });
 }
 

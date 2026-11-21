@@ -497,3 +497,41 @@ h3.timetable-label { margin: 0.625rem 0 0; font-size: 0.75rem; color: var(--mute
 .section-item > .storyline-form { flex: 1 1 100%; }
 .section-item:has(> .storyline-form) { border-left-color: var(--focus); }
 .timetable-connections .line-chip { white-space: normal; text-align: left; max-width: 100%; }
+
+/* Scenes (tab „Szenen“): each scene a calm white card with a rounded image, notes and the sections it is assigned to. */
+.scene-list { gap: 0.75rem; }
+.scene-list > li.scene-item { flex-direction: column; align-items: stretch; gap: 0.625rem; padding: 0.75rem; border: 1px solid var(--rule); border-radius: 14px; background: var(--ground); }
+.scene-head { display: flex; gap: 0.375rem; align-items: center; }
+.scene-head input { flex: 1; min-width: 0; font-family: var(--font-display); font-weight: 700; font-size: 1rem; }
+.scene-image { display: flex; flex-wrap: wrap; gap: 0.375rem; align-items: center; }
+.scene-image img { display: block; width: 100%; max-height: 180px; object-fit: cover; border-radius: var(--radius); background: var(--wash); }
+.scene-image .muted { margin: 0; flex-basis: 100%; font-size: 0.8125rem; }
+.file-button { position: relative; flex-direction: row; display: inline-flex; align-items: center; padding: 0.375rem 0.625rem; font-size: 0.8125rem; font-weight: 600; color: var(--ink); border: 1px solid var(--rule-strong); border-radius: var(--radius); background: var(--ground); cursor: pointer; transition: background 120ms, border-color 120ms; }
+.file-button:hover { border-color: var(--ink); background: var(--wash); }
+.file-button:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.file-button input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.scene-notes { display: flex; flex-direction: column; gap: 0.375rem; align-items: flex-start; }
+.scene-note { display: flex; gap: 0.25rem; align-items: flex-start; width: 100%; }
+.scene-note textarea { flex: 1; min-height: 3.25rem; resize: vertical; font-size: 0.875rem; }
+.scene-label { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.scene-usage { display: flex; flex-direction: column; gap: 0.375rem; padding-top: 0.625rem; border-top: 1px solid var(--rule); }
+.scene-usage p { margin: 0; font-size: 0.8125rem; }
+.scene-sections { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.375rem; }
+.line-chip.scene-section { padding: 0.25rem 0.75rem 0.25rem 0.5rem; font-size: 0.8125rem; }
+.line-chip.scene-section::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+
+/* Scenes inside a section's edit form (storyline mode, tab „Zeitpunkte“). */
+.scene-assignments { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem; border-radius: 12px; background: var(--wash); }
+.storyline-form fieldset.scene-assignments { padding: 0.75rem; }
+.scene-assignments > legend { float: left; width: 100%; margin: 0; }
+.scene-assignments .panel-list { margin: 0; }
+.scene-assignments .panel-list li.scene-assignment { flex-direction: column; align-items: stretch; padding: 0.5rem 0.625rem; border-radius: var(--radius); background: var(--ground); }
+.scene-assignment .scene-label { color: var(--ink-2); }
+.scene-assignment textarea, .scene-assign textarea { min-height: 4rem; resize: vertical; font-size: 0.875rem; }
+.scene-assignment .actions, .scene-assign .actions { display: flex; gap: 0.375rem; flex-wrap: wrap; }
+.scene-assign { display: flex; flex-direction: column; gap: 0.5rem; }
+.scene-assignments .muted { margin: 0; font-size: 0.8125rem; }
+
+/* Scene names on a section card of the timetable. */
+.timetable-scenes { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.25rem; }
+.scene-chip { padding: 0 0.5rem; border-radius: 999px; background: var(--wash); color: var(--ink-2); font-size: 0.6875rem; font-weight: 700; line-height: 1.25rem; }

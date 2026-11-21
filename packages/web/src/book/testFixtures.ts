@@ -35,7 +35,7 @@ export function sampleBook(): Book {
 
 /** Full book response with no hints or warnings; override fields as needed. */
 export function bookResponse(book: Book, extra: Partial<Omit<BookResponse, 'book'>> = {}): BookResponse {
-  return { book, hints: [], characterWarnings: [], characterChecks: [], ai: { enabled: true }, ...extra };
+  return { book, hints: [], characterWarnings: [], characterChecks: [], scenes: [], sceneAssignments: [], ai: { enabled: true }, ...extra };
 }
 
 /** GET handler serving the given book. */

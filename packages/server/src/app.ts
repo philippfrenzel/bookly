@@ -9,6 +9,7 @@ import { bookRoutes } from './books/routes.js';
 import { characterRoutes } from './books/characters.js';
 import { acknowledgementRoutes } from './books/acknowledgements.js';
 import { connectionRoutes } from './books/connections.js';
+import { sceneRoutes } from './books/scenes.js';
 import { sectionRoutes } from './books/sections.js';
 import { storylineRoutes } from './books/storylines.js';
 import { timePointRoutes } from './books/timepoints.js';
@@ -55,5 +56,6 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   await app.register(connectionRoutes);
   await app.register(acknowledgementRoutes);
   await app.register(aiRoutes);
+  await app.register(sceneRoutes);
   return app;
 }

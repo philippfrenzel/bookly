@@ -22,7 +22,7 @@ class InvalidOrder extends Error {
 }
 
 /** Throws NotFoundError unless `sectionId` is a well-formed uuid of a section in a storyline of `bookId`. */
-async function assertSectionInBook(db: Db, sectionId: string, bookId: Id): Promise<void> {
+export async function assertSectionInBook(db: Db, sectionId: string, bookId: Id): Promise<void> {
   if (!UUID_RE.test(sectionId)) throw new NotFoundError();
   const [row] = await db
     .select({ id: sections.id })

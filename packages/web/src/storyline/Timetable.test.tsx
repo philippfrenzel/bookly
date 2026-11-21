@@ -64,6 +64,18 @@ describe('Timetable', () => {
     expect(screen.getByLabelText('Titel Heimkehr')).toHaveValue('Heimkehr');
   });
 
+  it('names the scenes assigned to a section on its card', async () => {
+    server.use(meOk, bookOk(timetableBook(), {
+      scenes: [{ id: 'sc1', name: 'Bergsee', image: null, notes: [] }],
+      sceneAssignments: [{ id: 'a1', sceneId: 'sc1', sectionId: 'x2', description: '', updatedAt: '2026-11-01T00:00:00.000Z' }],
+    }));
+    renderApp('/books/b1');
+    await select('Hauptstrang');
+    const card = await screen.findByRole('button', { name: 'Abschnitt „Heimkehr“ öffnen' });
+    expect(within(card).getByText('Bergsee')).toBeInTheDocument();
+    expect(within(screen.getByRole('button', { name: 'Abschnitt „Aufbruch“ öffnen' })).queryByText('Bergsee')).not.toBeInTheDocument();
+  });
+
   it('opens the „Figuren“ tab from a character row', async () => {
     server.use(meOk, bookOk(timetableBook()));
     renderApp('/books/b1');

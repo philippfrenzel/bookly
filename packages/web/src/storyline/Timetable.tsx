@@ -1,8 +1,8 @@
 /**
  * „Fahrplan“ below the map: the selected storyline laid out on the book's time points. Shows its sections,
- * which character is present when, and its connections; every entry opens the matching place in the side panel.
+ * the scenes they play in, which character is present when, and its connections; every entry opens the matching place in the side panel.
  */
-import { characterLabel, orderIndex, type Book, type CharacterWarning, type Id, type Storyline, type TimeRange } from '@bookly/shared';
+import { characterLabel, orderIndex, type Book, type CharacterWarning, type Id, type Scene, type SceneAssignment, type Storyline, type TimeRange } from '@bookly/shared';
 import { CONNECTION_TYPES } from '../connection/ConnectionDialog';
 import { signetOf, SignetChip } from './StorylineHeader';
 
@@ -11,6 +11,9 @@ interface Props {
   storyline: Storyline;
   /** AI character warnings of the book; open ones of this storyline mark the character. */
   warnings: CharacterWarning[];
+  /** Scenes of the book and their section assignments; assigned scenes are named on the section cards. */
+  scenes?: Scene[];
+  sceneAssignments?: SceneAssignment[];
   /** Opens a section (null: the add form) in the „Zeitpunkte“ tab. */
   onOpenSection: (sectionId: Id | null) => void;
   /** Opens the „Figuren“ tab. */
@@ -50,7 +53,7 @@ export function runsOf(columns: Set<number>): Span[] {
 const place = ([a, b]: Span, row?: number) => ({ gridColumn: `${a + 2} / ${b + 3}`, gridRow: row });
 
 /** Renders the timetable of one storyline. */
-export function Timetable({ book, storyline, warnings, onOpenSection, onOpenCharacters, onOpenConnection }: Props) {
+export function Timetable({ book, storyline, warnings, scenes = [], sceneAssignments = [], onOpenSection, onOpenCharacters, onOpenConnection }: Props) {
   const points = [...book.timePoints].sort((a, b) => a.position - b.position);
   const idx = orderIndex(points);
   const spanOf = (r: TimeRange): Span => {
@@ -65,6 +68,10 @@ export function Timetable({ book, storyline, warnings, onOpenSection, onOpenChar
   const connections = book.connections.filter((c) => c.fromId === storyline.id || c.toId === storyline.id);
   // Characters in the book's own order, not in the order they were ticked.
   const people = book.characters.filter((c) => storyline.characterIds.includes(c.id));
+  const sceneName = new Map(scenes.map((sc) => [sc.id, sc.name]));
+  /** Names of the scenes assigned to a section, in assignment order. */
+  const scenesOf = (sectionId: Id) =>
+    sceneAssignments.filter((a) => a.sectionId === sectionId).map((a) => sceneName.get(a.sceneId)).filter((n): n is string => !!n);
   const grid = { gridTemplateColumns: `minmax(5rem, 8.5rem) repeat(${points.length}, minmax(5.5rem, 1fr))` };
 
   /** Columns where a character appears: its sections, or the whole storyline when no section names it. */
@@ -114,6 +121,11 @@ export function Timetable({ book, storyline, warnings, onOpenSection, onOpenChar
             >
               <strong>{s.title}</strong>
               {s.description && <span className="muted">{s.description}</span>}
+              {scenesOf(s.id).length > 0 && (
+                <span className="timetable-scenes">
+                  {scenesOf(s.id).map((n) => <span key={n} className="scene-chip">{n}</span>)}
+                </span>
+              )}
             </button>
           ))}
         </div>

@@ -4,14 +4,14 @@ import { UUID_RE } from '@bookly/shared';
 import type { Id, ValidationIssue } from '@bookly/shared';
 import type { Db } from '../db/client.js';
 import type { Tx } from '../db/loadBook.js';
-import { characters, connections, storylines, timePoints } from '../db/schema.js';
+import { characters, connections, scenes, storylines, timePoints } from '../db/schema.js';
 import { NotFoundError, ValidationError } from '../errors.js';
 
 
 /** Throws NotFoundError unless `id` is a well-formed uuid of a row in `table` belonging to `bookId`. */
 export async function assertInBook(
   db: Db | Tx,
-  table: typeof timePoints | typeof characters | typeof storylines | typeof connections,
+  table: typeof timePoints | typeof characters | typeof storylines | typeof connections | typeof scenes,
   id: string | null | undefined,
   bookId: Id,
 ): Promise<void> {
