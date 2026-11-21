@@ -1,7 +1,8 @@
 /**
  * End-to-end flow: one scene assignment is written in ordered blocks. The text is split before „Jon antwortete“,
  * an empty block is inserted, only that block is drafted by the fake AI, and after a reload the order and the
- * neighbour texts are exact. The same scene on a side strand keeps its own independent block list.
+ * neighbour texts are exact. The same scene on a side strand starts from that text, split into blocks at the
+ * paragraph breaks, and keeps its own independent block list.
  */
 import { expect, test } from '@playwright/test';
 
@@ -141,7 +142,11 @@ test('scene writing in ordered blocks', async ({ page }) => {
   await expect(panel.getByRole('tab', { name: 'Szenen' })).toHaveAttribute('aria-selected', 'true');
   const side = panel.getByRole('group', { name: 'Szenen' });
   const sideBlock = side.getByLabel('Block 1 Szene Hafen', { exact: true });
-  await expect(side.getByLabel(/^Block \d+ Szene Hafen$/)).toHaveCount(1);
+  // It starts from the latest description, split into blocks at the paragraph breaks.
+  await expect(side.getByLabel(/^Block \d+ Szene Hafen$/)).toHaveCount(3);
+  for (const [i, text] of [FIRST, 'KI-Vorschlag 1', LAST].entries()) {
+    await expect(side.getByLabel(`Block ${i + 1} Szene Hafen`, { exact: true })).toHaveValue(text);
+  }
   await sideBlock.fill('Nur am Nebenstrang.');
   await sideBlock.blur();
   await expect(side.getByRole('button', { name: 'Hier teilen' })).toBeVisible();
