@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { mutateBook } from '../db/mutate.js';
 import { loadBook } from '../db/loadBook.js';
-import { acknowledgements, connections, storylines, timePoints } from '../db/schema.js';
+import { acknowledgements, characters, connections, storylines, timePoints } from '../db/schema.js';
 import { ValidationError } from '../errors.js';
 import { registeredAgent, testApp } from '../test/helpers.js';
 
@@ -33,10 +33,34 @@ describe('books', () => {
     await app.inject({ method: 'POST', url: '/api/books', headers: { cookie }, payload: { title: 'Zweites' } });
     const list = await app.inject({ method: 'GET', url: '/api/books', headers: { cookie } });
     expect(list.statusCode).toBe(200);
+    const empty = { storylineCount: 0, characterCount: 0, updatedAt: expect.any(String), lines: [] };
     expect(list.json()).toEqual([
-      { id: first.json().book.id, title: 'Erstes', storylineCount: 0 },
-      { id: expect.any(String), title: 'Zweites', storylineCount: 0 },
+      { id: first.json().book.id, title: 'Erstes', ...empty },
+      { id: expect.any(String), title: 'Zweites', ...empty },
     ]);
+    await app.close();
+  });
+
+  test('list summarises counts, line previews and the last change', async () => {
+    const app = await testApp();
+    const { cookie } = await registeredAgent(app);
+    const id = await createBook(app, cookie, 'Mit Linien');
+    const [t1, t2, t3] = await seedTimePoints(app, id);
+    await app.db.insert(storylines).values([
+      { bookId: id, title: 'Neben', startId: t2!, endId: t3!, kind: 'side', status: 'open', color: '#3E9160' },
+      { bookId: id, title: 'Haupt', startId: t1!, endId: t3!, kind: 'main', status: 'open', color: '#2F6FA8' },
+    ]);
+    await app.db.insert(characters).values([{ bookId: id, name: 'Ingrid' }, { bookId: id, name: 'Jon' }]);
+    const before = (await app.inject({ method: 'GET', url: '/api/books', headers: { cookie } })).json()[0];
+    expect(before).toMatchObject({ storylineCount: 2, characterCount: 2 });
+    expect(before.lines).toEqual([
+      { color: '#2F6FA8', kind: 'main', start: 0, end: 1 },
+      { color: '#3E9160', kind: 'side', start: 0.5, end: 1 },
+    ]);
+    await new Promise((r) => setTimeout(r, 20));
+    await app.inject({ method: 'PATCH', url: `/api/books/${id}`, headers: { cookie }, payload: { title: 'Umbenannt' } });
+    const after = (await app.inject({ method: 'GET', url: '/api/books', headers: { cookie } })).json()[0];
+    expect(Date.parse(after.updatedAt)).toBeGreaterThan(Date.parse(before.updatedAt));
     await app.close();
   });
 

@@ -9,7 +9,10 @@
 @import 'tailwindcss/utilities.css' layer(utilities);
 
 @theme inline {
+  --color-page: var(--page);
   --color-ground: var(--ground);
+  --color-accent: var(--accent);
+  --color-accent-wash: var(--accent-wash);
   --color-wash: var(--wash);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
@@ -24,5 +27,6 @@
   --radius-app: var(--radius);
   --shadow-app: var(--shadow);
   --font-sans: var(--font);
+  --font-display: var(--font-display);
   --ease-out: var(--ease-out);
 }
