@@ -188,9 +188,29 @@ export async function sceneRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) return invalid(reply, parsed.error.flatten());
     const { bookId, assignmentId } = request.params as { bookId: string; assignmentId: string };
     await assertAssignmentInBook(app.db, assignmentId, bookId);
-    return app.mutate(bookId, async (tx) => {
-      await tx.update(sceneAssignments).set({ description: parsed.data.description, updatedAt: new Date() }).where(eq(sceneAssignments.id, assignmentId));
-    });
+    const { description, sectionId } = parsed.data;
+    if (sectionId) await assertSectionInBook(app.db, sectionId, bookId);
+    try {
+      // Moving (AC-003 „ändern“): the scene may sit in the target section only once; the book row lock serialises the check.
+      return await app.mutate(bookId, async (tx) => {
+        if (sectionId) {
+          const [current] = await tx.select({ sceneId: sceneAssignments.sceneId }).from(sceneAssignments).where(eq(sceneAssignments.id, assignmentId));
+          const [dup] = await tx
+            .select({ id: sceneAssignments.id })
+            .from(sceneAssignments)
+            .where(and(eq(sceneAssignments.sceneId, current!.sceneId), eq(sceneAssignments.sectionId, sectionId)));
+          if (dup && dup.id !== assignmentId) throw new AlreadyAssigned();
+        }
+        await tx
+          .update(sceneAssignments)
+          // updatedAt dates the description (it orders earlier descriptions, FR-005), so a pure move keeps it.
+          .set({ ...(description !== undefined ? { description, updatedAt: new Date() } : {}), ...(sectionId ? { sectionId } : {}) })
+          .where(eq(sceneAssignments.id, assignmentId));
+      });
+    } catch (error) {
+      if (error instanceof AlreadyAssigned) return reply.code(409).send({ error: 'already_assigned' });
+      throw error;
+    }
   });
 
   app.delete(`${base}/scene-assignments/:assignmentId`, guarded, async (request) => {

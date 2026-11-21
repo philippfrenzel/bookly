@@ -1,4 +1,7 @@
-/** End-to-end flow: scene with image and note, assigned to a section, fake-AI description, second assignment reuses it. */
+/**
+ * End-to-end flow: scene with image and note, assigned to a section, fake-AI description, second assignment
+ * reuses it, an earlier description is put back into an existing assignment and the assignment is moved.
+ */
 import { expect, test } from '@playwright/test';
 
 /** A 1×1 PNG, uploaded as the scene image. */
@@ -56,7 +59,7 @@ test('scene management and assignment flow', async ({ page }) => {
   await panel.getByRole('button', { name: 'Anlegen' }).click();
   await page.getByRole('button', { name: 'Storyline „Reise“' }).click();
   await panel.getByRole('tab', { name: 'Zeitpunkte' }).click();
-  for (const [title, tp] of [['Ankunft', 'Tag 1'], ['Abschied', 'Tag 2']] as const) {
+  for (const [title, tp] of [['Ankunft', 'Tag 1'], ['Abschied', 'Tag 2'], ['Rückkehr', 'Tag 2']] as const) {
     await panel.getByRole('button', { name: 'Neuer Abschnitt' }).click();
     await panel.getByLabel('Titel neuer Abschnitt', { exact: true }).fill(title);
     await panel.getByLabel('Zeitraum neuer Abschnitt Start').selectOption({ label: tp });
@@ -99,4 +102,21 @@ test('scene management and assignment flow', async ({ page }) => {
   await usage.getByRole('button', { name: 'Abschnitt „Abschied“ öffnen' }).click();
   await expect(panel.getByRole('tab', { name: 'Zeitpunkte' })).toHaveAttribute('aria-selected', 'true');
   await expect(panel.getByRole('group', { name: 'Szenen' }).getByLabel('Beschreibung Szene Bergsee')).toBeVisible();
+
+  // Existing assignment: change it, then take the earlier description back from the list (FR-005).
+  const sceneBlock = panel.getByRole('group', { name: 'Szenen' });
+  const own = sceneBlock.getByLabel('Beschreibung Szene Bergsee');
+  await own.fill('Sonne über dem See.');
+  await own.blur();
+  await sceneBlock.getByLabel('Frühere Beschreibung für Szene Bergsee einsetzen').selectOption({ label: 'Nebel über dem Bergsee.' });
+  await expect(own).toHaveValue('Nebel über dem Bergsee.');
+  await sceneBlock.getByRole('button', { name: 'Übernehmen' }).click();
+  await expect(sceneBlock.getByRole('button', { name: 'Übernehmen' })).toHaveCount(0);
+
+  // Move the assignment to another section (AC-003); its description goes along.
+  await sceneBlock.getByLabel('Szene Bergsee in anderen Abschnitt verschieben').selectOption({ label: 'Rückkehr' });
+  await expect(sceneBlock.getByLabel('Beschreibung Szene Bergsee')).toHaveCount(0);
+  await panel.getByRole('button', { name: 'Fertig' }).click();
+  await panel.getByRole('button', { name: 'Abschnitt „Rückkehr“ bearbeiten' }).click();
+  await expect(panel.getByRole('group', { name: 'Szenen' }).getByLabel('Beschreibung Szene Bergsee')).toHaveValue('Nebel über dem Bergsee.');
 });

@@ -132,4 +132,55 @@ describe('SceneAssignments', () => {
     expect(within(block).getByRole('button', { name: 'Beschreibung erzeugen' })).toBeDisabled();
     expect(within(block).getByText('KI nicht eingerichtet.')).toBeInTheDocument();
   });
+  it('offers earlier descriptions for an existing assignment as a proposal (FR-005)', async () => {
+    const patches: unknown[] = [];
+    const extra = {
+      scenes: [scene()],
+      sceneAssignments: [
+        assignment({ id: 'a1', sectionId: 'sec1', description: 'Morgennebel', updatedAt: '2026-01-01T00:00:00.000Z' }),
+        assignment({ id: 'a2', sectionId: 'sec2', description: 'Alt', updatedAt: '2026-02-01T00:00:00.000Z' }),
+      ],
+    };
+    server.use(
+      meOk,
+      bookOk(bookWithSections(), extra),
+      http.patch('/api/books/b1/scene-assignments/a2', async ({ request }) => {
+        patches.push(await request.json());
+        return HttpResponse.json(bookResponse(bookWithSections(), extra));
+      }),
+    );
+    const block = await openSection();
+    const field = within(block).getByLabelText('Beschreibung Szene Bergsee');
+    const pick = within(block).getByLabelText('Frühere Beschreibung für Szene Bergsee einsetzen');
+    expect(within(pick).getAllByRole('option').map((o) => o.textContent)).toEqual(['Frühere Beschreibung einsetzen …', 'Morgennebel']);
+    await userEvent.selectOptions(pick, '0');
+    expect(field).toHaveValue('Morgennebel');
+    await userEvent.click(within(block).getByRole('button', { name: 'Verwerfen' }));
+    expect(field).toHaveValue('Alt');
+    await userEvent.selectOptions(within(block).getByLabelText('Frühere Beschreibung für Szene Bergsee einsetzen'), '0');
+    await userEvent.click(within(block).getByRole('button', { name: 'Übernehmen' }));
+    expect(patches).toEqual([{ description: 'Morgennebel' }]);
+  });
+
+  it('moves an assignment to another section that does not hold the scene yet (AC-003)', async () => {
+    const patches: unknown[] = [];
+    const book = bookWithSections();
+    book.storylines[0]!.sections.push({ id: 'sec3', storylineId: 's1', title: 'Rückkehr', description: '', characterIds: [], range: { startId: 't3', endId: 't3' }, note: null, order: 2 });
+    const extra = { scenes: [scene()], sceneAssignments: [assignment({ id: 'a1', sectionId: 'sec1' }), assignment({ id: 'a2', sectionId: 'sec2', description: 'See' })] };
+    server.use(
+      meOk,
+      bookOk(book, extra),
+      http.patch('/api/books/b1/scene-assignments/a2', async ({ request }) => {
+        patches.push(await request.json());
+        return HttpResponse.json(bookResponse(book, { ...extra, sceneAssignments: [extra.sceneAssignments[0]!, assignment({ id: 'a2', sectionId: 'sec3', description: 'See' })] }));
+      }),
+    );
+    const block = await openSection();
+    const move = within(block).getByLabelText('Szene Bergsee in anderen Abschnitt verschieben');
+    expect(within(move).getAllByRole('option').map((o) => o.textContent)).toEqual(['Verschieben nach …', 'Rückkehr']);
+    await userEvent.selectOptions(move, 'sec3');
+    expect(patches).toEqual([{ sectionId: 'sec3' }]);
+    expect(await within(block).findByLabelText('Szene zuordnen')).toBeInTheDocument();
+    expect(within(block).queryByLabelText('Beschreibung Szene Bergsee')).not.toBeInTheDocument();
+  });
 });

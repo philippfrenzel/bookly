@@ -36,7 +36,10 @@ export type SceneNoteBody = z.infer<typeof SceneNoteBody>;
 export const SceneAssignmentCreateBody = z.object({ sceneId: Id, sectionId: Id, description: description.default('') });
 export type SceneAssignmentCreateBody = z.infer<typeof SceneAssignmentCreateBody>;
 
-export const SceneAssignmentPatchBody = z.object({ description });
+/** Change an assignment's description, move it to another section, or both. */
+export const SceneAssignmentPatchBody = z
+  .object({ description: description.optional(), sectionId: Id.optional() })
+  .refine((b) => b.description !== undefined || b.sectionId !== undefined, { message: 'description or sectionId required' });
 export type SceneAssignmentPatchBody = z.infer<typeof SceneAssignmentPatchBody>;
 
 /** Optional section the description is meant for; adds the section as context. */

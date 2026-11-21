@@ -52,6 +52,9 @@ Im Bearbeiten-Formular eines gespeicherten Abschnitts erscheint der Block „Sze
   - „Beschreibung erzeugen“ (FR-006): Die KI erzeugt aus Bild und Notizen eine neue Beschreibung und setzt sie ins Feld. Deaktiviert mit Hinweis, wenn die Szene weder Bild noch Notizen hat (EC-003) oder die KI nicht eingerichtet ist.
   - Beschreibung im Feld frei bearbeitbar; „Zuordnen“ speichert.
 - Eine Szene kann demselben Abschnitt nur einmal zugeordnet sein.
+- Erweiterung (2026-11-21, Wunsch des Auftraggebers):
+  - **Frühere Beschreibung einsetzen** auch bei bestehenden Zuordnungen: Auswahlliste mit den Beschreibungen der anderen Zuordnungen dieser Szene (neueste zuerst, ohne die eigene). Die Wahl steht als Vorschlag im Feld und wird erst mit „Übernehmen“ gespeichert, „Verwerfen“ stellt den alten Text her.
+  - **Verschieben nach …**: Eine Zuordnung samt Beschreibung zieht in einen anderen Abschnitt (gruppiert nach Storyline; nur Abschnitte, denen die Szene noch nicht zugeordnet ist). Server: `PATCH …/scene-assignments/:id` mit `sectionId`, 409 `already_assigned`, wenn die Szene dort schon liegt. Ein reines Verschieben ändert `updatedAt` nicht, weil es das Alter der Beschreibung angibt.
 
 ### 4.3 KI-Beschreibung (FR-004)
 

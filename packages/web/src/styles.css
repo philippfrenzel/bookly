@@ -530,6 +530,8 @@ h3.timetable-label { margin: 0.625rem 0 0; font-size: 0.75rem; color: var(--mute
 .scene-assignment textarea, .scene-assign textarea { min-height: 4rem; resize: vertical; font-size: 0.875rem; }
 .scene-assignment .actions, .scene-assign .actions { display: flex; gap: 0.375rem; flex-wrap: wrap; }
 .scene-assign { display: flex; flex-direction: column; gap: 0.5rem; }
+.scene-assignment select { font-size: 0.8125rem; }
+.scene-assignment .scene-move { align-self: flex-start; max-width: 100%; color: var(--ink-2); }
 .scene-assignments .muted { margin: 0; font-size: 0.8125rem; }
 
 /* Scene names on a section card of the timetable. */

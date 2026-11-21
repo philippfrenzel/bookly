@@ -149,6 +149,21 @@ describe('assignments (AC-003, AC-005)', () => {
     await app.close();
   });
 
+  test('moving an assignment keeps its description; target with the same scene is 409', async () => {
+    const { app, req, s1, s2, createScene } = await setup();
+    const id = await createScene();
+    const a = (await req('POST', '/scene-assignments', { sceneId: id, sectionId: s1, description: 'Ein klarer See.' })).json().sceneAssignments[0].id;
+    const moved = await req('PATCH', `/scene-assignments/${a}`, { sectionId: s2 });
+    expect(moved.statusCode).toBe(200);
+    expect(moved.json().sceneAssignments.map((x: { sectionId: string; description: string }) => [x.sectionId, x.description])).toEqual([[s2, 'Ein klarer See.']]);
+    await req('POST', '/scene-assignments', { sceneId: id, sectionId: s1 });
+    expect((await req('PATCH', `/scene-assignments/${a}`, { sectionId: s1 })).statusCode).toBe(409);
+    expect((await req('PATCH', `/scene-assignments/${a}`, { sectionId: s2 })).statusCode).toBe(200);
+    expect((await req('PATCH', `/scene-assignments/${a}`, { sectionId: '00000000-0000-4000-8000-000000000000' })).statusCode).toBe(404);
+    expect((await req('PATCH', `/scene-assignments/${a}`, {})).statusCode).toBe(400);
+    await app.close();
+  });
+
   test('unknown section is 404', async () => {
     const { app, req, createScene } = await setup();
     const id = await createScene();
