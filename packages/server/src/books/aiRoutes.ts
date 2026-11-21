@@ -87,7 +87,7 @@ export async function aiRoutes(app: FastifyInstance): Promise<void> {
     let aiRequest: AiRequest;
     if (target.kind === 'sceneBlock') {
       // Scene blocks are scoped to their assignment; generating is allowed on an empty block.
-      const ctx = await loadSceneBlockContext(app.db, bookId, target.assignmentId, target.blockId, body.length);
+      const ctx = await loadSceneBlockContext(app.db, bookId, target.assignmentId, target.blockId);
       aiRequest = sceneBlockRequest(ctx, body);
     } else {
       const ctx = buildTextContext(await loadBook(app.db, bookId), body);

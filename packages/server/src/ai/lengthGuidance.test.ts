@@ -1,6 +1,6 @@
 /** Unit tests for the length guidance sentence of AI prompts (book word range and length choice). */
 import { describe, expect, test } from 'vitest';
-import { lengthGuidance } from './lengthGuidance.js';
+import { bookTotalSentence, lengthGuidance } from './lengthGuidance.js';
 
 const F = 'Etwa 300 bis 600 Wörter.';
 const RANGE = { min: 60000, max: 90000 };
@@ -32,5 +32,10 @@ describe('lengthGuidance', () => {
   test('short and long with a range add a tendency', () => {
     expect(lengthGuidance(RANGE, 'short', F)).toMatch(/ Schreibe eher knapp\.$/);
     expect(lengthGuidance(RANGE, 'long', F)).toMatch(/ Schreibe eher ausführlich\.$/);
+  });
+
+  test('bookTotalSentence is the shared first sentence of the range guidance', () => {
+    expect(bookTotalSentence(RANGE)).toBe('Das ganze Buch soll insgesamt etwa 60000–90000 Wörter umfassen.');
+    expect(lengthGuidance(RANGE, 'book', F).startsWith(bookTotalSentence(RANGE))).toBe(true);
   });
 });

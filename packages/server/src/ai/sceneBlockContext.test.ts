@@ -82,14 +82,13 @@ describe('loadSceneBlockContext', () => {
     await app.close();
   });
 
-  test('zielumfang reflects the book range and the length choice', async () => {
+  test('the loaded context carries the book range but no length text of its own', async () => {
     const { app, req, bookId, sectionId, assign } = await setup();
     await req('PATCH', '', { targetWords: { min: 60000, max: 90000 } });
     const a = await assign({ sectionId }, ['']);
-    const ctx = await loadSceneBlockContext(app.db, bookId, a.id, a.blocks[0]!.id, 'short');
-    expect(ctx.context.zielumfang).toContain('60000–90000');
-    expect(ctx.context.zielumfang).toContain('knapp');
+    const ctx = await loadSceneBlockContext(app.db, bookId, a.id, a.blocks[0]!.id);
     expect(ctx.targetWords).toEqual({ min: 60000, max: 90000 });
+    expect(ctx.context.zielumfang).toBeUndefined();
     await app.close();
   });
 
@@ -112,6 +111,25 @@ describe('sceneBlockRequest', () => {
   } as AiTextBody);
   const ctx = (targetWords: { min: number; max: number } | null) => ({
     fieldLabel: 'Szenentext' as const, context: {}, hasText: true as const, targetWords,
+  });
+
+  const OVERRIDE = 'Abweichend von den Längenangaben oben („1–3 Sätze“) gilt für diesen Block: Umfang:';
+  const kontext = (r: { user: string }) => JSON.parse(r.user).kontext as Record<string, unknown>;
+
+  test.each(['generate', 'continue'] as const)('%s: the length line explicitly overrides "1–3 Sätze"', (action) => {
+    const r = sceneBlockRequest(ctx(null), body(action));
+    expect(r.system).toContain(`${OVERRIDE} ein bis drei Absätze`);
+    expect(r.system.indexOf(OVERRIDE)).toBeGreaterThan(r.system.lastIndexOf('1–3 Sätze,'));
+  });
+
+  test('zielumfang comes from body.length and matches the system line; only for generate and continue', () => {
+    const r = sceneBlockRequest(ctx({ min: 60000, max: 90000 }), body('generate', 'short'));
+    expect(kontext(r).zielumfang).toContain('60000–90000');
+    expect(kontext(r).zielumfang).toContain('Schreibe eher knapp.');
+    expect(r.system).toContain(`Umfang: ${kontext(r).zielumfang as string}`);
+    for (const action of ['rephrase', 'polish'] as const) {
+      expect(kontext(sceneBlockRequest(ctx({ min: 60000, max: 90000 }), body(action, 'short'))).zielumfang).toBeUndefined();
+    }
   });
 
   test('adds the block rule and, for generate/continue, the length line', () => {

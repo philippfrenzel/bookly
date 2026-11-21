@@ -17,6 +17,11 @@ const TENDENCY: Record<LengthChoice, string> = {
   long: ' Schreibe eher ausführlich.',
 };
 
+/** The whole-book sentence shared by the length guidance and the structure prompt's `zielumfang`. */
+export function bookTotalSentence(range: WordRange): string {
+  return `Das ganze Buch soll insgesamt etwa ${range.min}–${range.max} Wörter umfassen.`;
+}
+
 /**
  * Returns the length instruction for a prompt. Without range and with `book` (or no choice) it is `fallback`
  * unchanged, so existing prompts stay byte-identical; without range, `short`/`long` give a fixed span; with a
@@ -25,7 +30,7 @@ const TENDENCY: Record<LengthChoice, string> = {
 export function lengthGuidance(range: WordRange | null | undefined, length: LengthChoice = 'book', fallback: string): string {
   if (!range) return length === 'book' ? fallback : SPAN_WITHOUT_RANGE[length];
   return (
-    `Das ganze Buch soll insgesamt etwa ${range.min}–${range.max} Wörter umfassen. ` +
+    `${bookTotalSentence(range)} ` +
     'Das ist keine Vorgabe für diese Passage; wähle den Umfang so, wie der Inhalt es im Verhältnis zum ganzen Buch braucht.' +
     TENDENCY[length]
   );

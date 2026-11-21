@@ -5,7 +5,7 @@
  */
 import { and, asc, eq } from 'drizzle-orm';
 import { joinBlocks, UUID_RE } from '@bookly/shared';
-import type { AiTextBody, Book, Id, LengthChoice, WordRange } from '@bookly/shared';
+import type { AiTextBody, Book, Id, WordRange } from '@bookly/shared';
 import { assertAssignmentInBook } from '../books/sceneBlocks.js';
 import type { Db } from '../db/client.js';
 import { loadBook } from '../db/loadBook.js';
@@ -23,6 +23,9 @@ const AFTER_MAX = 1500;
 
 /** Length fallback of the block prompt when neither a book range nor an explicit choice applies. */
 const BLOCK_LENGTH_FALLBACK = 'ein bis drei Absätze';
+
+/** Makes the block's length line win over the general "1–3 Sätze" of the text prompt. */
+const LENGTH_OVERRIDE = 'Abweichend von den Längenangaben oben („1–3 Sätze“) gilt für diesen Block: Umfang:';
 
 const BLOCK_RULE =
   'Der Text ist ein Block eines Szenentextes (Prosa). Bearbeite nur diesen Block; textDavor und textDanach sind Umgebung und werden nie wiederholt oder verändert.';
@@ -45,14 +48,13 @@ function figures(book: Book, ids: Id[]): { name: string; beschreibung: string }[
 
 /**
  * Loads the context for block `blockId` of assignment `assignmentId`. Throws NotFoundError unless the block belongs
- * to the assignment, the assignment to a scene and the scene to `bookId`. `length` only shapes `zielumfang`.
+ * to the assignment, the assignment to a scene and the scene to `bookId`. Length text is added by sceneBlockRequest.
  */
 export async function loadSceneBlockContext(
   db: Db,
   bookId: Id,
   assignmentId: Id,
   blockId: Id,
-  length: LengthChoice = 'book',
 ): Promise<SceneBlockContext> {
   await assertAssignmentInBook(db, assignmentId, bookId);
   if (!UUID_RE.test(blockId)) throw new NotFoundError();
@@ -93,20 +95,20 @@ export async function loadSceneBlockContext(
       figuren: figures(book, section ? section.characterIds : line.characterIds),
       textDavor: joinBlocks(blockRows.slice(0, index).map((b) => b.text)).slice(-BEFORE_MAX),
       textDanach: joinBlocks(blockRows.slice(index + 1).map((b) => b.text)).slice(0, AFTER_MAX),
-      zielumfang: lengthGuidance(targetWords, length, BLOCK_LENGTH_FALLBACK),
     },
   };
 }
 
 /**
- * The text request for a scene block: the general text request plus the block rule and, when writing new text
- * (generate, continue), the length line, which replaces the general "1–3 Sätze" span.
+ * The text request for a scene block: the general text request plus the block rule. When writing new text
+ * (generate, continue) the length guidance, derived once from `body.length`, goes both into `kontext.zielumfang`
+ * and into a system line that explicitly overrides the general "1–3 Sätze"; rephrase and polish keep the length
+ * of the target passage and get neither.
  */
 export function sceneBlockRequest(ctx: SceneBlockContext, body: AiTextBody): AiRequest {
-  const req = textRequest(ctx, body);
-  const lines = [BLOCK_RULE];
-  if (body.action === 'generate' || body.action === 'continue') {
-    lines.push(`Umfang: ${lengthGuidance(ctx.targetWords, body.length, BLOCK_LENGTH_FALLBACK)}`);
-  }
+  const writesNew = body.action === 'generate' || body.action === 'continue';
+  const guidance = writesNew ? lengthGuidance(ctx.targetWords, body.length, BLOCK_LENGTH_FALLBACK) : null;
+  const req = textRequest(guidance === null ? ctx : { ...ctx, context: { ...ctx.context, zielumfang: guidance } }, body);
+  const lines = [BLOCK_RULE, ...(guidance === null ? [] : [`${LENGTH_OVERRIDE} ${guidance}`])];
   return { ...req, system: `${req.system}\n${lines.join('\n')}` };
 }

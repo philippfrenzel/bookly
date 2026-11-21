@@ -5,7 +5,7 @@
 import type { Book, Id, LengthChoice, ManuscriptChapter, ProposalChapter, SceneAssignment, WordRange } from '@bookly/shared';
 import { MANUSCRIPT_LIMITS } from '@bookly/shared';
 import { AiError, type AiRequest } from './client.js';
-import { lengthGuidance } from './lengthGuidance.js';
+import { bookTotalSentence, lengthGuidance } from './lengthGuidance.js';
 
 /** Scene data the structure prompt may use. */
 export interface SceneInfo {
@@ -118,7 +118,7 @@ export function structureRequest(book: Book, sceneInfo: SceneInfo, current: Manu
       titel: c.title,
       bausteine: c.blocks.map((b) => ({ blockId: b.id, titel: b.title, inhalt: b.synopsis.slice(0, 400) })),
     })),
-    ...(book.targetWords && { zielumfang: `Das ganze Buch soll insgesamt etwa ${book.targetWords.min}–${book.targetWords.max} Wörter umfassen.` }),
+    ...(book.targetWords && { zielumfang: bookTotalSentence(book.targetWords) }),
     ...(wish && { wunsch: wish }),
     ...(style && { stil: style }),
     ...(focusChapterId && {
