@@ -34,6 +34,16 @@ describe('textRequest', () => {
     expect(system).toContain('kontext');
   });
 
+  it('asks for natural, human-sounding text without stock phrases for every action', () => {
+    const actions = ['rephrase', 'polish', 'continue', 'generate'] as const;
+    for (const action of actions) {
+      const { system } = textRequest(ctx, body({ action }));
+      expect(system).toContain('natürlich');
+      expect(system).toContain('Floskeln');
+      expect(system).toContain('Satzbau');
+    }
+  });
+
   it('gives each of the four actions its own task line', () => {
     const actions = ['rephrase', 'continue', 'polish', 'generate'] as const;
     const lines = actions.map((action) => textRequest(ctx, body({ action })).system.split('\n').find((l) => l.startsWith('Aufgabe:')));
