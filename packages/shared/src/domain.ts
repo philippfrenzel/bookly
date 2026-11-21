@@ -1,6 +1,7 @@
 /** Domain types and visual constants shared by server and web. */
 import type { CharacterCriterion } from './criteria.js';
 import type { Hint } from './hints.js';
+import type { Scene, SceneAssignment } from './scenes.js';
 
 export type Id = string; // uuid
 export type StorylineKind = 'main' | 'side';
@@ -111,12 +112,16 @@ export interface CharacterCheck {
   error: string | null;
 }
 
-/** Book aggregate plus hints, AI warnings and check states, returned by every book endpoint. */
+/** Book aggregate plus hints, AI warnings, check states and scenes, returned by every book endpoint. */
 export interface BookResponse {
   book: Book;
   hints: Hint[];
   characterWarnings: CharacterWarning[];
   characterChecks: CharacterCheck[];
+  /** Scenes of the book, sorted by name. */
+  scenes: Scene[];
+  /** Scene–section assignments of the book. */
+  sceneAssignments: SceneAssignment[];
   ai: { enabled: boolean };
 }
 

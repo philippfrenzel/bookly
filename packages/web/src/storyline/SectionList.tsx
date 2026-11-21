@@ -1,8 +1,9 @@
-/** Sections of a main strand: ordered list with reorder, add (button), direct-save editing and delete. */
+/** Sections of a main strand: ordered list with reorder, add (button), direct-save editing (with scenes) and delete. */
 import { useState } from 'react';
 import type { Book, Id, Section, Storyline, TimeRange } from '@bookly/shared';
 import { useBookMutation } from '../api/hooks';
 import { useSaveFeedback } from '../book/saveFeedback';
+import { SceneAssignments } from '../scene/SceneAssignments';
 import { CharacterChecks } from './CharacterChecks';
 import { noteOrNull, validateWithStoryline } from './draft';
 import { TextInput } from './fields';
@@ -144,6 +145,7 @@ export function SectionList({ book, storyline, aiEnabled }: { book: Book; storyl
                   aiEnabled={aiEnabled} storylineId={storyline.id} sectionId={s.id}
                   onCommit={(patch) => saveField(s, patch)}
                 />
+                <SceneAssignments bookId={book.id} sectionId={s.id} aiEnabled={aiEnabled} />
                 <div className="actions">
                   <button type="button" onClick={() => setEditingId(null)}>Fertig</button>
                 </div>

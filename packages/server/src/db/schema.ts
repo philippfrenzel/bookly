@@ -1,6 +1,7 @@
 /** Drizzle schema for all bookly tables. Domain enums are stored as plain text. */
 import { sql } from 'drizzle-orm';
 import {
+  customType,
   integer,
   pgTable,
   primaryKey,
@@ -199,4 +200,56 @@ export const characterWarningAcks = pgTable(
     criterion: text('criterion').notNull(),
   },
   (t) => [primaryKey({ columns: [t.storylineId, t.characterId, t.criterion] })],
+);
+
+/** PostgreSQL bytea mapped to a Node Buffer. */
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
+
+/** Scenes (places/settings) of a book. */
+export const scenes = pgTable('scenes', {
+  id: id(),
+  bookId: uuid('book_id')
+    .notNull()
+    .references(() => books.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  createdAt: createdAt(),
+});
+
+/** The optional single image of a scene; kept out of the book aggregate and served by its own route. */
+export const sceneImages = pgTable('scene_images', {
+  sceneId: uuid('scene_id')
+    .primaryKey()
+    .references(() => scenes.id, { onDelete: 'cascade' }),
+  mime: text('mime').notNull(),
+  data: bytea('data').notNull(),
+  size: integer('size').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Text notes of a scene, ordered by position. */
+export const sceneNotes = pgTable('scene_notes', {
+  id: id(),
+  sceneId: uuid('scene_id')
+    .notNull()
+    .references(() => scenes.id, { onDelete: 'cascade' }),
+  text: text('text').notNull().default(''),
+  position: integer('position').notNull(),
+  createdAt: createdAt(),
+});
+
+/** A scene assigned to a section with that section's scene description; one per scene and section. */
+export const sceneAssignments = pgTable(
+  'scene_assignments',
+  {
+    id: id(),
+    sceneId: uuid('scene_id')
+      .notNull()
+      .references(() => scenes.id, { onDelete: 'cascade' }),
+    sectionId: uuid('section_id')
+      .notNull()
+      .references(() => sections.id, { onDelete: 'cascade' }),
+    description: text('description').notNull().default(''),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('scene_assignments_unique').on(t.sceneId, t.sectionId)],
 );

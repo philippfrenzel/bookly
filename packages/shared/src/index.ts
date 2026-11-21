@@ -6,3 +6,4 @@ export * from './hints.js';
 export * from './schemas.js';
 export * from './criteria.js';
 export * from './aiText.js';
+export * from './scenes.js';

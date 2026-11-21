@@ -434,3 +434,25 @@ div.book-hint { cursor: pointer; }
 
 /* Wand fields as direct children of a panel row (character list) */
 .panel-list li > .wand-field { flex: 1 1 100%; }
+
+/* Scenes: list in the „Szenen“ tab and the scene block inside a section's edit form */
+.scene-list > li.scene-item { flex-direction: column; align-items: stretch; gap: 0.5rem; padding: 0.625rem 0; border-bottom: 1px solid var(--rule); }
+.scene-head { display: flex; gap: 0.375rem; align-items: center; }
+.scene-head input { flex: 1; min-width: 0; font-weight: 600; }
+.scene-image { display: flex; flex-wrap: wrap; gap: 0.375rem; align-items: center; }
+.scene-image img { display: block; width: 100%; max-height: 180px; object-fit: cover; border: 1px solid var(--rule); }
+.scene-image .muted { margin: 0; flex-basis: 100%; }
+.file-button { position: relative; display: inline-flex; align-items: center; padding: 0.375rem 0.5rem; font-size: 0.8125rem; font-weight: 600; border: 1px solid var(--rule-strong); cursor: pointer; }
+.file-button:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
+.file-button input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.scene-notes { display: flex; flex-direction: column; gap: 0.375rem; align-items: flex-start; }
+.scene-note { display: flex; gap: 0.25rem; align-items: flex-start; width: 100%; }
+.scene-note textarea { flex: 1; min-height: 3.25rem; resize: vertical; font-size: 0.875rem; }
+.scene-label { font-size: 0.8125rem; font-weight: 600; color: var(--ink-2); }
+.scene-usage { margin: 0; font-size: 0.8125rem; }
+.scene-assignments { display: flex; flex-direction: column; gap: 0.5rem; }
+.scene-assignments .panel-list li.scene-assignment { flex-direction: column; align-items: stretch; }
+.scene-assignment textarea, .scene-assign textarea { min-height: 4rem; resize: vertical; font-size: 0.875rem; }
+.scene-assignment .actions, .scene-assign .actions { display: flex; gap: 0.375rem; flex-wrap: wrap; }
+.scene-assign { display: flex; flex-direction: column; gap: 0.5rem; }
+.scene-assignments .muted { margin: 0; font-size: 0.8125rem; }

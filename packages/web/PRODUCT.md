@@ -33,6 +33,7 @@ Two things together, equally weighted:
 - Main and side strands differ by line thickness (main thicker), colour and position (mains in the centre, sides at the edge). The kind can be changed at any time.
 - Status: „in Bearbeitung“ (start status), „abgeschlossen“, „bewusst offen“, each shown by colour and a symbol (✎, ✓, ○).
 - Main strands can be divided into sections with their own time ranges; side strands cannot.
+- Scenes are places: a name, an optional image and any number of notes. A scene can be assigned to several sections; each assignment carries a short scene description (place and atmosphere, never prose). The latest stored description is offered when assigning again; the AI drafts one from image and notes only on click.
 - Connection types: „Figur wechselt“, „Zeitsprung“, „Handlungsstränge vereinigen sich“, „Rückblende“, plus free text.
 - Hints for time contradictions and character overlaps appear immediately while creating a connection and can be acknowledged. They never block saving.
 - Filters: main strands only, open strands only, time range, characters. Zoom and pan; notes can be shown on the map.

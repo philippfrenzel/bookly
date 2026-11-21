@@ -66,7 +66,8 @@ npm run e2e         # Playwright end-to-end flow (needs bookly_e2e, starts its o
 - Storylines as main strands (with sections) or side strands, with status, colour, characters and notes.
 - Interactive map: zoom, filters, notes overlay, drag to create ranges and connections.
 - Typed connections (time jump, flashback, merge, character switch) with live contradiction hints, which can be acknowledged with „Bewusst so“.
-- No upper limit on storylines, sections, time points or characters.
+- Scenes (places) with an optional image (JPEG/PNG/WebP, up to 5 MB, stored in the database) and any number of notes, assigned to sections with a per-section scene description; with AI configured the description can be generated from the scene's image and notes.
+- No upper limit on storylines, sections, time points, characters, scenes or notes.
 
 ## Layout
 

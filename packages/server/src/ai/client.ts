@@ -8,6 +8,23 @@ export interface AiRequest {
   schemaName: string;
   schema: Record<string, unknown>;
   timeoutMs: number;
+  /** Images sent with the user message (multimodal models only). */
+  images?: AiImage[];
+}
+
+/** An image handed to the model as part of the user message. */
+export interface AiImage {
+  mime: string;
+  data: Buffer;
+}
+
+/** User message content: plain text, or text plus image parts when the request carries images. */
+export function userContent(req: Pick<AiRequest, 'user' | 'images'>): string | Record<string, unknown>[] {
+  if (!req.images || req.images.length === 0) return req.user;
+  return [
+    { type: 'text', text: req.user },
+    ...req.images.map((i) => ({ type: 'image_url', image_url: { url: `data:${i.mime};base64,${i.data.toString('base64')}` } })),
+  ];
 }
 
 /** Minimal AI client: resolves to the parsed JSON content of the model reply. */
@@ -39,7 +56,7 @@ export function createOpenRouterClient(opts: { apiKey: string; model: string; fe
             model: opts.model,
             messages: [
               { role: 'system', content: req.system },
-              { role: 'user', content: req.user },
+              { role: 'user', content: userContent(req) },
             ],
             response_format: {
               type: 'json_schema',

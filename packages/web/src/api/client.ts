@@ -35,3 +35,22 @@ export async function api<T>(
   if (!res.ok) throw new ApiError(res.status, parsed);
   return parsed as T;
 }
+
+/** Sends a file as the raw request body (its own Content-Type) and returns the parsed JSON. Throws ApiError on failure. */
+export async function uploadFile<T>(method: 'PUT' | 'POST', path: string, file: Blob): Promise<T> {
+  const res = await fetch(path, {
+    method,
+    credentials: 'include',
+    headers: { 'content-type': file.type },
+    body: file,
+  });
+  const text = await res.text();
+  let parsed: unknown;
+  try {
+    parsed = text ? JSON.parse(text) : undefined;
+  } catch {
+    parsed = text;
+  }
+  if (!res.ok) throw new ApiError(res.status, parsed);
+  return parsed as T;
+}

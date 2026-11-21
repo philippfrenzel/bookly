@@ -12,6 +12,21 @@ function stubFetch(body: unknown, status = 200) {
 const ok = (content: string) => ({ choices: [{ message: { content } }] });
 
 describe('createOpenRouterClient', () => {
+  test('sends images as data-URL parts of the user message', async () => {
+    const fetch = stubFetch(ok('{"description":"x"}'));
+    const client = createOpenRouterClient({ apiKey: 'k', model: 'm/x', fetch: fetch as unknown as typeof globalThis.fetch });
+    await client.complete({ ...req, images: [{ mime: 'image/png', data: Buffer.from([1, 2, 3]) }] });
+    const body = JSON.parse((fetch.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body.messages[1]).toEqual({
+      role: 'user',
+      content: [
+        { type: 'text', text: 'usr' },
+        { type: 'image_url', image_url: { url: 'data:image/png;base64,AQID' } },
+      ],
+    });
+  });
+
+
   test('sends the expected request and returns parsed content', async () => {
     const fetch = stubFetch(ok('{"warnings":[]}'));
     const client = createOpenRouterClient({ apiKey: 'k', model: 'm/x', fetch: fetch as unknown as typeof globalThis.fetch });

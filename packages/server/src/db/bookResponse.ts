@@ -1,9 +1,10 @@
-/** Assembles the BookResponse (book, hints, AI warnings, check states) returned by every book endpoint. */
+/** Assembles the BookResponse (book, hints, AI warnings, check states, scenes) returned by every book endpoint. */
 import { asc, inArray } from 'drizzle-orm';
 import { checkBook } from '@bookly/shared';
 import type { Book, BookResponse, CharacterCriterion, CheckStatus } from '@bookly/shared';
 import type { Db } from './client.js';
 import type { Tx } from './loadBook.js';
+import { loadScenes } from './loadScenes.js';
 import { characterChecks, characterWarningAcks, characterWarnings } from './schema.js';
 
 /** Builds the response for an already loaded book; warnings carry `acknowledged` by (storyline, character, criterion). */
@@ -18,6 +19,7 @@ export async function bookResponse(db: Db | Tx, book: Book, aiEnabled: boolean):
         db.select().from(characterWarningAcks).where(inArray(characterWarningAcks.storylineId, lineIds)),
       ])
     : [[], [], []];
+  const sceneData = await loadScenes(db, book.id);
   const ackKeys = new Set(acks.map((a) => `${a.storylineId}:${a.characterId}:${a.criterion}`));
   return {
     book,
@@ -36,6 +38,7 @@ export async function bookResponse(db: Db | Tx, book: Book, aiEnabled: boolean):
       finishedAt: c.finishedAt ? c.finishedAt.toISOString() : null,
       error: c.error,
     })),
+    ...sceneData,
     ai: { enabled: aiEnabled },
   };
 }

@@ -1,4 +1,4 @@
-/** Book page: header, storyline map slot and the side area with time point, character and storyline panels. */
+/** Book page: header, storyline map slot and the side area with time point, character, scene and storyline panels. */
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { Book, Id, TimeRange } from '@bookly/shared';
@@ -9,6 +9,7 @@ import { FilterBar } from '../map/FilterBar';
 import { LineLegend } from '../map/LineLegend';
 import { applyFilters, toMapFilter, useStoredFilters } from '../map/filters';
 import { StorylineMap, type StorylineMapProps } from '../map/StorylineMap';
+import { ScenePanel } from '../scene/ScenePanel';
 import { StorylinePanel, type PanelTarget } from '../storyline/StorylinePanel';
 import { BookHints } from './BookHints';
 import { CharacterPanel } from './CharacterPanel';
@@ -103,6 +104,7 @@ export function BookPage() {
             tabs={[
               { id: 'timepoints', label: 'Zeitpunkte', content: <TimePointPanel book={book} /> },
               { id: 'characters', label: 'Figuren', content: <CharacterPanel book={book} aiEnabled={query.data?.ai.enabled ?? false} /> },
+              { id: 'scenes', label: 'Szenen', content: <ScenePanel book={book} scenes={query.data?.scenes ?? []} assignments={query.data?.sceneAssignments ?? []} /> },
               { id: 'storyline', label: 'Storyline', content: <StorylinePanel book={book} checks={query.data?.characterChecks ?? []} aiEnabled={query.data?.ai.enabled ?? false} target={target} onTarget={open} onConnect={(fromId, toId) => setConnection({ mode: 'create', fromId, toId })} /> },
             ]}
           />
