@@ -1,4 +1,4 @@
-/** Test setup: jest-dom matchers, RTL cleanup, a shared msw server, and a fresh localStorage per test. */
+/** Test setup: jest-dom matchers, RTL cleanup, a shared msw server, a fresh localStorage per test, and layout stubs for CodeMirror. */
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -20,6 +20,18 @@ export function memoryStorage(): Storage {
     setItem: (k, v) => void m.set(k, String(v)),
   };
 }
+
+// Component tests type into a textarea stand-in; ProseField's own tests use vi.importActual / vi.unmock.
+vi.mock('../editor/ProseField', async (importActual) => {
+  const actual = await importActual<typeof import('../editor/ProseField')>();
+  const { ProseFieldStub } = await import('./ProseFieldStub');
+  return { ...actual, ProseField: ProseFieldStub };
+});
+
+// jsdom has no layout: give Range the rect methods CodeMirror measures with (ProseField).
+const emptyRects = () => Object.assign([], { item: () => null }) as unknown as DOMRectList;
+if (!Range.prototype.getClientRects) Range.prototype.getClientRects = emptyRects;
+if (!Range.prototype.getBoundingClientRect) Range.prototype.getBoundingClientRect = () => new DOMRect();
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 // Every test starts with an empty localStorage, so stored map filters cannot leak from one test into the next.

@@ -1,9 +1,11 @@
 /** Per-storyline behavior and intentions of one character, with the base profile and an AI wand per field. */
-import { useEffect, useRef, type FocusEvent } from 'react';
+import { useEffect, useRef } from 'react';
 import { characterLabel, type Character, type CharacterAddition, type Id } from '@bookly/shared';
 import { useBookMutation } from '../api/hooks';
 import { useSaveFeedback } from '../book/saveFeedback';
 import { MagicWand } from '../ai/MagicWand';
+import { ProseField } from '../editor/ProseField';
+import type { ProseHandle } from '../editor/ProseField';
 
 type Field = 'behavior' | 'intentions';
 
@@ -23,7 +25,7 @@ export function AdditionEditor({ bookId, storylineId, character: c, addition, ai
   const base = `/api/books/${bookId}/storylines/${storylineId}/characters/${c.id}`;
   const fb = useSaveFeedback();
   const save = useBookMutation<Partial<Record<Field, string>>>(bookId, 'PUT', () => `${base}/addition`, (x) => x);
-  const areas = useRef<Partial<Record<Field, HTMLTextAreaElement | null>>>({});
+  const areas = useRef<Partial<Record<Field, ProseHandle | null>>>({});
   /** Live (possibly unsaved) textarea values; reads the refs, so a stale closure is fine. */
   const live = () => ({ behavior: areas.current.behavior?.value ?? '', intentions: areas.current.intentions?.value ?? '' });
 
@@ -37,8 +39,8 @@ export function AdditionEditor({ bookId, storylineId, character: c, addition, ai
     fb.clear();
     save.mutate({ [field]: value }, { onError: fb.onError });
   };
-  const onBlur = (field: Field) => (e: FocusEvent<HTMLTextAreaElement>) => {
-    if (e.target.value !== stored(field)) write(field, e.target.value);
+  const onBlur = (field: Field) => (value: string) => {
+    if (value !== stored(field)) write(field, value);
   };
 
   const profile = [c.behavior, c.intentions].filter((p): p is string => !!p && p.trim() !== '').join(' · ');
@@ -48,8 +50,8 @@ export function AdditionEditor({ bookId, storylineId, character: c, addition, ai
       <div className="field">
         <span>{title}</span>
         <div className="wand-field">
-          <textarea
-            aria-label={ariaLabel}
+          <ProseField
+            ariaLabel={ariaLabel}
             key={`${field}-${stored(field)}-${fb.resetKey}`}
             maxLength={2000}
             ref={(el) => { areas.current[field] = el; }}

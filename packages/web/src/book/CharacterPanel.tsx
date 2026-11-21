@@ -1,9 +1,11 @@
 /** Character management: add, edit profile fields, AI wand on each field, delete with confirmation. */
-import { useRef, type FocusEvent } from 'react';
+import { useRef } from 'react';
 import type { Book, Character, Id } from '@bookly/shared';
 import { characterLabel } from '@bookly/shared';
 import { useBookMutation } from '../api/hooks';
 import { MagicWand } from '../ai/MagicWand';
+import { ProseField } from '../editor/ProseField';
+import type { ProseHandle } from '../editor/ProseField';
 import { useSaveFeedback, type SaveFeedback } from './saveFeedback';
 import { Icon } from '../ui/Icon';
 
@@ -23,7 +25,7 @@ interface ItemProps {
 /** One character: four profile fields saved on blur, each with an AI wand, delete button. */
 function CharacterItem({ character: c, bookId, aiEnabled, fb, save, onDelete }: ItemProps) {
   const label = characterLabel(c);
-  const areas = useRef<Partial<Record<Field, HTMLInputElement | HTMLTextAreaElement | null>>>({});
+  const areas = useRef<Partial<Record<Field, HTMLInputElement | ProseHandle | null>>>({});
 
   /** Current (possibly unsaved) values of the four fields, as context for the AI. */
   const draft = () => ({
@@ -34,8 +36,7 @@ function CharacterItem({ character: c, bookId, aiEnabled, fb, save, onDelete }: 
   });
 
   /** Saves a changed text field on blur. */
-  const onBlurField = (field: TextField) => (e: FocusEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
+  const onBlurField = (field: TextField) => (value: string) => {
     if (value === (c[field] ?? '')) return;
     save({ id: c.id, [field]: value });
   };
@@ -55,8 +56,8 @@ function CharacterItem({ character: c, bookId, aiEnabled, fb, save, onDelete }: 
     const ariaLabel = `${title} Figur ${label}`;
     return (
       <div className="wand-field">
-        <textarea
-          aria-label={ariaLabel}
+        <ProseField
+          ariaLabel={ariaLabel}
           key={`${field}-${c[field] ?? ''}-${fb.resetKey}`}
           maxLength={2000}
           placeholder={title}

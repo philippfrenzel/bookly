@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AiTextDraft, AiTextTarget, Id } from '@bookly/shared';
 import { MagicWand } from '../ai/MagicWand';
+import { ProseField } from '../editor/ProseField';
+import type { ProseHandle } from '../editor/ProseField';
 
 interface TextProps {
   /** The stored value (edit) or the draft value (create). */
@@ -18,34 +20,29 @@ interface TextProps {
   ai?: { bookId: Id; target: AiTextTarget; draft?: () => AiTextDraft; enabled: boolean };
 }
 
-/** Text input or textarea; edit forms keep a local buffer and commit on blur. */
+/** Single-line input or multi-line ProseField; edit forms keep a local buffer and commit on blur. */
 export function TextInput({ value, multiline, maxLength, ariaLabel, live, resetKey, onCommit, ai }: TextProps) {
   const [text, setText] = useState(value);
-  const ref = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
+  const ref = useRef<HTMLInputElement>(null);
+  const proseRef = useRef<ProseHandle>(null);
   useEffect(() => setText(value), [value, resetKey]);
-  const shared = {
-    ref,
-    value: text,
-    maxLength,
-    'aria-label': ariaLabel,
-    onBlur: () => {
-      if (!live && text !== value) onCommit(text);
-    },
+  const blur = (current: string) => {
+    if (!live && current !== value) onCommit(current);
   };
   const change = (next: string) => {
     setText(next);
     if (live) onCommit(next);
   };
   const control = multiline ? (
-    <textarea {...shared} onChange={(e) => change(e.target.value)} />
+    <ProseField ref={proseRef} value={text} maxLength={maxLength} ariaLabel={ariaLabel} onChange={change} onBlur={blur} rows={3} />
   ) : (
-    <input {...shared} onChange={(e) => change(e.target.value)} />
+    <input ref={ref} value={text} maxLength={maxLength} aria-label={ariaLabel} onBlur={() => blur(text)} onChange={(e) => change(e.target.value)} />
   );
   if (!ai) return control;
   return (
     <div className="wand-field">
       {control}
-      <MagicWand getField={() => ref.current} fieldLabel={ariaLabel ?? ''} {...ai} />
+      <MagicWand getField={() => (multiline ? proseRef.current : ref.current)} fieldLabel={ariaLabel ?? ''} {...ai} />
     </div>
   );
 }

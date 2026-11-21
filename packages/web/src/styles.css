@@ -64,14 +64,28 @@ a:hover { text-decoration-thickness: 2px; }
 
 /* Controls */
 label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8125rem; font-weight: 600; color: var(--ink-2); }
-input, select, textarea {
+input, select, textarea, .prose-field {
   font: inherit; font-weight: 400; font-size: 0.9375rem; color: var(--ink);
   padding: 0.5rem 0.625rem; border: 1px solid var(--rule-strong); border-radius: var(--radius); background: var(--ground);
   transition: border-color 120ms, box-shadow 120ms;
 }
-input:hover, select:hover, textarea:hover { border-color: var(--muted); }
-input:focus, select:focus, textarea:focus { outline: none; border-color: var(--focus); box-shadow: 0 0 0 3px var(--focus-wash); }
+input:hover, select:hover, textarea:hover, .prose-field:hover { border-color: var(--muted); }
+input:focus, select:focus, textarea:focus, .prose-field:focus-within { outline: none; border-color: var(--focus); box-shadow: 0 0 0 3px var(--focus-wash); }
 input::placeholder, textarea::placeholder { color: var(--muted); }
+/* ProseField: CodeMirror text field styled like a textarea; grows with its text, at least --prose-rows lines. */
+.prose-field { display: flex; flex-direction: column; padding: 0; min-width: 0; cursor: text; }
+.prose-field[data-readonly] { background: var(--wash); }
+.prose-field .cm-editor { flex: 1; background: transparent; border-radius: inherit; }
+.prose-field .cm-editor.cm-focused { outline: none; }
+.prose-field .cm-scroller { font: inherit; line-height: 1.5; overflow: visible; }
+.prose-field .cm-content { padding: 0.5rem 0.625rem; min-height: calc(var(--prose-rows, 2) * 1.5em); caret-color: var(--focus); color: var(--ink); white-space: pre-wrap; }
+.prose-field .cm-line { padding: 0; }
+.prose-field .cm-placeholder { color: var(--muted); }
+.prose-field .cm-cursor { border-left-color: var(--focus); }
+.prose-field .cm-selectionBackground { background: var(--focus-wash) !important; }
+.prose-field .cm-ai-range { background: var(--accent-wash); border-radius: 3px; }
+.prose-field .cm-ai-del { color: var(--signal-ink); background: var(--signal-wash); text-decoration: line-through; text-decoration-thickness: 1.5px; border-radius: 3px; }
+.prose-field .cm-ai-ins { color: var(--accent); background: var(--accent-wash); text-decoration: underline; text-decoration-color: currentColor; text-underline-offset: 3px; border-radius: 3px; }
 input[type='color'] { padding: 0; width: 26px; height: 26px; border-radius: 50%; border: 1px dashed var(--muted); cursor: pointer; overflow: hidden; }
 input[type='color']::-webkit-color-swatch-wrapper { padding: 3px; }
 input[type='color']::-webkit-color-swatch { border: 0; border-radius: 50%; }
@@ -259,7 +273,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
 .storyline-form .inline label { flex-direction: row; align-items: center; gap: 0.375rem; color: var(--ink); font-weight: 600; }
 .storyline-form .actions { flex-direction: row; gap: 0.5rem; flex-wrap: wrap; }
 .field { display: flex; flex-direction: column; gap: 0.3rem; }
-.storyline-form textarea { min-height: 4.5rem; resize: vertical; }
+.storyline-form textarea, .storyline-form .prose-field { min-height: 4.5rem; resize: vertical; }
 .range-picker { display: flex; gap: 0.5rem; align-items: center; }
 .range-picker select { flex: 1; min-width: 0; }
 .range-sep { color: var(--ink-2); font-size: 0.875rem; font-weight: 600; }
@@ -314,11 +328,12 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
 .station-list li::before { content: ''; position: absolute; left: 2px; top: 50%; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 3px var(--ink); }
 .station-list li input { min-width: 0; margin-right: 0.25rem; font-weight: 600; }
 .side-panel section > button:first-child { margin-bottom: 0.5rem; }
-.panel-list li textarea { flex-basis: 100%; min-height: 3.25rem; resize: vertical; font-size: 0.875rem; }
+.panel-list li textarea, .panel-list li .prose-field { flex-basis: 100%; min-height: 3.25rem; resize: vertical; font-size: 0.875rem; }
 
 /* AI magic wand: button inside the field, action menu popover, suggestion bar below the field */
 .wand-field { position: relative; display: flex; flex-direction: column; }
 .wand-field > textarea, .wand-field > input { padding-right: 2.5rem; }
+.wand-field > .prose-field .cm-content { padding-right: 2rem; }
 .wand-button { position: absolute; top: 3px; right: 3px; z-index: 1; width: 28px; height: 28px; color: var(--muted); background: var(--ground); }
 .wand-button:hover:not(:disabled) { color: var(--ink); }
 .wand-button.is-loading { animation: wand-pulse 900ms ease-in-out infinite alternate; }
@@ -331,6 +346,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
 .wand-menu [role='menuitem']:disabled { background: none; border-color: transparent; }
 .wand-hint { margin: 0.25rem 0.625rem 0.375rem; font-size: 0.8125rem; color: var(--muted); }
 .wand-bar { display: flex; align-items: center; gap: 2px; align-self: flex-end; margin-top: 0.25rem; padding: 2px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--ground); }
+.wand-accept { display: inline-flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 0.25rem; padding: 0.25rem 0.625rem; font-size: 0.8125rem; background: var(--accent); border-color: var(--accent); color: #fff; }
+.wand-accept:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
 .wand-count { min-width: 2.5rem; text-align: center; font-size: 0.8125rem; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .wand-status { margin: 0; font-size: 0.8125rem; color: var(--muted); }
 .wand-status.is-error { color: var(--signal-ink); }
@@ -512,7 +529,7 @@ h3.timetable-label { margin: 0.625rem 0 0; font-size: 0.75rem; color: var(--mute
 .file-button input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
 .scene-notes { display: flex; flex-direction: column; gap: 0.375rem; align-items: flex-start; }
 .scene-note { display: flex; gap: 0.25rem; align-items: flex-start; width: 100%; }
-.scene-note textarea { flex: 1; min-height: 3.25rem; resize: vertical; font-size: 0.875rem; }
+.scene-note textarea, .scene-note .prose-field { flex: 1; min-height: 3.25rem; resize: vertical; font-size: 0.875rem; }
 .scene-label { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .scene-usage { display: flex; flex-direction: column; gap: 0.375rem; padding-top: 0.625rem; border-top: 1px solid var(--rule); }
 .scene-usage p { margin: 0; font-size: 0.8125rem; }
@@ -527,7 +544,7 @@ h3.timetable-label { margin: 0.625rem 0 0; font-size: 0.75rem; color: var(--mute
 .scene-assignments .panel-list { margin: 0; }
 .scene-assignments .panel-list li.scene-assignment { flex-direction: column; align-items: stretch; padding: 0.5rem 0.625rem; border-radius: var(--radius); background: var(--ground); }
 .scene-assignment .scene-label { color: var(--ink-2); }
-.scene-assignment textarea, .scene-assign textarea { min-height: 4rem; resize: vertical; font-size: 0.875rem; }
+.scene-assignment textarea, .scene-assign textarea, .scene-assignment .prose-field, .scene-assign .prose-field { min-height: 4rem; resize: vertical; font-size: 0.875rem; }
 .scene-blocks { display: flex; flex-direction: column; gap: 0.375rem; }
 .scene-blocks > .actions { flex-wrap: wrap; align-items: center; }
 .scene-assignment .actions, .scene-assign .actions { display: flex; gap: 0.375rem; flex-wrap: wrap; }

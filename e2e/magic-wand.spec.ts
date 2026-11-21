@@ -1,5 +1,6 @@
-/** End-to-end flow: the AI magic wand on a storyline description (fake AI): suggest, cycle, keep, save on blur, restore with Escape. */
+/** End-to-end flow: the AI magic wand on a storyline description (fake AI): suggest, cycle, keep, save on blur, discard with Escape. */
 import { expect, test } from '@playwright/test';
+import { expectProse, selectProse } from './prose';
 
 test('magic wand on a storyline description', async ({ page }) => {
   page.on('dialog', (d) => d.accept());
@@ -46,30 +47,38 @@ test('magic wand on a storyline description', async ({ page }) => {
 
   await panel.getByRole('button', { name: 'KI-Assistent: Kurzbeschreibung', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Umformulieren' }).click();
-  await expect(description).toHaveValue('KI-Vorschlag 1');
+  // The suggestion is shown as a change over the text; the text itself is unchanged until accepted.
+  const inserted = description.locator('.cm-ai-ins');
+  await expect(inserted).toHaveText('KI-Vorschlag 1');
+  await expect(description.locator('.cm-ai-del')).toHaveText('Mira geht.');
+  await expectProse(description, 'Mira geht.');
 
   await page.getByRole('button', { name: 'Nächster Vorschlag' }).click();
-  await expect(description).toHaveValue('KI-Vorschlag 2');
+  await expect(inserted).toHaveText('KI-Vorschlag 2');
 
-  // Leaving the field keeps the suggestion and closes the bar.
-  const saved = page.waitForResponse((r) => r.request().method() === 'PATCH' && r.ok());
-  await panel.getByLabel('Titel', { exact: true }).click();
+  // Tab accepts: the text is written and the bar closes.
+  await page.keyboard.press('Tab');
+  await expectProse(description, 'KI-Vorschlag 2');
   await expect(page.getByRole('button', { name: 'Nächster Vorschlag' })).toBeHidden();
 
-  // The blur saved it (wait for the PATCH so the reload cannot abort it).
+  // Leaving the field saves it (wait for the PATCH so the reload cannot abort it).
+  const saved = page.waitForResponse((r) => r.request().method() === 'PATCH' && r.ok());
+  await panel.getByLabel('Titel', { exact: true }).click();
   await saved;
   await page.reload();
   await page.getByRole('button', { name: 'Storyline „Flucht“' }).click();
-  await expect(panel.getByLabel('Kurzbeschreibung', { exact: true })).toHaveValue('KI-Vorschlag 2');
+  await expectProse(panel.getByLabel('Kurzbeschreibung', { exact: true }), 'KI-Vorschlag 2');
 
-  // Selection: Escape restores the original text.
+  // Selection: only the selected part is changed, and Escape discards the suggestion.
   const reopened = panel.getByLabel('Kurzbeschreibung', { exact: true });
-  await reopened.focus();
-  await reopened.evaluate((el: HTMLTextAreaElement) => el.setSelectionRange(3, el.value.length));
+  await selectProse(reopened, 3, 'KI-Vorschlag 2'.length);
   await panel.getByRole('button', { name: 'KI-Assistent: Kurzbeschreibung', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Stil verbessern' }).click();
-  await expect(page.getByRole('button', { name: 'Rückgängig' })).toBeVisible();
-  await expect(reopened).not.toHaveValue('KI-Vorschlag 2');
+  await expect(page.getByRole('button', { name: 'Vorschlag verwerfen' })).toBeVisible();
+  // „Vorschlag 2“ → „KI-Vorschlag 1“: only the differing words are marked.
+  await expect(reopened.locator('.cm-ai-del')).toHaveText('2');
+  await expect(reopened.locator('.cm-ai-ins')).toHaveText(['KI-', '1']);
   await page.keyboard.press('Escape');
-  await expect(reopened).toHaveValue('KI-Vorschlag 2');
+  await expect(page.getByRole('button', { name: 'Vorschlag verwerfen' })).toBeHidden();
+  await expectProse(reopened, 'KI-Vorschlag 2');
 });

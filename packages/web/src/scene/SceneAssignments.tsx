@@ -11,6 +11,7 @@ import { Icon } from '../ui/Icon';
 import { SceneBlocks } from './SceneBlocks';
 import { descriptionErrorMessage, useSceneDescription } from './sceneApi';
 import { useStaleNotice } from './staleNotice';
+import { ProseField } from '../editor/ProseField';
 
 /** Why "generate" is not available for a scene, or null when it is (EC-003). */
 function generateBlocker(scene: Scene | undefined, aiEnabled: boolean): string | null {
@@ -103,11 +104,11 @@ function AssignmentRow({ bookId, target, assignment, scene, aiEnabled, earlier, 
     <li className="scene-assignment">
       <span className="scene-label">{name}</span>
       {proposal ? (
-        <textarea
-          aria-label={`Beschreibung Szene ${name}`}
+        <ProseField
+          ariaLabel={`Beschreibung Szene ${name}`}
           placeholder="Beschreibung der Szene in diesem Abschnitt"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(value) => setText(value)}
         />
       ) : (
         <SceneBlocks bookId={bookId} assignment={assignment} aiEnabled={aiEnabled} name={name} />
@@ -196,11 +197,11 @@ function AssignScene({ bookId, target, candidates, assignments, aiEnabled, onAss
             </label>
           )}
           {previous.length === 0 && <p className="muted">Diese Szene hat noch keine Beschreibung.</p>}
-          <textarea
-            aria-label="Beschreibung der neuen Zuordnung"
+          <ProseField
+            ariaLabel="Beschreibung der neuen Zuordnung"
             placeholder="Beschreibung der Szene in diesem Abschnitt"
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(value) => setText(value)}
           />
           <div className="actions">
             <button
