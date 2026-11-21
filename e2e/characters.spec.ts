@@ -56,6 +56,13 @@ test('character profile with AI warning flow', async ({ page }) => {
   await expect(linked).toBeChecked();
   await panel.getByRole('button', { name: 'Ergänzung für Anna' }).click();
   const addition = panel.getByLabel('Verhalten Ergänzung Anna', { exact: true });
+  // The addition textareas span the editor's full content width (they do not shrink to their cols).
+  const widthRatio = await addition.evaluate((el) => {
+    const editor = el.closest('.addition-editor')!;
+    const cs = getComputedStyle(editor);
+    return el.getBoundingClientRect().width / (editor.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+  });
+  expect(widthRatio).toBeGreaterThan(0.99);
   await addition.fill('Hier zögert sie.');
   await addition.blur();
 
