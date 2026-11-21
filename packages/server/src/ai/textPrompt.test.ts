@@ -34,6 +34,21 @@ describe('textRequest', () => {
     expect(system).toContain('kontext');
   });
 
+  it('gives each of the four actions its own task line', () => {
+    const actions = ['rephrase', 'continue', 'polish', 'generate'] as const;
+    const lines = actions.map((action) => textRequest(ctx, body({ action })).system.split('\n').find((l) => l.startsWith('Aufgabe:')));
+    expect(lines.every((l) => l !== undefined)).toBe(true);
+    expect(new Set(lines).size).toBe(4);
+  });
+
+  it('forbids returning the whole field text only when a passage is selected', () => {
+    const whole = textRequest(ctx, body({})).system;
+    expect(whole).not.toContain('nicht den ganzen Feldtext');
+    expect(whole).toContain('den ganzen Feldtext');
+    const selected = textRequest(ctx, body({ selection: { start: 4, end: 8 } })).system;
+    expect(selected).toContain('nicht den ganzen Feldtext');
+  });
+
   it('sends the selected substring as markierung, or null', () => {
     const sel = JSON.parse(textRequest(ctx, body({ selection: { start: 4, end: 8 } })).user);
     expect(sel.markierung).toBe('Held');

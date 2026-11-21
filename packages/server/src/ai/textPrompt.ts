@@ -14,8 +14,13 @@ Schreibe auf Deutsch. Behalte Ton, Zeitform, Erzählperspektive und Wortschatz d
 Erfinde keine Fakten, die dem Kontext widersprechen.
 Die Länge entspricht etwa der Zielpassage (beim Umformulieren und Verbessern) bzw. umfasst 1–3 Sätze (beim Fortsetzen und Vorschlagen). Titel sind kurz (höchstens etwa 8 Wörter).
 Liefere genau 3 deutlich verschiedene Varianten.
-Eingabe als JSON: text ist der ganze Feldtext, markierung (falls nicht null) ist die zu bearbeitende Passage, sonst ist der ganze Text das Ziel; kontext dient nur als Hintergrund und wird nie verändert.
-Gib nur den Ersatztext für genau diese Zielpassage aus (beim Fortsetzen nur den neuen Text an der Einfügestelle nach markierung bzw. am Ende von text), nicht den ganzen Feldtext, ohne Anführungszeichen, Erklärungen oder Wiederholung des Kontexts.`;
+Eingabe als JSON: text ist der ganze Feldtext, markierung (falls nicht null) ist die zu bearbeitende Passage, sonst ist der ganze Text das Ziel; kontext dient nur als Hintergrund und wird nie verändert.`;
+
+/** Output rule; only with a selection is the target smaller than the whole field text. */
+const OUTPUT_SELECTION =
+  'Gib nur den Ersatztext für die markierte Passage aus (beim Fortsetzen nur den neuen Text, der nach markierung eingefügt wird), nicht den ganzen Feldtext, ohne Anführungszeichen, Erklärungen oder Wiederholung des Kontexts.';
+const OUTPUT_WHOLE =
+  'Gib den neuen Text für den ganzen Feldtext aus (beim Fortsetzen nur den neuen Text, der am Ende von text angehängt wird), ohne Anführungszeichen, Erklärungen oder Wiederholung des Kontexts.';
 
 const ACTION_LINES: Record<AiTextAction, string> = {
   rephrase: 'Aufgabe: Formuliere die Zielpassage mit anderen Worten um und behalte ihre Bedeutung.',
@@ -30,7 +35,7 @@ const ACTION_LINES: Record<AiTextAction, string> = {
 export function textRequest(ctx: TextContext, body: AiTextBody): AiRequest {
   const markierung = body.selection ? body.text.slice(body.selection.start, body.selection.end) : null;
   return {
-    system: `${BASE}\n${ACTION_LINES[body.action]}`,
+    system: `${BASE}\n${body.selection ? OUTPUT_SELECTION : OUTPUT_WHOLE}\n${ACTION_LINES[body.action]}`,
     user: JSON.stringify({ feld: ctx.fieldLabel, aktion: body.action, text: body.text, markierung, kontext: ctx.context }),
     schemaName: TEXT_SCHEMA_NAME,
     timeoutMs: 20_000,
