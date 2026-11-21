@@ -227,6 +227,50 @@ describe('SceneAssignments', () => {
     expect(await within(block).findByLabelText('Block 1 Szene Bergsee')).toHaveValue('Morgennebel');
   });
 
+  it('assigns with a prefilled earlier description longer than 2000 characters in full', async () => {
+    const bodies: { description: string }[] = [];
+    const long = `${'a'.repeat(1500)}\n\n${'b'.repeat(1500)}`;
+    const extra = { scenes: [scene()], sceneAssignments: [assignment({ sectionId: 'sec1', description: long })] };
+    server.use(
+      meOk,
+      bookOk(bookWithSections(), extra),
+      http.post('/api/books/b1/scene-assignments', async ({ request }) => {
+        bodies.push((await request.json()) as { description: string });
+        return HttpResponse.json(bookResponse(bookWithSections(), extra), { status: 201 });
+      }),
+    );
+    const block = await openSection();
+    await userEvent.selectOptions(within(block).getByLabelText('Szene zuordnen'), 'sc1');
+    const text = within(block).getByLabelText('Beschreibung der neuen Zuordnung');
+    expect(text).toHaveValue(long);
+    expect(text).not.toHaveAttribute('maxlength');
+    await userEvent.click(within(block).getByRole('button', { name: 'Zuordnen' }));
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]!.description).toBe(long);
+  });
+
+  it('says that „Übernehmen“ replaces the whole scene text only while a proposal is open; the proposal is not cut at 2000', async () => {
+    const hint = 'Übernehmen ersetzt den ganzen Szenentext (alle Blöcke) durch diesen Text.';
+    const long = 'x'.repeat(2500);
+    const extra = {
+      scenes: [scene()],
+      sceneAssignments: [
+        assignment({ id: 'a1', sectionId: 'sec1', description: long, updatedAt: '2026-01-01T00:00:00.000Z' }),
+        assignment({ id: 'a2', sectionId: 'sec2', description: 'Alt', updatedAt: '2026-02-01T00:00:00.000Z' }),
+      ],
+    };
+    server.use(meOk, bookOk(bookWithSections(), extra));
+    const block = await openSection();
+    expect(within(block).queryByText(hint)).not.toBeInTheDocument();
+    await userEvent.selectOptions(within(block).getByLabelText('Frühere Beschreibung für Szene Bergsee einsetzen'), '0');
+    expect(within(block).getByText(hint)).toHaveClass('muted');
+    const proposal = within(block).getByLabelText('Beschreibung Szene Bergsee');
+    expect(proposal).toHaveValue(long);
+    expect(proposal).not.toHaveAttribute('maxlength');
+    await userEvent.click(within(block).getByRole('button', { name: 'Verwerfen' }));
+    expect(within(block).queryByText(hint)).not.toBeInTheDocument();
+  });
+
   it('shows the scenes of a main strand by section in its „Szenen“ tab', async () => {
     server.use(meOk, bookOk(bookWithSections(), { scenes: [scene()], sceneAssignments: [assignment({ sectionId: 'sec2' })] }));
     renderApp('/books/b1');

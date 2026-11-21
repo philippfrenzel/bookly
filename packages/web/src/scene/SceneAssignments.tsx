@@ -4,7 +4,7 @@
  */
 import { useState } from 'react';
 import type { Book, Id, Scene, SceneAssignment, SceneTarget } from '@bookly/shared';
-import { hasSceneContext, parseTargetKey, previousDescriptions, SCENE_LIMITS, targetKey } from '@bookly/shared';
+import { hasSceneContext, parseTargetKey, previousDescriptions, targetKey } from '@bookly/shared';
 import { useBook, useBookMutation } from '../api/hooks';
 import { useSaveFeedback } from '../book/saveFeedback';
 import { SceneBlocks } from './SceneBlocks';
@@ -70,8 +70,8 @@ interface RowProps {
 
 /**
  * One assignment: its text as ordered blocks (SceneBlocks); "Neu erzeugen" or an earlier description from
- * the list puts a proposal into a single field, which the author takes over (replacing all blocks with
- * one) or discards (Q-002: never generated without a click). "Verschieben nach" moves the assignment
+ * the list puts a proposal into a single field, which the author takes over (replacing all blocks with its
+ * paragraphs) or discards (Q-002: never generated without a click). "Verschieben nach" moves the assignment
  * with its text to another section.
  */
 function AssignmentRow({ bookId, target, assignment, scene, aiEnabled, earlier, targets, onSave, onMove, onRemove, resetKey }: RowProps) {
@@ -104,7 +104,6 @@ function AssignmentRow({ bookId, target, assignment, scene, aiEnabled, earlier, 
       {proposal ? (
         <textarea
           aria-label={`Beschreibung Szene ${name}`}
-          maxLength={SCENE_LIMITS.description}
           placeholder="Beschreibung der Szene in diesem Abschnitt"
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -138,6 +137,7 @@ function AssignmentRow({ bookId, target, assignment, scene, aiEnabled, earlier, 
         <TargetSelect className="scene-move" label={`Szene ${name} verschieben`} placeholder="Verschieben nach …" groups={targets} onPick={onMove} />
       )}
       {blocker && !proposal && <p className="muted">{blocker}</p>}
+      {proposal && <p className="muted">Übernehmen ersetzt den ganzen Szenentext (alle Blöcke) durch diesen Text.</p>}
       {generate.isError && <p className="error" role="alert">{descriptionErrorMessage(generate.error)}</p>}
     </li>
   );
@@ -197,7 +197,6 @@ function AssignScene({ bookId, target, candidates, assignments, aiEnabled, onAss
           {previous.length === 0 && <p className="muted">Diese Szene hat noch keine Beschreibung.</p>}
           <textarea
             aria-label="Beschreibung der neuen Zuordnung"
-            maxLength={SCENE_LIMITS.description}
             placeholder="Beschreibung der Szene in diesem Abschnitt"
             value={text}
             onChange={(e) => setText(e.target.value)}
