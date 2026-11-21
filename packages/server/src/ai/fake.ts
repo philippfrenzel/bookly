@@ -17,6 +17,9 @@ export function createFakeAiClient(): AiClient {
   return {
     model: 'fake',
     async complete(req) {
+      if (req.schemaName === 'text_suggestions') {
+        return { suggestions: ['KI-Vorschlag 1', 'KI-Vorschlag 2', 'KI-Vorschlag 3'] };
+      }
       if (req.schemaName === 'character_suggestion') {
         return { behavior: 'Vorschlag Verhalten', intentions: 'Vorschlag Absichten' };
       }
