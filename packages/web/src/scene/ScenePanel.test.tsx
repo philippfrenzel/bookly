@@ -1,12 +1,12 @@
 /** Tests for the scene tab: create, rename, notes, image upload and delete (AC-001, AC-002). */
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { bookOk, bookResponse, meOk } from '../book/testFixtures';
 import { renderApp } from '../test/render';
 import { server } from '../test/setup';
-import { assignment, bookWithSections, scene } from './sceneTestFixtures';
+import { assignment, bookWithSections, bookWithSideStrand, scene } from './sceneTestFixtures';
 
 async function openTab() {
   renderApp('/books/b1');
@@ -136,5 +136,47 @@ describe('ScenePanel', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Szene „Bergsee“ löschen' }));
     expect(confirm).toHaveBeenCalledWith('Szene „Bergsee“ löschen? Sie wird aus 1 Abschnitt(en) entfernt.');
     expect(deletes).toBe(1);
+  });
+  it('assigns a scene right from its card, also to a side strand, and opens that storyline', async () => {
+    const bodies: unknown[] = [];
+    const book = bookWithSideStrand();
+    server.use(
+      meOk,
+      bookOk(book, { scenes: [scene()] }),
+      http.post('/api/books/b1/scene-assignments', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json(bookResponse(book, { scenes: [scene()], sceneAssignments: [assignment({ sectionId: null, storylineId: 's2' })] }), { status: 201 });
+      }),
+    );
+    await openTab();
+    const pick = screen.getByLabelText('Szene Bergsee zuordnen');
+    expect(within(pick).getAllByRole('option').map((o) => o.textContent)).toEqual(['Zuordnen zu …', 'Ganze Storyline „Hauptstrang“', 'Ankunft', 'Abschied', 'Erinnerung']);
+    await userEvent.selectOptions(pick, 'storyline:s2');
+    expect(bodies).toEqual([{ sceneId: 'sc1', description: '', storylineId: 's2' }]);
+    await userEvent.click(await screen.findByRole('button', { name: 'Storyline „Erinnerung“ öffnen' }));
+    expect(await screen.findByRole('tab', { name: 'Szenen' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('group', { name: 'Szenen' })).toBeInTheDocument();
+  });
+
+  it('shows an AI sample passage of the setting on request, without saving it', async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      meOk,
+      bookOk(bookWithSections(), { scenes: [scene({ notes: [{ id: 'n1', text: 'Nebel' }] }), scene({ id: 'sc2', name: 'Leer' })] }),
+      http.post('/api/books/b1/scenes/sc1/description', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({ description: 'Der See lag still unter dem Nebel.' });
+      }),
+    );
+    await openTab();
+    const buttons = screen.getAllByRole('button', { name: 'Beispielbeschreibung' });
+    expect(buttons[1]).toBeDisabled();
+    expect(screen.getByText('Für ein Beispiel braucht die Szene ein Bild oder eine Notiz.')).toBeInTheDocument();
+    await userEvent.click(buttons[0]!);
+    const sample = await screen.findByRole('figure', { name: 'Beispielbeschreibung Szene Bergsee' });
+    expect(sample).toHaveTextContent('Der See lag still unter dem Nebel.');
+    expect(bodies).toEqual([{ kind: 'sample' }]);
+    await userEvent.click(within(sample).getByRole('button', { name: 'Schließen' }));
+    expect(screen.queryByRole('figure')).not.toBeInTheDocument();
   });
 });

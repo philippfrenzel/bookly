@@ -30,7 +30,10 @@ async function setup(ai: AiClient | null = createFakeAiClient()) {
     expect(r.statusCode).toBe(201);
     return (r.json().scenes as { id: string; name: string }[]).find((s) => s.name === name)!.id;
   };
-  return { app, cookie, bookId, req, upload, s1, s2, createScene };
+  /** A side strand (no sections) in the same book. */
+  const createSide = async (title = 'Erinnerung') =>
+    ((await req('POST', '/storylines', { title, kind: 'side', range: { startId: tps[1], endId: tps[2] } })).json().book.storylines as { id: string; title: string }[]).find((l) => l.title === title)!.id;
+  return { app, cookie, bookId, req, upload, s1, s2, storylineId, createScene, createSide };
 }
 
 describe('scenes (AC-001)', () => {
@@ -149,6 +152,46 @@ describe('assignments (AC-003, AC-005)', () => {
     await app.close();
   });
 
+  test('moving an assignment keeps its description; target with the same scene is 409', async () => {
+    const { app, req, s1, s2, createScene } = await setup();
+    const id = await createScene();
+    const a = (await req('POST', '/scene-assignments', { sceneId: id, sectionId: s1, description: 'Ein klarer See.' })).json().sceneAssignments[0].id;
+    const moved = await req('PATCH', `/scene-assignments/${a}`, { sectionId: s2 });
+    expect(moved.statusCode).toBe(200);
+    expect(moved.json().sceneAssignments.map((x: { sectionId: string; description: string }) => [x.sectionId, x.description])).toEqual([[s2, 'Ein klarer See.']]);
+    await req('POST', '/scene-assignments', { sceneId: id, sectionId: s1 });
+    expect((await req('PATCH', `/scene-assignments/${a}`, { sectionId: s1 })).statusCode).toBe(409);
+    expect((await req('PATCH', `/scene-assignments/${a}`, { sectionId: s2 })).statusCode).toBe(200);
+    expect((await req('PATCH', `/scene-assignments/${a}`, { sectionId: '00000000-0000-4000-8000-000000000000' })).statusCode).toBe(404);
+    expect((await req('PATCH', `/scene-assignments/${a}`, {})).statusCode).toBe(400);
+    await app.close();
+  });
+
+  test('a scene can be assigned to a whole storyline such as a side strand, and moved between targets', async () => {
+    const { app, req, s1, createScene, createSide } = await setup();
+    const id = await createScene();
+    const side = await createSide();
+    const res = await req('POST', '/scene-assignments', { sceneId: id, storylineId: side, description: 'Kindheitssee' });
+    expect(res.statusCode).toBe(201);
+    const [a] = res.json().sceneAssignments as { id: string; sectionId: string | null; storylineId: string | null }[];
+    expect(a).toMatchObject({ sectionId: null, storylineId: side });
+    expect((await req('POST', '/scene-assignments', { sceneId: id, storylineId: side })).statusCode).toBe(409);
+    expect((await req('POST', '/scene-assignments', { sceneId: id })).statusCode).toBe(400);
+    const toSection = await req('PATCH', `/scene-assignments/${a!.id}`, { sectionId: s1 });
+    expect(toSection.json().sceneAssignments[0]).toMatchObject({ sectionId: s1, storylineId: null, description: 'Kindheitssee' });
+    const back = await req('PATCH', `/scene-assignments/${a!.id}`, { storylineId: side });
+    expect(back.json().sceneAssignments[0]).toMatchObject({ sectionId: null, storylineId: side });
+    expect((await req('DELETE', `/storylines/${side}`)).json().sceneAssignments).toEqual([]);
+    await app.close();
+  });
+
+  test('unknown storyline is 404', async () => {
+    const { app, req, createScene } = await setup();
+    const id = await createScene();
+    expect((await req('POST', '/scene-assignments', { sceneId: id, storylineId: '00000000-0000-4000-8000-000000000000' })).statusCode).toBe(404);
+    await app.close();
+  });
+
   test('unknown section is 404', async () => {
     const { app, req, createScene } = await setup();
     const id = await createScene();
@@ -180,6 +223,22 @@ describe('scene description (FR-004, AC-004, AC-008, EC-001..003)', () => {
     const user = JSON.parse(calls[0]!.user);
     expect(user.notizen).toEqual(['Leichter Nebel, wo die Morgensonne auftrifft']);
     expect(user.abschnitt).toMatchObject({ titel: 'Ankunft', storyline: 'Reise' });
+    await app.close();
+  });
+
+  test('a storyline target is sent as context; a sample asks for a prose passage', async () => {
+    const { client, calls } = recording();
+    const { app, req, createScene, createSide } = await setup(client);
+    const id = await createScene();
+    await req('POST', `/scenes/${id}/notes`, { text: 'Nebel' });
+    const side = await createSide();
+    await req('POST', `/scenes/${id}/description`, { storylineId: side });
+    expect(JSON.parse(calls[0]!.user).storyline).toMatchObject({ titel: 'Erinnerung', art: 'Nebenstrang' });
+    expect(calls[0]!.system).toContain('2 bis 5 Sätze');
+    const sample = await req('POST', `/scenes/${id}/description`, { kind: 'sample' });
+    expect(sample.statusCode).toBe(200);
+    expect(calls[1]!.system).toContain('Beispielpassage');
+    expect(JSON.parse(calls[1]!.user).notizen).toEqual(['Nebel']);
     await app.close();
   });
 

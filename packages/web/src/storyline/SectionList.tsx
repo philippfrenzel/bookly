@@ -154,7 +154,7 @@ export function SectionList({ book, storyline, aiEnabled, focusId = null, startA
                   aiEnabled={aiEnabled} storylineId={storyline.id} sectionId={s.id}
                   onCommit={(patch) => saveField(s, patch)}
                 />
-                <SceneAssignments bookId={book.id} sectionId={s.id} aiEnabled={aiEnabled} />
+                <SceneAssignments bookId={book.id} target={{ sectionId: s.id }} aiEnabled={aiEnabled} />
                 <div className="actions">
                   <button type="button" onClick={() => setEditingId(null)}>Fertig</button>
                 </div>

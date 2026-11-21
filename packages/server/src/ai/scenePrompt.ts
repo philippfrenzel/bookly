@@ -11,6 +11,10 @@ export interface SceneDescriptionContext {
   image: AiImage | null;
   /** The section the description is meant for, when given. */
   section: { title: string; description: string; storylineTitle: string } | null;
+  /** The storyline the description is meant for (assignment to a whole storyline), when given. */
+  storyline?: { title: string; description: string; kind: string } | null;
+  /** `assignment`: short description stored on an assignment; `sample`: prose sample of the setting (preview only). */
+  kind?: 'assignment' | 'sample';
 }
 
 /** Notes actually sent and what the budget left out; used for the request and the trace log line. */
@@ -25,6 +29,15 @@ const SYSTEM = [
   'Schreibe auf Deutsch eine kurze Szenenbeschreibung (2 bis 5 Sätze) des Ortes und seiner Atmosphäre.',
   'Nutze das Bild und die Notizen der Szene als Referenz, soweit vorhanden. Erfinde nichts, was ihnen widerspricht.',
   'Beschreibe den Ort, keine Handlung, keine Dialoge. Kein Titel, keine Anführungszeichen, keine Erklärungen.',
+  'Antworte als JSON-Objekt mit dem Feld "description".',
+].join(' ');
+
+const SAMPLE_SYSTEM = [
+  'Du hilfst einer Autorin oder einem Autor, ein Gefühl für einen Schauplatz ihres Buches zu bekommen.',
+  'Schreibe auf Deutsch eine kurze Beispielpassage (ein Absatz, etwa 80 bis 150 Wörter), wie der Ort im Roman beschrieben sein könnte:',
+  'erzählend, mit Sinneseindrücken (Licht, Geräusche, Gerüche, Temperatur) und Stimmung.',
+  'Nutze das Bild und die Notizen der Szene als Referenz, soweit vorhanden. Erfinde nichts, was ihnen widerspricht.',
+  'Keine Handlung mit benannten Figuren, keine Dialoge, kein Titel, keine Erklärungen.',
   'Antworte als JSON-Objekt mit dem Feld "description".',
 ].join(' ');
 
@@ -58,9 +71,12 @@ export function sceneDescriptionRequest(ctx: SceneDescriptionContext): AiRequest
     ...(ctx.section && {
       abschnitt: { titel: ctx.section.title, beschreibung: ctx.section.description, storyline: ctx.section.storylineTitle },
     }),
+    ...(ctx.storyline && {
+      storyline: { titel: ctx.storyline.title, beschreibung: ctx.storyline.description, art: ctx.storyline.kind === 'main' ? 'Hauptstrang' : 'Nebenstrang' },
+    }),
   });
   return {
-    system: SYSTEM,
+    system: ctx.kind === 'sample' ? SAMPLE_SYSTEM : SYSTEM,
     user,
     schemaName: 'scene_description',
     schema: SCHEMA,

@@ -1,4 +1,4 @@
-/** Loads the scenes of a book and their section assignments for the BookResponse (image bytes excluded). */
+/** Loads the scenes of a book and their assignments (to sections or storylines) for the BookResponse (image bytes excluded). */
 import { asc, eq, inArray } from 'drizzle-orm';
 import type { Id, Scene, SceneAssignment, SceneImageType } from '@bookly/shared';
 import type { Db } from './client.js';
@@ -33,6 +33,7 @@ export async function loadScenes(db: Db | Tx, bookId: Id): Promise<{ scenes: Sce
       id: a.id,
       sceneId: a.sceneId,
       sectionId: a.sectionId,
+      storylineId: a.storylineId,
       description: a.description,
       updatedAt: a.updatedAt.toISOString(),
     })),

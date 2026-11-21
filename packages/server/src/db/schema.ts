@@ -1,6 +1,7 @@
 /** Drizzle schema for all bookly tables. Domain enums are stored as plain text. */
 import { sql } from 'drizzle-orm';
 import {
+  check,
   customType,
   integer,
   pgTable,
@@ -245,11 +246,15 @@ export const sceneAssignments = pgTable(
     sceneId: uuid('scene_id')
       .notNull()
       .references(() => scenes.id, { onDelete: 'cascade' }),
-    sectionId: uuid('section_id')
-      .notNull()
-      .references(() => sections.id, { onDelete: 'cascade' }),
+    /** Target is either a section (of a main strand) or a whole storyline (e.g. a side strand); exactly one is set. */
+    sectionId: uuid('section_id').references(() => sections.id, { onDelete: 'cascade' }),
+    storylineId: uuid('storyline_id').references(() => storylines.id, { onDelete: 'cascade' }),
     description: text('description').notNull().default(''),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('scene_assignments_unique').on(t.sceneId, t.sectionId)],
+  (t) => [
+    uniqueIndex('scene_assignments_unique').on(t.sceneId, t.sectionId),
+    uniqueIndex('scene_assignments_storyline_unique').on(t.sceneId, t.storylineId),
+    check('scene_assignments_one_target', sql`(${t.sectionId} IS NULL) <> (${t.storylineId} IS NULL)`),
+  ],
 );

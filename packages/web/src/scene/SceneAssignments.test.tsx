@@ -7,7 +7,7 @@ import type { BookResponse } from '@bookly/shared';
 import { bookOk, bookResponse, meOk } from '../book/testFixtures';
 import { renderApp } from '../test/render';
 import { server } from '../test/setup';
-import { assignment, bookWithSections, scene } from './sceneTestFixtures';
+import { assignment, bookWithSections, bookWithSideStrand, scene } from './sceneTestFixtures';
 
 /** Opens the storyline, its „Zeitpunkte“ tab and the edit form of section „Abschied“ (sec2). */
 async function openSection(name = 'Abschied') {
@@ -131,5 +131,94 @@ describe('SceneAssignments', () => {
     await userEvent.selectOptions(within(block).getByLabelText('Szene zuordnen'), 'sc1');
     expect(within(block).getByRole('button', { name: 'Beschreibung erzeugen' })).toBeDisabled();
     expect(within(block).getByText('KI nicht eingerichtet.')).toBeInTheDocument();
+  });
+  it('offers earlier descriptions for an existing assignment as a proposal (FR-005)', async () => {
+    const patches: unknown[] = [];
+    const extra = {
+      scenes: [scene()],
+      sceneAssignments: [
+        assignment({ id: 'a1', sectionId: 'sec1', description: 'Morgennebel', updatedAt: '2026-01-01T00:00:00.000Z' }),
+        assignment({ id: 'a2', sectionId: 'sec2', description: 'Alt', updatedAt: '2026-02-01T00:00:00.000Z' }),
+      ],
+    };
+    server.use(
+      meOk,
+      bookOk(bookWithSections(), extra),
+      http.patch('/api/books/b1/scene-assignments/a2', async ({ request }) => {
+        patches.push(await request.json());
+        return HttpResponse.json(bookResponse(bookWithSections(), extra));
+      }),
+    );
+    const block = await openSection();
+    const field = within(block).getByLabelText('Beschreibung Szene Bergsee');
+    const pick = within(block).getByLabelText('Frühere Beschreibung für Szene Bergsee einsetzen');
+    expect(within(pick).getAllByRole('option').map((o) => o.textContent)).toEqual(['Frühere Beschreibung einsetzen …', 'Morgennebel']);
+    await userEvent.selectOptions(pick, '0');
+    expect(field).toHaveValue('Morgennebel');
+    await userEvent.click(within(block).getByRole('button', { name: 'Verwerfen' }));
+    expect(field).toHaveValue('Alt');
+    await userEvent.selectOptions(within(block).getByLabelText('Frühere Beschreibung für Szene Bergsee einsetzen'), '0');
+    await userEvent.click(within(block).getByRole('button', { name: 'Übernehmen' }));
+    expect(patches).toEqual([{ description: 'Morgennebel' }]);
+  });
+
+  it('moves an assignment to another section that does not hold the scene yet (AC-003)', async () => {
+    const patches: unknown[] = [];
+    const book = bookWithSections();
+    book.storylines[0]!.sections.push({ id: 'sec3', storylineId: 's1', title: 'Rückkehr', description: '', characterIds: [], range: { startId: 't3', endId: 't3' }, note: null, order: 2 });
+    const extra = { scenes: [scene()], sceneAssignments: [assignment({ id: 'a1', sectionId: 'sec1' }), assignment({ id: 'a2', sectionId: 'sec2', description: 'See' })] };
+    server.use(
+      meOk,
+      bookOk(book, extra),
+      http.patch('/api/books/b1/scene-assignments/a2', async ({ request }) => {
+        patches.push(await request.json());
+        return HttpResponse.json(bookResponse(book, { ...extra, sceneAssignments: [extra.sceneAssignments[0]!, assignment({ id: 'a2', sectionId: 'sec3', description: 'See' })] }));
+      }),
+    );
+    const block = await openSection();
+    const move = within(block).getByLabelText('Szene Bergsee verschieben');
+    expect(within(move).getAllByRole('option').map((o) => o.textContent)).toEqual(['Verschieben nach …', 'Ganze Storyline „Hauptstrang“', 'Rückkehr']);
+    await userEvent.selectOptions(move, 'section:sec3');
+    expect(patches).toEqual([{ sectionId: 'sec3' }]);
+    expect(await within(block).findByLabelText('Szene zuordnen')).toBeInTheDocument();
+    expect(within(block).queryByLabelText('Beschreibung Szene Bergsee')).not.toBeInTheDocument();
+  });
+  it('assigns a scene to a side strand in its „Szenen“ tab, starting with the latest description (FR-005)', async () => {
+    const bodies: unknown[] = [];
+    const book = bookWithSideStrand();
+    const extra = { scenes: [withNote], sceneAssignments: [assignment({ sectionId: 'sec1', description: 'Morgennebel' })] };
+    server.use(
+      meOk,
+      bookOk(book, extra),
+      http.post('/api/books/b1/scene-assignments', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json(bookResponse(book, { ...extra, sceneAssignments: [...extra.sceneAssignments, assignment({ id: 'a2', sectionId: null, storylineId: 's2', description: 'Morgennebel' })] }), { status: 201 });
+      }),
+    );
+    renderApp('/books/b1');
+    await userEvent.click(await screen.findByRole('button', { name: 'Storyline „Erinnerung“' }));
+    expect(screen.queryByRole('tab', { name: 'Zeitpunkte' })).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('tab', { name: 'Szenen' }));
+    const block = screen.getByRole('group', { name: 'Szenen' });
+    await userEvent.selectOptions(within(block).getByLabelText('Szene zuordnen'), 'sc1');
+    expect(within(block).getByLabelText('Beschreibung der neuen Zuordnung')).toHaveValue('Morgennebel');
+    await userEvent.click(within(block).getByRole('button', { name: 'Zuordnen' }));
+    expect(bodies).toEqual([{ sceneId: 'sc1', description: 'Morgennebel', storylineId: 's2' }]);
+    expect(await within(block).findByLabelText('Beschreibung Szene Bergsee')).toHaveValue('Morgennebel');
+  });
+
+  it('shows the scenes of a main strand by section in its „Szenen“ tab', async () => {
+    server.use(meOk, bookOk(bookWithSections(), { scenes: [scene()], sceneAssignments: [assignment({ sectionId: 'sec2' })] }));
+    renderApp('/books/b1');
+    await userEvent.click(await screen.findByRole('button', { name: 'Storyline „Hauptstrang“' }));
+    const tab = await screen.findByRole('tab', { name: 'Szenen' });
+    expect(tab).toHaveTextContent('1');
+    await userEvent.click(tab);
+    expect(screen.getByRole('group', { name: 'Szenen der ganzen Storyline' })).toBeInTheDocument();
+    const overview = screen.getByText('In den Abschnitten').parentElement!;
+    expect(within(overview).getByText('Abschied').closest('li')).toHaveTextContent('Bergsee');
+    expect(within(overview).getByText('Ankunft').closest('li')).toHaveTextContent('keine Szene');
+    await userEvent.click(screen.getByRole('button', { name: '„Zeitpunkte“' }));
+    expect(screen.getByRole('tab', { name: 'Zeitpunkte' })).toHaveAttribute('aria-selected', 'true');
   });
 });

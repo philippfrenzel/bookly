@@ -1,11 +1,33 @@
 /** Tests for the scene bodies and pure scene rules. */
 import { describe, expect, test } from 'vitest';
-import { hasSceneContext, previousDescriptions, SceneAssignmentCreateBody, SceneBody, SceneNoteBody, type SceneAssignment } from './scenes.js';
+import { hasSceneContext, previousDescriptions, SceneAssignmentCreateBody, SceneAssignmentPatchBody, SceneBody, SceneNoteBody, parseTargetKey, targetKey, type SceneAssignment } from './scenes.js';
 
 const a = (id: string, sceneId: string, description: string, updatedAt: string): SceneAssignment =>
-  ({ id, sceneId, sectionId: `sec-${id}`, description, updatedAt });
+  ({ id, sceneId, sectionId: `sec-${id}`, storylineId: null, description, updatedAt });
 
 describe('scene bodies', () => {
+  test('assignment patch changes the description, the section, or both, but not nothing', () => {
+    const sec = '00000000-0000-4000-8000-000000000001';
+    expect(SceneAssignmentPatchBody.parse({ description: ' See ' })).toEqual({ description: 'See' });
+    expect(SceneAssignmentPatchBody.parse({ sectionId: sec })).toEqual({ sectionId: sec });
+    expect(SceneAssignmentPatchBody.safeParse({}).success).toBe(false);
+    expect(SceneAssignmentPatchBody.safeParse({ sectionId: 'x' }).success).toBe(false);
+    expect(SceneAssignmentPatchBody.safeParse({ sectionId: sec, storylineId: sec }).success).toBe(false);
+    expect(SceneAssignmentPatchBody.parse({ storylineId: sec })).toEqual({ storylineId: sec });
+  });
+
+  test('assignment create needs exactly one target', () => {
+    const id = '00000000-0000-4000-8000-000000000001';
+    expect(SceneAssignmentCreateBody.safeParse({ sceneId: id, storylineId: id }).success).toBe(true);
+    expect(SceneAssignmentCreateBody.safeParse({ sceneId: id }).success).toBe(false);
+    expect(SceneAssignmentCreateBody.safeParse({ sceneId: id, sectionId: id, storylineId: id }).success).toBe(false);
+  });
+
+  test('target keys round-trip', () => {
+    expect(parseTargetKey(targetKey({ sectionId: 'a', storylineId: null }))).toEqual({ sectionId: 'a' });
+    expect(parseTargetKey(targetKey({ sectionId: null, storylineId: 'b' }))).toEqual({ storylineId: 'b' });
+  });
+
   test('name is trimmed and required', () => {
     expect(SceneBody.parse({ name: '  See  ' })).toEqual({ name: 'See' });
     expect(SceneBody.safeParse({ name: '   ' }).success).toBe(false);

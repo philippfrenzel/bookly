@@ -1,7 +1,10 @@
-/** Scenes of one stored section: assign, describe (by hand or AI), change and remove (FR-003, FR-005, FR-006). */
+/**
+ * Scenes of one target, a stored section or a whole storyline (e.g. a side strand): assign, describe
+ * (by hand, from earlier ones or AI), move and remove (FR-003, FR-005, FR-006).
+ */
 import { useState } from 'react';
-import type { Id, Scene, SceneAssignment } from '@bookly/shared';
-import { hasSceneContext, previousDescriptions, SCENE_LIMITS } from '@bookly/shared';
+import type { Book, Id, Scene, SceneAssignment, SceneTarget } from '@bookly/shared';
+import { hasSceneContext, parseTargetKey, previousDescriptions, SCENE_LIMITS, targetKey } from '@bookly/shared';
 import { useBook, useBookMutation } from '../api/hooks';
 import { useSaveFeedback } from '../book/saveFeedback';
 import { descriptionErrorMessage, useSceneDescription } from './sceneApi';
@@ -13,22 +16,62 @@ function generateBlocker(scene: Scene | undefined, aiEnabled: boolean): string |
   return null;
 }
 
+/** Places a scene can go to, grouped by storyline; option values are target keys. */
+export interface TargetGroup { storylineId: Id; title: string; options: { key: string; label: string }[] }
+
+/** Every storyline (as a whole) and every section of the book, minus the places that already hold the scene. */
+export function sceneTargets(book: Book, sceneId: Id, assignments: SceneAssignment[]): TargetGroup[] {
+  const taken = new Set(assignments.filter((a) => a.sceneId === sceneId).map(targetKey));
+  return book.storylines
+    .map((l) => ({
+      storylineId: l.id,
+      title: l.title,
+      options: [
+        { key: targetKey({ storylineId: l.id }), label: l.kind === 'main' ? `Ganze Storyline „${l.title}“` : l.title },
+        ...[...l.sections].sort((a, b) => a.order - b.order).map((s) => ({ key: targetKey({ sectionId: s.id }), label: s.title })),
+      ].filter((o) => !taken.has(o.key)),
+    }))
+    .filter((g) => g.options.length > 0);
+}
+
+/** A select of target groups with a leading placeholder option. */
+export function TargetSelect({ label, placeholder, groups, onPick, className }: { label: string; placeholder: string; groups: TargetGroup[]; onPick: (t: SceneTarget) => void; className?: string }) {
+  return (
+    <select className={className} aria-label={label} value="" onChange={(e) => { if (e.target.value) onPick(parseTargetKey(e.target.value)); }}>
+      <option value="">{placeholder}</option>
+      {groups.map((g) => (
+        <optgroup key={g.storylineId} label={g.title}>
+          {g.options.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+        </optgroup>
+      ))}
+    </select>
+  );
+}
+
+/** Shortens a description for a select option. */
+const preview = (p: string) => (p.length > 80 ? `${p.slice(0, 80)} …` : p);
+
 interface RowProps {
   bookId: Id;
-  sectionId: Id;
+  target: SceneTarget;
   assignment: SceneAssignment;
   scene: Scene | undefined;
   aiEnabled: boolean;
+  /** Earlier descriptions of the scene from its other assignments, newest first (FR-005). */
+  earlier: string[];
+  targets: TargetGroup[];
   onSave: (description: string) => void;
+  onMove: (to: SceneTarget) => void;
   onRemove: () => void;
   resetKey: number;
 }
 
 /**
- * One assignment: description saved on blur; "Neu erzeugen" puts an AI proposal into the field,
- * which the author takes over or discards (Q-002: never generated without a click).
+ * One assignment: description saved on blur; "Neu erzeugen" or an earlier description from the list
+ * puts a proposal into the field, which the author takes over or discards (Q-002: never generated
+ * without a click). "Verschieben nach" moves the assignment with its description to another section.
  */
-function AssignmentRow({ bookId, sectionId, assignment, scene, aiEnabled, onSave, onRemove, resetKey }: RowProps) {
+function AssignmentRow({ bookId, target, assignment, scene, aiEnabled, earlier, targets, onSave, onMove, onRemove, resetKey }: RowProps) {
   const name = scene?.name ?? 'Szene';
   const [text, setText] = useState(assignment.description);
   const [proposal, setProposal] = useState(false);
@@ -43,7 +86,7 @@ function AssignmentRow({ bookId, sectionId, assignment, scene, aiEnabled, onSave
 
   const regenerate = () =>
     generate.mutate(
-      { sceneId: assignment.sceneId, sectionId },
+      { sceneId: assignment.sceneId, ...target },
       {
         onSuccess: (res) => {
           setText(res.description);
@@ -65,6 +108,15 @@ function AssignmentRow({ bookId, sectionId, assignment, scene, aiEnabled, onSave
           if (!proposal && text.trim() !== assignment.description) onSave(text);
         }}
       />
+      {!proposal && earlier.length > 0 && (
+        <select aria-label={`Frühere Beschreibung für Szene ${name} einsetzen`} value="" onChange={(e) => {
+          const chosen = earlier[Number(e.target.value)];
+          if (chosen !== undefined) { setText(chosen); setProposal(true); }
+        }}>
+          <option value="">Frühere Beschreibung einsetzen …</option>
+          {earlier.map((p, i) => <option key={i} value={i}>{preview(p)}</option>)}
+        </select>
+      )}
       <div className="actions">
         {proposal ? (
           <>
@@ -78,6 +130,9 @@ function AssignmentRow({ bookId, sectionId, assignment, scene, aiEnabled, onSave
         )}
         <button type="button" aria-label={`Szene „${name}“ aus diesem Abschnitt entfernen`} onClick={onRemove}>Entfernen</button>
       </div>
+      {targets.length > 0 && (
+        <TargetSelect className="scene-move" label={`Szene ${name} verschieben`} placeholder="Verschieben nach …" groups={targets} onPick={onMove} />
+      )}
       {blocker && !proposal && <p className="muted">{blocker}</p>}
       {generate.isError && <p className="error" role="alert">{descriptionErrorMessage(generate.error)}</p>}
     </li>
@@ -86,7 +141,7 @@ function AssignmentRow({ bookId, sectionId, assignment, scene, aiEnabled, onSave
 
 interface AddProps {
   bookId: Id;
-  sectionId: Id;
+  target: SceneTarget;
   candidates: Scene[];
   assignments: SceneAssignment[];
   aiEnabled: boolean;
@@ -98,7 +153,7 @@ interface AddProps {
  * are offered as a list, and the author may generate a new one instead (FR-006). Nothing is
  * generated without a click; a first assignment starts empty (HDR-001).
  */
-function AssignScene({ bookId, sectionId, candidates, assignments, aiEnabled, onAssign }: AddProps) {
+function AssignScene({ bookId, target, candidates, assignments, aiEnabled, onAssign }: AddProps) {
   const [sceneId, setSceneId] = useState<Id | ''>('');
   const [text, setText] = useState('');
   const generate = useSceneDescription(bookId);
@@ -112,7 +167,7 @@ function AssignScene({ bookId, sectionId, candidates, assignments, aiEnabled, on
     generate.reset();
   };
 
-  if (candidates.length === 0) return <p className="muted">Alle Szenen sind diesem Abschnitt schon zugeordnet, oder es gibt noch keine. Szenen legst du im Buch unter „Szenen“ an.</p>;
+  if (candidates.length === 0) return <p className="muted">Alle Szenen sind hier schon zugeordnet, oder es gibt noch keine. Szenen legst du im Buch unter „Szenen“ an.</p>;
 
   return (
     <div className="scene-assign">
@@ -130,7 +185,7 @@ function AssignScene({ bookId, sectionId, candidates, assignments, aiEnabled, on
               <span>Bisherige Beschreibungen</span>
               <select key={sceneId} aria-label="Bisherige Beschreibung wählen" defaultValue="0" onChange={(e) => setText(previous[Number(e.target.value)] ?? '')}>
                 {previous.map((p, i) => (
-                  <option key={i} value={i}>{p.length > 80 ? `${p.slice(0, 80)} …` : p}</option>
+                  <option key={i} value={i}>{preview(p)}</option>
                 ))}
               </select>
             </label>
@@ -148,7 +203,7 @@ function AssignScene({ bookId, sectionId, candidates, assignments, aiEnabled, on
               type="button"
               disabled={blocker !== null || generate.isPending}
               title={blocker ?? undefined}
-              onClick={() => generate.mutate({ sceneId: scene.id, sectionId }, { onSuccess: (res) => setText(res.description) })}
+              onClick={() => generate.mutate({ sceneId: scene.id, ...target }, { onSuccess: (res) => setText(res.description) })}
             >
               {generate.isPending ? 'Erzeuge …' : 'Beschreibung erzeugen'}
             </button>
@@ -162,24 +217,28 @@ function AssignScene({ bookId, sectionId, candidates, assignments, aiEnabled, on
   );
 }
 
-/** The scene block inside the edit form of a stored section; reads scenes from the cached book response. */
-export function SceneAssignments({ bookId, sectionId, aiEnabled }: { bookId: Id; sectionId: Id; aiEnabled: boolean }) {
+/** True when the assignment points at `target`. */
+const isAt = (a: SceneAssignment, target: SceneTarget) => targetKey(a) === targetKey(target);
+
+/** The scene block of a section's edit form or a storyline's „Szenen“ tab; reads scenes from the cached book response. */
+export function SceneAssignments({ bookId, target, aiEnabled, legend = 'Szenen' }: { bookId: Id; target: SceneTarget; aiEnabled: boolean; legend?: string }) {
   const data = useBook(bookId).data;
   const fb = useSaveFeedback();
   const base = `/api/books/${bookId}/scene-assignments`;
-  const create = useBookMutation<{ sceneId: Id; description: string }>(bookId, 'POST', () => base, (v) => ({ ...v, sectionId }));
+  const create = useBookMutation<{ sceneId: Id; description: string }>(bookId, 'POST', () => base, (v) => ({ ...v, ...target }));
   const update = useBookMutation<{ id: Id; description: string }>(bookId, 'PATCH', (v) => `${base}/${v.id}`, (v) => ({ description: v.description }));
+  const move = useBookMutation<{ id: Id; to: SceneTarget }>(bookId, 'PATCH', (v) => `${base}/${v.id}`, (v) => v.to);
   const remove = useBookMutation<{ id: Id }>(bookId, 'DELETE', (v) => `${base}/${v.id}`);
   if (!data) return null;
   const scenes = data.scenes;
   const all = data.sceneAssignments;
-  const own = all.filter((a) => a.sectionId === sectionId);
+  const own = all.filter((a) => isAt(a, target));
   const assigned = new Set(own.map((a) => a.sceneId));
   const onError = fb.onError;
 
   return (
     <fieldset className="scene-assignments">
-      <legend>Szenen</legend>
+      <legend>{legend}</legend>
       {fb.feedback}
       {own.length > 0 && (
         <ul className="panel-list">
@@ -187,12 +246,15 @@ export function SceneAssignments({ bookId, sectionId, aiEnabled }: { bookId: Id;
             <AssignmentRow
               key={a.id}
               bookId={bookId}
-              sectionId={sectionId}
+              target={target}
               assignment={a}
               scene={scenes.find((s) => s.id === a.sceneId)}
               aiEnabled={aiEnabled}
+              earlier={previousDescriptions(a.sceneId, all.filter((x) => x.id !== a.id)).filter((d) => d !== a.description)}
+              targets={sceneTargets(data.book, a.sceneId, all)}
               resetKey={fb.resetKey}
               onSave={(description) => { fb.clear(); update.mutate({ id: a.id, description }, { onError }); }}
+              onMove={(to) => { fb.clear(); move.mutate({ id: a.id, to }, { onError }); }}
               onRemove={() => { fb.clear(); remove.mutate({ id: a.id }, { onError }); }}
             />
           ))}
@@ -200,7 +262,7 @@ export function SceneAssignments({ bookId, sectionId, aiEnabled }: { bookId: Id;
       )}
       <AssignScene
         bookId={bookId}
-        sectionId={sectionId}
+        target={target}
         candidates={scenes.filter((s) => !assigned.has(s.id))}
         assignments={all}
         aiEnabled={aiEnabled}
