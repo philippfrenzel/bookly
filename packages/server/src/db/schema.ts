@@ -343,6 +343,7 @@ export const structureProposals = pgTable('structure_proposals', {
   kind: text('kind').notNull(),
   status: text('status').notNull(),
   summary: text('summary').notNull().default(''),
+  chapterId: uuid('chapter_id').references(() => chapters.id, { onDelete: 'cascade' }),
   payload: jsonb('payload').notNull(),
   createdAt: createdAt(),
   decidedAt: timestamp('decided_at', { withTimezone: true }),
@@ -374,4 +375,25 @@ export const blockSuggestions = pgTable('block_suggestions', {
   status: text('status').notNull(),
   createdAt: createdAt(),
   decidedAt: timestamp('decided_at', { withTimezone: true }),
+});
+
+/** Base styles of an author's team, usable in all their works (FR-017). */
+export const teamStyles = pgTable('team_styles', {
+  id: id(),
+  ownerId: uuid('owner_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  createdAt: createdAt(),
+});
+
+/** The style of one work (FR-015, FR-016). */
+export const bookStyles = pgTable('book_styles', {
+  bookId: uuid('book_id')
+    .primaryKey()
+    .references(() => books.id, { onDelete: 'cascade' }),
+  presetKeys: text('preset_keys').array().notNull(),
+  teamStyleIds: uuid('team_style_ids').array().notNull(),
+  addition: text('addition').notNull().default(''),
 });

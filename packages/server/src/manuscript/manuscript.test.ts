@@ -283,3 +283,45 @@ describe('comments, suggestions, instructions (phase 2)', () => {
     await app.close();
   });
 });
+
+describe('styles and per-chapter proposals (phase 3)', () => {
+  test('a work gets presets, team styles and an own addition; the style reaches the AI draft (AC-013, AC-014)', async () => {
+    const { app, author, req, ms, proposeAndAccept, reviewer } = await setup();
+    const block = (await proposeAndAccept()).chapters[0]!.blocks[0]!;
+    const team = await app.inject({ method: 'POST', url: '/api/team-styles', headers: { cookie: author.cookie }, payload: { name: 'Hausstil', description: 'Präsens, keine Rückblenden.' } });
+    expect(team.statusCode).toBe(201);
+    const teamId: string = team.json().id;
+    const saved = await ms(await req('PUT', '/manuscript/style', { presetKeys: ['knapp', 'gibtsnicht'], teamStyleIds: [teamId], addition: 'Viel Meer.' }));
+    expect(saved.style).toEqual({ presetKeys: ['knapp'], teamStyleIds: [teamId], addition: 'Viel Meer.' });
+    expect(saved.teamStyles).toEqual([{ id: teamId, name: 'Hausstil', description: 'Präsens, keine Rückblenden.' }]);
+    expect((await req('POST', `/manuscript/blocks/${block.id}/draft`)).json().text).toBe('KI-Entwurf: Ankunft [Stil: Modern und knapp, Hausstil, Ergänzung des Autors]');
+    const r = await reviewer(['edit']);
+    expect((await r.req('PUT', '/manuscript/style', { presetKeys: [], teamStyleIds: [], addition: '' })).statusCode).toBe(403);
+    expect((await r.req('GET', '/manuscript')).json().teamStyles).toHaveLength(1);
+    // another author cannot use or see this team style
+    const other = await registeredAgent(app);
+    expect((await app.inject({ method: 'GET', url: '/api/team-styles', headers: { cookie: other.cookie } })).json()).toEqual([]);
+    await app.close();
+  });
+
+  test('the style is per work: another book of the same author has none (FR-016)', async () => {
+    const { app, author, req, ms } = await setup();
+    await req('PUT', '/manuscript/style', { presetKeys: ['poetisch'], teamStyleIds: [], addition: '' });
+    const b2 = await app.inject({ method: 'POST', url: '/api/books', headers: { cookie: author.cookie }, payload: { title: 'Zwei' } });
+    const other = await app.inject({ method: 'GET', url: `/api/books/${b2.json().book.id}/manuscript`, headers: { cookie: author.cookie } });
+    expect(other.json().style).toEqual({ presetKeys: [], teamStyleIds: [], addition: '' });
+    expect((await ms(await req('GET', '/manuscript'))).style.presetKeys).toEqual(['poetisch']);
+    await app.close();
+  });
+
+  test('a proposal for one chapter only reorders that chapter and keeps chapter order (AC-012)', async () => {
+    const { app, req, ms, proposeAndAccept } = await setup();
+    const before = await proposeAndAccept();
+    const p = (await ms(await req('POST', '/manuscript/proposals', { chapterId: before.chapters[0]!.id }))).proposals[0]!;
+    expect(p).toMatchObject({ kind: 'chapter', chapterId: before.chapters[0]!.id });
+    const after = await ms(await req('POST', `/manuscript/proposals/${p.id}/accept`));
+    expect(after.chapters.map((c) => c.id)).toEqual(before.chapters.map((c) => c.id));
+    expect(after.chapters[0]!.blocks.map((b) => b.title)).toEqual(['Abschied', 'Ankunft']);
+    await app.close();
+  });
+});

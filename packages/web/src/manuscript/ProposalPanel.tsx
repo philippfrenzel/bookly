@@ -11,10 +11,12 @@ import { manuscriptError, useManuscriptMutation } from './manuscriptApi';
 export function ProposalPanel({ bookId, ms }: { bookId: Id; ms: ManuscriptResponse }) {
   const mutate = useManuscriptMutation(bookId);
   const [wish, setWish] = useState('');
+  const [scope, setScope] = useState('');
   const proposal = ms.proposals[0];
   const empty = ms.chapters.length === 0;
   const blocker = !ms.ai.enabled ? 'KI nicht eingerichtet.' : null;
-  const ask = () => mutate.mutate({ method: 'POST', path: '/proposals', body: wish.trim() ? { wish: wish.trim() } : {} });
+  const focus = ms.chapters.find((c) => c.id === scope);
+  const ask = () => mutate.mutate({ method: 'POST', path: '/proposals', body: { ...(wish.trim() && { wish: wish.trim() }), ...(focus && { chapterId: focus.id }) } });
 
   return (
     <div className="ms-panel">
@@ -23,12 +25,21 @@ export function ProposalPanel({ bookId, ms }: { bookId: Id; ms: ManuscriptRespon
           ? 'Die KI schlägt aus deinen Storylines, Figuren und Szenen eine Kapitelstruktur vor. Du entscheidest, ob du sie übernimmst.'
           : 'Die KI schlägt Kapitelgrenzen und Szenenübergänge für deine Struktur vor. Nichts ändert sich, bevor du zustimmst.'}
       </p>
+      {!empty && (
+        <label>
+          Bereich
+          <select value={focus ? scope : ''} onChange={(e) => setScope(e.target.value)}>
+            <option value="">Ganzes Werk</option>
+            {ms.chapters.map((c) => <option key={c.id} value={c.id}>Nur „{c.title}“</option>)}
+          </select>
+        </label>
+      )}
       <label>
         Wunsch an die KI (optional)
         <input value={wish} maxLength={1000} onChange={(e) => setWish(e.target.value)} placeholder="z. B. kürzere Kapitel, Nebenstrang früher einweben" />
       </label>
       <button type="button" className="primary with-icon" disabled={blocker !== null || mutate.isPending} title={blocker ?? undefined} onClick={ask}>
-        <Icon name="wand" />{mutate.isPending ? 'Denke nach …' : empty ? 'Struktur vorschlagen' : 'Anpassung vorschlagen'}
+        <Icon name="wand" />{mutate.isPending ? 'Denke nach …' : empty ? 'Struktur vorschlagen' : focus ? 'Kapitel neu ordnen' : 'Anpassung vorschlagen'}
       </button>
       {blocker && <p className="muted">{blocker}</p>}
       {mutate.isError && <p className="error" role="alert">{manuscriptError(mutate.error)}</p>}
@@ -57,7 +68,7 @@ function ProposalView({ ms, proposal, onDecide, busy }: { ms: ManuscriptResponse
   };
   return (
     <article className="ms-proposal" aria-label="KI-Vorschlag">
-      <h3>{proposal.kind === 'initial' ? 'Vorgeschlagene Struktur' : 'Vorgeschlagene Anpassung'}</h3>
+      <h3>{proposal.kind === 'initial' ? 'Vorgeschlagene Struktur' : proposal.kind === 'chapter' ? `Vorschlag für „${chapterTitle.get(proposal.chapterId ?? '') ?? 'Kapitel'}“` : 'Vorgeschlagene Anpassung'}</h3>
       {proposal.summary && <p>{proposal.summary}</p>}
       <ol className="ms-proposal-chapters">
         {proposal.chapters.map((c, ci) => (

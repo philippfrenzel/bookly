@@ -147,8 +147,10 @@ export interface ProposalChapter {
 /** An AI structure proposal the author accepts or rejects (FR-001, FR-003, FR-020). */
 export interface StructureProposal {
   id: Id;
-  /** `initial`: first structure for an empty manuscript; `adjust`: changes to the existing structure. */
-  kind: 'initial' | 'adjust';
+  /** `initial`: first structure; `adjust`: changes to the whole structure; `chapter`: changes inside one chapter (FR-014). */
+  kind: 'initial' | 'adjust' | 'chapter';
+  /** The chapter a `chapter` proposal is about. */
+  chapterId: Id | null;
   summary: string;
   chapters: ProposalChapter[];
   createdAt: string;
@@ -174,6 +176,10 @@ export interface ManuscriptResponse {
   /** Reviewers of the book (author only; empty for reviewers). */
   reviewers: Reviewer[];
   context: ManuscriptContext;
+  /** Style of this work. */
+  style: BookStyle;
+  /** Team styles: for the author all of theirs (to pick from), for reviewers the ones this work uses. */
+  teamStyles: TeamStyle[];
   ai: { enabled: boolean };
 }
 
@@ -245,6 +251,8 @@ export type ReviewerPatchBody = z.infer<typeof ReviewerPatchBody>;
 export const ProposalRequestBody = z.object({
   /** Optional wish of the author, e.g. "kürzere Kapitel". */
   wish: z.string().trim().max(1000).optional(),
+  /** Limit the proposal to one chapter (FR-014). */
+  chapterId: Id.optional(),
 });
 export type ProposalRequestBody = z.infer<typeof ProposalRequestBody>;
 
@@ -259,3 +267,38 @@ export function normalizeRights(rights: readonly string[]): ReviewerRight[] {
 export function lockActive(lockedAt: Date, now: Date = new Date()): boolean {
   return now.getTime() - lockedAt.getTime() < LOCK_TIMEOUT_MINUTES * 60_000;
 }
+
+/** A predefined writing style the author can pick for a work (FR-015). */
+export interface StylePreset { key: string; name: string; description: string }
+
+/** Predefined styles; the description is what the AI is told. */
+export const STYLE_PRESETS: readonly StylePreset[] = [
+  { key: 'klassisch', name: 'Klassisch erzählend', description: 'Ruhiger, vollständiger Satzbau, auktoriale Distanz, sorgfältige Beschreibungen.' },
+  { key: 'knapp', name: 'Modern und knapp', description: 'Kurze Sätze, wenig Adjektive, viel Subtext, zügiges Tempo.' },
+  { key: 'poetisch', name: 'Poetisch', description: 'Bildreiche Sprache, Rhythmus und Klang, Stimmungen und Sinneseindrücke im Vordergrund.' },
+  { key: 'spannung', name: 'Spannungsgeladen', description: 'Hohes Tempo, Cliffhanger am Ende von Szenen, gezielt gesetzte Informationen.' },
+  { key: 'humorvoll', name: 'Humorvoll', description: 'Leichter Ton, Situationskomik, pointierte Dialoge.' },
+  { key: 'jugendbuch', name: 'Jugendbuch', description: 'Nahe an der Hauptfigur, klare Sprache, lebendige Dialoge, emotionale Unmittelbarkeit.' },
+  { key: 'ich-perspektive', name: 'Ich-Perspektive', description: 'Erzählt in der ersten Person aus Sicht der Hauptfigur.' },
+];
+
+/** A base style of the author's team, reusable in all of the author's works (FR-017). */
+export interface TeamStyle { id: Id; name: string; description: string }
+
+/** The style of one work: picked presets and team styles plus the author's own addition (FR-016: per work only). */
+export interface BookStyle { presetKeys: string[]; teamStyleIds: Id[]; addition: string }
+
+export const STYLE_LIMITS = { name: 100, description: 2000, addition: 4000 } as const;
+
+export const BookStyleBody = z.object({
+  presetKeys: z.array(z.string()).max(STYLE_PRESETS.length).transform((keys) => STYLE_PRESETS.map((p) => p.key).filter((k) => keys.includes(k))),
+  teamStyleIds: z.array(Id).max(50),
+  addition: z.string().trim().max(STYLE_LIMITS.addition),
+});
+export type BookStyleBody = z.infer<typeof BookStyleBody>;
+
+export const TeamStyleBody = z.object({
+  name: z.string().trim().min(1).max(STYLE_LIMITS.name),
+  description: z.string().trim().min(1).max(STYLE_LIMITS.description),
+});
+export type TeamStyleBody = z.infer<typeof TeamStyleBody>;

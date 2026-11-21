@@ -26,6 +26,8 @@ function manuscript(over: Partial<ManuscriptResponse> = {}): ManuscriptResponse 
     proposals: [],
     reviewers: [],
     context: { storylines: [{ id: 's1', title: 'Hauptstrang', color: '#2B59C3' }], sections: [], scenes: [] },
+    style: { presetKeys: [], teamStyleIds: [], addition: '' },
+    teamStyles: [],
     ai: { enabled: true },
     ...over,
   };
@@ -36,7 +38,7 @@ const msOk = (ms: ManuscriptResponse) => http.get('/api/books/b1/manuscript', ()
 describe('ManuscriptPage', () => {
   it('asks the AI for a structure and applies it only when the author accepts', async () => {
     const proposal = {
-      id: 'p1', kind: 'initial' as const, summary: 'Ein Kapitel pro Strang.', createdAt: '2026-11-21T10:00:00Z',
+      id: 'p1', kind: 'initial' as const, chapterId: null, summary: 'Ein Kapitel pro Strang.', createdAt: '2026-11-21T10:00:00Z',
       chapters: [{ chapterId: null, title: 'Kapitel 1', reason: 'Folgt der Reise.', blocks: [{ blockId: null, title: 'Ankunft', synopsis: '', sectionId: null, storylineId: 's1', sceneIds: [] }] }],
     };
     const calls: string[] = [];
@@ -122,7 +124,7 @@ describe('ManuscriptPage', () => {
     expect(screen.queryByRole('button', { name: 'Bearbeiten' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Baustein löschen' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Kapitel hinzufügen' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Papierkorb']);
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Stil', 'Papierkorb']);
   });
 
   it('the author invites a reviewer with chosen rights', async () => {
@@ -235,5 +237,44 @@ describe('ManuscriptPage', () => {
     const one = await screen.findByRole('article', { name: 'Vorschau' });
     expect(within(one).getByText('Regen.')).toBeInTheDocument();
     expect(within(one).queryByText('Zweiter Absatz.')).not.toBeInTheDocument();
+  });
+
+  it('saves the style of the work with presets, team styles and an addition', async () => {
+    const bodies: unknown[] = [];
+    const team = [{ id: 'ts1', name: 'Hausstil', description: 'Präsens.' }];
+    server.use(
+      meOk,
+      msOk(manuscript({ teamStyles: team })),
+      http.put('/api/books/b1/manuscript/style', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json(manuscript({ teamStyles: team, style: bodies[0] as never }));
+      }),
+    );
+    renderApp('/books/b1/manuskript');
+    await userEvent.click(await screen.findByRole('tab', { name: 'Stil' }));
+    const form = screen.getByRole('form', { name: 'Stil dieses Werks' });
+    await userEvent.click(within(form).getByRole('checkbox', { name: /Poetisch/ }));
+    await userEvent.click(within(form).getByRole('checkbox', { name: /Hausstil/ }));
+    await userEvent.type(within(form).getByLabelText('Eigene Ergänzungen'), 'Viel Meer.');
+    await userEvent.click(within(form).getByRole('button', { name: 'Stil speichern' }));
+    expect(await within(form).findByRole('status')).toHaveTextContent('Gespeichert.');
+    expect(bodies).toEqual([{ presetKeys: ['poetisch'], teamStyleIds: ['ts1'], addition: 'Viel Meer.' }]);
+  });
+
+  it('asks the AI to rework a single chapter', async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      meOk,
+      msOk(manuscript()),
+      http.post('/api/books/b1/manuscript/proposals', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json(manuscript({ proposals: [{ id: 'p2', kind: 'chapter', chapterId: 'c1', summary: '', createdAt: '2026-11-21T10:00:00Z', chapters: [{ chapterId: 'c1', title: 'Aufbruch', reason: '', blocks: [] }] }] }), { status: 201 });
+      }),
+    );
+    renderApp('/books/b1/manuskript');
+    await userEvent.selectOptions(await screen.findByLabelText('Bereich'), 'Nur „Aufbruch“');
+    await userEvent.click(screen.getByRole('button', { name: 'Kapitel neu ordnen' }));
+    expect(await screen.findByText('Vorschlag für „Aufbruch“')).toBeInTheDocument();
+    expect(bodies).toEqual([{ chapterId: 'c1' }]);
   });
 });

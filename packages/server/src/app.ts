@@ -11,6 +11,7 @@ import { acknowledgementRoutes } from './books/acknowledgements.js';
 import { connectionRoutes } from './books/connections.js';
 import { sceneRoutes } from './books/scenes.js';
 import { collabRoutes } from './manuscript/collab.js';
+import { styleRoutes } from './manuscript/styles.js';
 import { proposalRoutes } from './manuscript/proposals.js';
 import { reviewerRoutes } from './manuscript/reviewers.js';
 import { manuscriptRoutes } from './manuscript/routes.js';
@@ -65,5 +66,6 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   await app.register(reviewerRoutes);
   await app.register(proposalRoutes);
   await app.register(collabRoutes);
+  await app.register(styleRoutes);
   return app;
 }

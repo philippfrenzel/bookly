@@ -18,6 +18,8 @@ import {
   blockComments,
   blockSuggestions,
   blocks,
+  bookStyles,
+  teamStyles,
   bookReviewers,
   books,
   chapters,
@@ -121,6 +123,14 @@ export async function loadManuscript(
       title: x.title, synopsis: x.synopsis, text: x.text, note: x.note, createdAt: x.createdAt.toISOString(),
     })),
   });
+  const [[styleRow], [owner]] = await Promise.all([
+    db.select().from(bookStyles).where(eq(bookStyles.bookId, bookId)),
+    db.select({ userId: books.userId }).from(books).where(eq(books.id, bookId)),
+  ]);
+  const style = { presetKeys: styleRow?.presetKeys ?? [], teamStyleIds: styleRow?.teamStyleIds ?? [], addition: styleRow?.addition ?? '' };
+  const ownerStyles = owner
+    ? await db.select({ id: teamStyles.id, name: teamStyles.name, description: teamStyles.description }).from(teamStyles).where(eq(teamStyles.ownerId, owner.userId)).orderBy(asc(teamStyles.name))
+    : [];
   const now = new Date();
   const live = chapterRows.filter((c) => c.deletedAt === null);
   const chapterList: ManuscriptChapter[] = live.map((c) => ({
@@ -153,13 +163,16 @@ export async function loadManuscript(
     trash,
     proposals: proposalRows.map((p) => ({
       id: p.id,
-      kind: p.kind as 'initial' | 'adjust',
+      kind: p.kind as 'initial' | 'adjust' | 'chapter',
+      chapterId: p.chapterId,
       summary: p.summary,
       chapters: p.payload as ProposalChapter[],
       createdAt: p.createdAt.toISOString(),
     })),
     reviewers: reviewerRows.map((r) => ({ ...r, rights: normalizeRights(r.rights) })),
     context: { storylines: lines, sections: sectionRows, scenes: sceneRows },
+    style: { ...style, teamStyleIds: style.teamStyleIds.filter((id) => ownerStyles.some((t) => t.id === id)) },
+    teamStyles: isAuthor ? ownerStyles : ownerStyles.filter((t) => style.teamStyleIds.includes(t.id)),
     ai: { enabled: aiEnabled },
   };
 }

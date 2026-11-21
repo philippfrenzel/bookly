@@ -25,8 +25,8 @@ export function createFakeAiClient(): AiClient {
       }
       if (req.schemaName === 'structure_proposal') return fakeStructure(req.user);
       if (req.schemaName === 'block_draft') {
-        const { baustein, anweisung } = JSON.parse(req.user) as { baustein: string; anweisung?: string };
-        return { text: `KI-Entwurf: ${baustein}${anweisung ? ` (${anweisung})` : ''}` };
+        const { baustein, anweisung, stil } = JSON.parse(req.user) as { baustein: string; anweisung?: string; stil?: string };
+        return { text: `KI-Entwurf: ${baustein}${anweisung ? ` (${anweisung})` : ''}${stil ? ` [Stil: ${stil.split('\n').map((l) => l.split(':')[0]).join(', ')}]` : ''}` };
       }
       if (req.schemaName === 'text_suggestions') {
         return { suggestions: ['KI-Vorschlag 1', 'KI-Vorschlag 2', 'KI-Vorschlag 3'] };
@@ -41,11 +41,24 @@ export function createFakeAiClient(): AiClient {
 interface StructureInput {
   storylines: { id: string; titel: string; abschnitte: { id: string; titel: string; beschreibung: string; szenen: { id: string }[] }[] }[];
   aktuelleStruktur: { chapterId: string; titel: string; bausteine: { blockId: string; titel: string }[] }[];
+  fokusKapitel?: string;
 }
 
 /** Fake structure: one chapter per storyline with a block per section; an existing structure comes back in reverse chapter order. */
 function fakeStructure(user: string): unknown {
   const input = JSON.parse(user) as StructureInput;
+  const focus = input.aktuelleStruktur.find((c) => c.chapterId === input.fokusKapitel);
+  if (focus) {
+    return {
+      summary: 'Fake: Bausteine des Kapitels umgedreht.',
+      chapters: [{
+        chapterId: focus.chapterId,
+        title: focus.titel,
+        reason: 'Fake: andere Reihenfolge.',
+        blocks: [...focus.bausteine].reverse().map((b) => ({ blockId: b.blockId, title: b.titel, synopsis: '', sectionId: null, storylineId: null, sceneIds: [] })),
+      }],
+    };
+  }
   if (input.aktuelleStruktur.length > 0) {
     return {
       summary: 'Fake: Kapitel in umgekehrter Reihenfolge.',
