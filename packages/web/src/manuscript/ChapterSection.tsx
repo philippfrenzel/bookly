@@ -1,5 +1,6 @@
 /** One chapter of the manuscript: title (rename), order, soft delete, its Bausteine and adding a new one (FR-002). */
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { MANUSCRIPT_LIMITS } from '@bookly/shared';
 import type { Id, ManuscriptChapter, ManuscriptResponse } from '@bookly/shared';
 import { Icon } from '../ui/Icon';
@@ -15,6 +16,9 @@ export function ChapterSection({ bookId, ms, chapter, index }: { bookId: Id; ms:
   const [adding, setAdding] = useState(false);
   const [blockTitle, setBlockTitle] = useState('');
   const structure = ms.rights.includes('structure');
+  const canEdit = ms.rights.includes('edit');
+  const [chapterEdit, setChapterEdit] = useState(0);
+  const anyMine = chapter.blocks.some((b) => b.lock?.mine);
   const run = (c: Parameters<typeof mutate.mutate>[0], after?: () => void) => mutate.mutate(c, { onSuccess: () => after?.() });
 
   const rename = (e: FormEvent) => {
@@ -44,6 +48,18 @@ export function ChapterSection({ bookId, ms, chapter, index }: { bookId: Id; ms:
           <h3 id={`kapitel-titel-${chapter.id}`} className="ms-chapter-title">{chapter.title}</h3>
         )}
         <span className="header-spacer" />
+        {!renaming && (
+          <div className="ms-chapter-tools">
+            <Link className="link-button" to={`/books/${bookId}/manuskript/vorschau?kapitel=${chapter.id}`}>Vorschau</Link>
+            {canEdit && chapter.blocks.length > 0 && (anyMine ? (
+              <button type="button" className="ms-chapter-edit" onClick={() => run({ method: 'DELETE', path: `/chapters/${chapter.id}/lock` })}>Kapitel freigeben</button>
+            ) : (
+              <button type="button" className="ms-chapter-edit with-icon" onClick={() => run({ method: 'POST', path: `/chapters/${chapter.id}/lock` }, () => setChapterEdit((n) => n + 1))}>
+                <Icon name="pencil" />Kapitel bearbeiten
+              </button>
+            ))}
+          </div>
+        )}
         {structure && !renaming && (
           <div className="ms-chapter-tools">
             <button type="button" className="icon-button" aria-label="Kapitel umbenennen" onClick={() => setRenaming(true)}><Icon name="pencil" /></button>
@@ -63,7 +79,7 @@ export function ChapterSection({ bookId, ms, chapter, index }: { bookId: Id; ms:
       {mutate.isError && <p className="error" role="alert">{manuscriptError(mutate.error)}</p>}
       {chapter.blocks.length === 0 && <p className="muted ms-empty-chapter">Dieses Kapitel hat noch keine Bausteine.</p>}
       <ol className="ms-blocks">
-        {chapter.blocks.map((b, i) => <BlockCard key={b.id} bookId={bookId} ms={ms} chapter={chapter} block={b} index={i} />)}
+        {chapter.blocks.map((b, i) => <BlockCard key={b.id} bookId={bookId} ms={ms} chapter={chapter} block={b} index={i} chapterEdit={chapterEdit} />)}
       </ol>
       {structure && (adding ? (
         <form className="inline-form ms-add-block" onSubmit={addBlock}>

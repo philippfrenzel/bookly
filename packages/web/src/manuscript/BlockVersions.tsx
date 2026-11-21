@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { BlockVersion, Id, ManuscriptBlock } from '@bookly/shared';
 import { manuscriptError, useBlockVersions, useManuscriptMutation } from './manuscriptApi';
 
-const REASON: Record<BlockVersion['reason'], string> = { create: 'angelegt', edit: 'bearbeitet', restore: 'wiederhergestellt' };
+const REASON: Record<BlockVersion['reason'], string> = { create: 'angelegt', edit: 'bearbeitet', restore: 'wiederhergestellt', suggestion: 'Vorschlag übernommen' };
 
 /** Lists the versions of `block`. */
 export function BlockVersions({ bookId, block, canRestore }: { bookId: Id; block: ManuscriptBlock; canRestore: boolean }) {

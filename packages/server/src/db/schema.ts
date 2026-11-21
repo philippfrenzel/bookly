@@ -306,6 +306,7 @@ export const blocks = pgTable('blocks', {
   sectionId: uuid('section_id').references(() => sections.id, { onDelete: 'set null' }),
   storylineId: uuid('storyline_id').references(() => storylines.id, { onDelete: 'set null' }),
   sceneIds: uuid('scene_ids').array().notNull().default(sql`'{}'::uuid[]`),
+  instruction: text('instruction').notNull().default(''),
   lockedBy: uuid('locked_by').references(() => users.id, { onDelete: 'set null' }),
   lockedAt: timestamp('locked_at', { withTimezone: true }),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -343,6 +344,34 @@ export const structureProposals = pgTable('structure_proposals', {
   status: text('status').notNull(),
   summary: text('summary').notNull().default(''),
   payload: jsonb('payload').notNull(),
+  createdAt: createdAt(),
+  decidedAt: timestamp('decided_at', { withTimezone: true }),
+});
+
+/** Comments on blocks (reviewer right „Kommentieren“). */
+export const blockComments = pgTable('block_comments', {
+  id: id(),
+  blockId: uuid('block_id')
+    .notNull()
+    .references(() => blocks.id, { onDelete: 'cascade' }),
+  authorId: uuid('author_id').references(() => users.id, { onDelete: 'set null' }),
+  text: text('text').notNull(),
+  createdAt: createdAt(),
+});
+
+/** Reviewer suggestions for a block's content; status open, accepted or rejected (FR-023). */
+export const blockSuggestions = pgTable('block_suggestions', {
+  id: id(),
+  blockId: uuid('block_id')
+    .notNull()
+    .references(() => blocks.id, { onDelete: 'cascade' }),
+  authorId: uuid('author_id').references(() => users.id, { onDelete: 'set null' }),
+  baseVersion: integer('base_version').notNull(),
+  title: text('title').notNull(),
+  synopsis: text('synopsis').notNull(),
+  text: text('text').notNull(),
+  note: text('note').notNull().default(''),
+  status: text('status').notNull(),
   createdAt: createdAt(),
   decidedAt: timestamp('decided_at', { withTimezone: true }),
 });

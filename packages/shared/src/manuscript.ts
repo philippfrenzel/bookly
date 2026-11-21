@@ -27,7 +27,7 @@ export const MAX_REVIEWERS = 5;
 /** A lock is released automatically this long after it was taken, regardless of activity (FR-009, EC-001). */
 export const LOCK_TIMEOUT_MINUTES = 30;
 
-export const MANUSCRIPT_LIMITS = { title: 200, synopsis: 4000, text: 200000, comment: 2000 } as const;
+export const MANUSCRIPT_LIMITS = { title: 200, synopsis: 4000, text: 200000, comment: 2000, instruction: 2000 } as const;
 
 /** Lock state of a block as shown to users: only whether it is locked, never by whom (FR-013). */
 export interface BlockLock {
@@ -52,8 +52,38 @@ export interface ManuscriptBlock {
   sectionId: Id | null;
   storylineId: Id | null;
   sceneIds: Id[];
+  /** Concrete instructions for this block, used by the AI draft (FR-018). */
+  instruction: string;
   lock: BlockLock | null;
   updatedAt: string;
+  /** Comments, oldest first. */
+  comments: BlockComment[];
+  /** Open reviewer suggestions, oldest first (FR-023). */
+  suggestions: BlockSuggestion[];
+}
+
+/** A comment on a block. */
+export interface BlockComment {
+  id: Id;
+  authorName: string;
+  /** True when the caller wrote it (may delete it; the author may delete any). */
+  mine: boolean;
+  text: string;
+  createdAt: string;
+}
+
+/** A reviewer's proposed new content for a block; the author accepts or rejects it (FR-023). */
+export interface BlockSuggestion {
+  id: Id;
+  authorName: string;
+  mine: boolean;
+  /** Block version the suggestion was made on; older than the current one means the block changed since. */
+  baseVersion: number;
+  title: string;
+  synopsis: string;
+  text: string;
+  note: string;
+  createdAt: string;
 }
 
 /** A chapter with its live blocks in order. */
@@ -84,7 +114,7 @@ export interface BlockVersion {
   authorName: string;
   createdAt: string;
   /** Why the version was written. */
-  reason: 'create' | 'edit' | 'restore';
+  reason: 'create' | 'edit' | 'restore' | 'suggestion';
 }
 
 /** A reviewer of a book with their rights. */
@@ -190,6 +220,21 @@ export const BlockPatchBody = z
   })
   .refine((b) => b.title !== undefined || b.synopsis !== undefined || b.text !== undefined, 'nothing to change');
 export type BlockPatchBody = z.infer<typeof BlockPatchBody>;
+
+export const CommentBody = z.object({ text: z.string().trim().min(1).max(MANUSCRIPT_LIMITS.comment) });
+export type CommentBody = z.infer<typeof CommentBody>;
+
+export const InstructionBody = z.object({ instruction: z.string().trim().max(MANUSCRIPT_LIMITS.instruction) });
+export type InstructionBody = z.infer<typeof InstructionBody>;
+
+export const SuggestionBody = z.object({
+  baseVersion: z.number().int().min(1),
+  title,
+  synopsis: z.string().max(MANUSCRIPT_LIMITS.synopsis),
+  text: z.string().max(MANUSCRIPT_LIMITS.text),
+  note: z.string().trim().max(MANUSCRIPT_LIMITS.comment).optional(),
+});
+export type SuggestionBody = z.infer<typeof SuggestionBody>;
 
 export const ReviewerCreateBody = z.object({ email: z.string().trim().toLowerCase().email(), rights: Rights });
 export type ReviewerCreateBody = z.infer<typeof ReviewerCreateBody>;

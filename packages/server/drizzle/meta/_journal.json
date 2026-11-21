@@ -43,6 +43,13 @@
       "when": 1795260531291,
       "tag": "0005_manuscript",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795261503839,
+      "tag": "0006_collaboration",
+      "breakpoints": true
     }
   ]
 }

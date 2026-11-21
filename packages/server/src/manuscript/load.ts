@@ -2,6 +2,8 @@
 import { and, asc, desc, eq } from 'drizzle-orm';
 import { lockActive, LOCK_TIMEOUT_MINUTES, normalizeRights } from '@bookly/shared';
 import type {
+  BlockComment,
+  BlockSuggestion,
   Id,
   ManuscriptBlock,
   ManuscriptChapter,
@@ -13,6 +15,8 @@ import type {
 import type { Db } from '../db/client.js';
 import type { Tx } from '../db/loadBook.js';
 import {
+  blockComments,
+  blockSuggestions,
   blocks,
   bookReviewers,
   books,
@@ -27,7 +31,12 @@ import {
 type BlockRow = typeof blocks.$inferSelect;
 
 /** Maps a block row to the API shape; the lock only says whether it is the caller's (FR-013). */
-export function toBlock(row: BlockRow, userId: Id, now = new Date()): ManuscriptBlock {
+export function toBlock(
+  row: BlockRow,
+  userId: Id,
+  now = new Date(),
+  extras: { comments: BlockComment[]; suggestions: BlockSuggestion[] } = { comments: [], suggestions: [] },
+): ManuscriptBlock {
   const locked = row.lockedBy !== null && row.lockedAt !== null && lockActive(row.lockedAt, now);
   return {
     id: row.id,
@@ -40,10 +49,13 @@ export function toBlock(row: BlockRow, userId: Id, now = new Date()): Manuscript
     sectionId: row.sectionId,
     storylineId: row.storylineId,
     sceneIds: row.sceneIds,
+    instruction: row.instruction,
     lock: locked
       ? { mine: row.lockedBy === userId, expiresAt: new Date(row.lockedAt!.getTime() + LOCK_TIMEOUT_MINUTES * 60_000).toISOString() }
       : null,
     updatedAt: row.updatedAt.toISOString(),
+    comments: extras.comments,
+    suggestions: extras.suggestions,
   };
 }
 
@@ -84,13 +96,38 @@ export async function loadManuscript(
           .orderBy(asc(bookReviewers.createdAt))
       : Promise.resolve([]),
   ]);
+  const [commentRows, suggestionRows] = await Promise.all([
+    db
+      .select({ id: blockComments.id, blockId: blockComments.blockId, authorId: blockComments.authorId, authorName: users.displayName, text: blockComments.text, createdAt: blockComments.createdAt })
+      .from(blockComments)
+      .innerJoin(blocks, eq(blocks.id, blockComments.blockId))
+      .leftJoin(users, eq(users.id, blockComments.authorId))
+      .where(eq(blocks.bookId, bookId))
+      .orderBy(asc(blockComments.createdAt)),
+    db
+      .select({ s: blockSuggestions, authorName: users.displayName })
+      .from(blockSuggestions)
+      .innerJoin(blocks, eq(blocks.id, blockSuggestions.blockId))
+      .leftJoin(users, eq(users.id, blockSuggestions.authorId))
+      .where(and(eq(blocks.bookId, bookId), eq(blockSuggestions.status, 'open')))
+      .orderBy(asc(blockSuggestions.createdAt)),
+  ]);
+  const extrasOf = (blockId: Id) => ({
+    comments: commentRows.filter((c) => c.blockId === blockId).map((c): BlockComment => ({
+      id: c.id, authorName: c.authorName ?? 'Unbekannt', mine: c.authorId === userId, text: c.text, createdAt: c.createdAt.toISOString(),
+    })),
+    suggestions: suggestionRows.filter((r) => r.s.blockId === blockId).map(({ s: x, authorName }): BlockSuggestion => ({
+      id: x.id, authorName: authorName ?? 'Unbekannt', mine: x.authorId === userId, baseVersion: x.baseVersion,
+      title: x.title, synopsis: x.synopsis, text: x.text, note: x.note, createdAt: x.createdAt.toISOString(),
+    })),
+  });
   const now = new Date();
   const live = chapterRows.filter((c) => c.deletedAt === null);
   const chapterList: ManuscriptChapter[] = live.map((c) => ({
     id: c.id,
     position: c.position,
     title: c.title,
-    blocks: blockRows.filter((b) => b.chapterId === c.id && b.deletedAt === null).map((b) => toBlock(b, userId, now)),
+    blocks: blockRows.filter((b) => b.chapterId === c.id && b.deletedAt === null).map((b) => toBlock(b, userId, now, extrasOf(b.id))),
   }));
   const chapterTitle = new Map(chapterRows.map((c) => [c.id, c.title]));
   const trash: TrashItem[] = [

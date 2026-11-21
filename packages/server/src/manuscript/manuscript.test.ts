@@ -7,7 +7,7 @@ import { blocks } from '../db/schema.js';
 import { registeredAgent, testApp } from '../test/helpers.js';
 import { seedTimePoints } from '../test/fixtures.js';
 
-type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
 /** An author with a book of two storylines (one with two sections) and a scene; AI is the fake client. */
 async function setup() {
@@ -220,6 +220,66 @@ describe('locks (AC-006 .. AC-009, AC-011, EC-001)', () => {
     await app.db.update(blocks).set({ lockedAt: new Date(Date.now() - 31 * 60_000) }).where(eq(blocks.id, block.id));
     expect((await ms(await req('GET', '/manuscript'))).chapters[0]!.blocks[0]!.lock).toBeNull();
     expect((await req('POST', `/manuscript/blocks/${block.id}/lock`)).statusCode).toBe(200);
+    await app.close();
+  });
+});
+
+describe('comments, suggestions, instructions (phase 2)', () => {
+  test('comments need the comment right; own comments and (for the author) any can be deleted', async () => {
+    const { app, req, ms, proposeAndAccept, reviewer } = await setup();
+    const block = (await proposeAndAccept()).chapters[0]!.blocks[0]!;
+    const reader = await reviewer([]);
+    expect((await reader.req('POST', `/manuscript/blocks/${block.id}/comments`, { text: 'Hm' })).statusCode).toBe(403);
+    const r = await reviewer(['comment']);
+    const res = await ms(await r.req('POST', `/manuscript/blocks/${block.id}/comments`, { text: 'Zu langsam.' }));
+    const c = res.chapters[0]!.blocks[0]!.comments[0]!;
+    expect(c).toMatchObject({ text: 'Zu langsam.', mine: true });
+    expect((await reader.req('DELETE', `/manuscript/blocks/${block.id}/comments/${c.id}`)).statusCode).toBe(403);
+    const gone = await ms(await req('DELETE', `/manuscript/blocks/${block.id}/comments/${c.id}`));
+    expect(gone.chapters[0]!.blocks[0]!.comments).toEqual([]);
+    await app.close();
+  });
+
+  test('a reviewer suggestion changes nothing until the author accepts it (AC-019)', async () => {
+    const { app, req, ms, proposeAndAccept, reviewer } = await setup();
+    const block = (await proposeAndAccept()).chapters[0]!.blocks[0]!;
+    const r = await reviewer(['suggest']);
+    expect((await r.req('PATCH', `/manuscript/blocks/${block.id}`, { baseVersion: 1, text: 'x' })).statusCode).toBe(403);
+    const made = await ms(await r.req('POST', `/manuscript/blocks/${block.id}/suggestions`, { baseVersion: 1, title: 'Ankunft', synopsis: '', text: 'Vorschlag', note: 'kürzer' }));
+    const sug = made.chapters[0]!.blocks[0]!.suggestions[0]!;
+    expect(made.chapters[0]!.blocks[0]!.text).toBe('');
+    expect((await r.req('POST', `/manuscript/blocks/${block.id}/suggestions/${sug.id}/accept`)).statusCode).toBe(403);
+    const accepted = await ms(await req('POST', `/manuscript/blocks/${block.id}/suggestions/${sug.id}/accept`));
+    expect(accepted.chapters[0]!.blocks[0]).toMatchObject({ text: 'Vorschlag', version: 2, suggestions: [] });
+    const versions = (await req('GET', `/manuscript/blocks/${block.id}/versions`)).json() as { reason: string }[];
+    expect(versions[0]!.reason).toBe('suggestion');
+    const second = (await ms(await r.req('POST', `/manuscript/blocks/${block.id}/suggestions`, { baseVersion: 2, title: 'A', synopsis: '', text: 'B' }))).chapters[0]!.blocks[0]!.suggestions[0]!;
+    const withdrawn = await ms(await r.req('POST', `/manuscript/blocks/${block.id}/suggestions/${second.id}/reject`));
+    expect(withdrawn.chapters[0]!.blocks[0]).toMatchObject({ text: 'Vorschlag', suggestions: [] });
+    await app.close();
+  });
+
+  test('an instruction is stored per block and steers the AI draft (AC-015)', async () => {
+    const { app, req, ms, proposeAndAccept } = await setup();
+    const block = (await proposeAndAccept()).chapters[0]!.blocks[0]!;
+    const saved = await ms(await req('PUT', `/manuscript/blocks/${block.id}/instruction`, { instruction: 'aus Miras Sicht' }));
+    expect(saved.chapters[0]!.blocks[0]!).toMatchObject({ instruction: 'aus Miras Sicht', version: 1 });
+    expect((await req('POST', `/manuscript/blocks/${block.id}/draft`)).json()).toEqual({ text: 'KI-Entwurf: Ankunft (aus Miras Sicht)' });
+    await app.close();
+  });
+
+  test('a chapter is locked as a whole, or not at all when one block is taken (AC-010)', async () => {
+    const { app, req, ms, proposeAndAccept, reviewer } = await setup();
+    const chapter = (await proposeAndAccept()).chapters[0]!;
+    const r = await reviewer(['edit']);
+    await r.req('POST', `/manuscript/blocks/${chapter.blocks[1]!.id}/lock`);
+    expect((await req('POST', `/manuscript/chapters/${chapter.id}/lock`)).statusCode).toBe(423);
+    expect((await ms(await req('GET', '/manuscript'))).chapters[0]!.blocks[0]!.lock).toBeNull();
+    await r.req('DELETE', `/manuscript/blocks/${chapter.blocks[1]!.id}/lock`);
+    const locked = await ms(await req('POST', `/manuscript/chapters/${chapter.id}/lock`));
+    expect(locked.chapters[0]!.blocks.every((b) => b.lock?.mine)).toBe(true);
+    const released = await ms(await req('DELETE', `/manuscript/chapters/${chapter.id}/lock`));
+    expect(released.chapters[0]!.blocks.every((b) => b.lock === null)).toBe(true);
     await app.close();
   });
 });

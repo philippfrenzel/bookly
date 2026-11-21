@@ -167,6 +167,8 @@ export interface DraftContext {
   source: { title: string; description: string } | null;
   characters: { name: string; description: string }[];
   scenes: { name: string; description: string }[];
+  /** The author's concrete instructions for this block (FR-018); they take precedence. */
+  instruction?: string;
   /** End of the previous block's text, for continuity. */
   previousText: string;
 }
@@ -175,6 +177,7 @@ const DRAFT_SYSTEM = [
   'Du schreibst für eine Autorin oder einen Autor einen ersten Entwurf einer Romanpassage auf Deutsch.',
   'Erzähle, was im Inhalt des Bausteins steht, mit den genannten Figuren am genannten Schauplatz.',
   'Schließe stilistisch und inhaltlich an den vorherigen Text an, falls vorhanden. Etwa 300 bis 600 Wörter.',
+  'Halte dich vorrangig an die "anweisung" des Autors, falls vorhanden.',
   'Kein Titel, keine Erklärungen. Antworte als JSON-Objekt mit dem Feld "text".',
 ].join(' ');
 
@@ -190,6 +193,7 @@ export function draftRequest(ctx: DraftContext): AiRequest {
       quelle: ctx.source,
       figuren: ctx.characters,
       szenen: ctx.scenes,
+      ...(ctx.instruction && { anweisung: ctx.instruction }),
       vorherigerText: ctx.previousText,
     }),
     schemaName: 'block_draft',

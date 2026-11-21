@@ -107,7 +107,7 @@ export async function insertBlock(
 }
 
 /** Stores new content as the next version of the block; every version stays (FR-004). */
-export async function writeVersion(tx: Tx, row: BlockRow, content: BlockContent, reason: 'edit' | 'restore', authorId: Id): Promise<void> {
+export async function writeVersion(tx: Tx, row: BlockRow, content: BlockContent, reason: 'edit' | 'restore' | 'suggestion', authorId: Id): Promise<void> {
   const version = row.version + 1;
   await tx.insert(blockVersions).values({ blockId: row.id, version, ...pick(content), reason, authorId });
   await tx.update(blocks).set({ ...pick(content), version, updatedAt: new Date() }).where(eq(blocks.id, row.id));
