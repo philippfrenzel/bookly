@@ -57,7 +57,9 @@ npm run e2e         # Playwright end-to-end flow (needs bookly_e2e, starts its o
 | `OPENROUTER_MODEL` | _(none)_ | OpenRouter model id; required when `OPENROUTER_API_KEY` is set |
 | `AI_FAKE` | _(unset)_ | Set to `1` to use a deterministic fake AI client (used by e2e) |
 | `API_TARGET` | `http://localhost:3000` | API URL the web dev server proxies `/api` to |
-| `E2E_DATABASE_URL` | `postgres://localhost:5432/bookly_e2e` | Database used by the e2e run (API on port 3100, web on 5174) |
+| `E2E_DATABASE_URL` | `postgres://localhost:5432/bookly_e2e` | Database used by the e2e run |
+| `E2E_API_PORT` | `3100` | API server port of the e2e run |
+| `E2E_WEB_PORT` | `5174` | Web dev server port of the e2e run |
 
 ## Features
 
@@ -67,6 +69,7 @@ npm run e2e         # Playwright end-to-end flow (needs bookly_e2e, starts its o
 - Interactive map: zoom, filters, notes overlay, drag to create ranges and connections.
 - Typed connections (time jump, flashback, merge, character switch) with live contradiction hints, which can be acknowledged with „Bewusst so“.
 - Scenes (places) with an optional image (JPEG/PNG/WebP, up to 5 MB, stored in the database) and any number of notes, assigned to sections with a per-section scene description; with AI configured the description can be generated from the scene's image and notes.
+- Scene writing: every scene assignment is written in ordered blocks (split at the caret, insert, undo the split); the AI magic wand works per block with a length choice, and the book word range („Umfang“ on the manuscript page) guides draft length.
 - Manuscript: AI chapter structure from storylines, characters and scenes (accept or reject), chapters and Bausteine that can be edited, moved and soft-deleted (trash with restore), every version kept, locks with a 30-minute timeout (per Baustein or whole chapter), instructions per Baustein for the AI draft, a reading preview, and up to 5 reviewers per book with individual rights who can comment and send suggestions for the author to accept.
 - No upper limit on storylines, sections, time points, characters, scenes or notes.
 
