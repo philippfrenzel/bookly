@@ -3,6 +3,8 @@
  * It grows with its content, keeps one undo history, and can show an AI suggestion as a change
  * over the text (see ./suggestion). A ref gives a textarea-like handle (`value`, `selectionStart`,
  * `selectionEnd`, `focus`) so existing code that reads fields, including the magic wand, keeps working.
+ * Writing aids: "@" mentions of the page's characters (./MentionNames), reviewer hints and the typing
+ * assistant (both switchable, ./preferences).
  */
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef } from 'react';
 import { Compartment, EditorState } from '@codemirror/state';
@@ -12,6 +14,11 @@ import { acceptSuggestion, cycleSuggestion, rejectSuggestion, setSuggestion, sug
 import type { Suggestion } from './suggestion';
 import { assistIsOn, selectionTools, setAssistOn } from './selectionTools';
 import type { Assist } from './selectionTools';
+import { ghost } from './ghost';
+import { hints } from './hints';
+import { mentions } from './mentions';
+import { useMentionNames } from './MentionNames';
+import { useEditorPrefs } from './preferences';
 
 /** Textarea-like handle on a ProseField, plus the suggestion controls the magic wand uses. */
 export interface ProseHandle {
@@ -71,6 +78,14 @@ export const ProseField = forwardRef<ProseHandle, ProseFieldProps>(function Pros
   latest.current = props;
   const readOnlyConf = useRef(new Compartment());
   const labelConf = useRef(new Compartment());
+  const aidsConf = useRef(new Compartment());
+  const names = useMentionNames();
+  const prefs = useEditorPrefs();
+  /** Mentions, hints and typing assistant; none on a read-only field. */
+  const aids = () =>
+    readOnly
+      ? []
+      : [mentions(names), prefs.hints ? hints(names, () => assist.current) : [], prefs.ghost ? ghost(() => assist.current) : []];
   /** Accessible name and placeholder; both can change (e.g. a renamed character or a renumbered block). */
   const labelling = () => [
     EditorView.contentAttributes.of({ 'aria-label': ariaLabel ?? '', 'aria-multiline': 'true', ...(id ? { id } : {}) }),
@@ -92,6 +107,7 @@ export const ProseField = forwardRef<ProseHandle, ProseFieldProps>(function Pros
           keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorView.lineWrapping,
           labelConf.current.of(labelling()),
+          aidsConf.current.of(aids()),
           readOnlyConf.current.of([EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)]),
           limit === undefined ? [] : EditorState.changeFilter.of((tr) => tr.newDoc.length <= limit || tr.newDoc.length <= tr.startState.doc.length),
           EditorView.updateListener.of((u) => {
@@ -128,6 +144,11 @@ export const ProseField = forwardRef<ProseHandle, ProseFieldProps>(function Pros
     viewRef.current?.dispatch({ effects: labelConf.current.reconfigure(labelling()) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ariaLabel, placeholder, id]);
+
+  useEffect(() => {
+    viewRef.current?.dispatch({ effects: aidsConf.current.reconfigure(aids()) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [names, prefs.hints, prefs.ghost, readOnly]);
 
   useEffect(() => {
     viewRef.current?.dispatch({

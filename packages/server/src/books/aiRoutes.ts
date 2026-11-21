@@ -7,6 +7,7 @@ import type { AiRequest } from '../ai/client.js';
 import { requireUser } from '../auth/session.js';
 import { buildCheckInput } from '../ai/checkPrompt.js';
 import { enqueueForced } from '../ai/queue.js';
+import { withMentions } from '../ai/mentions.js';
 import { loadSceneBlockContext, sceneBlockRequest } from '../ai/sceneBlockContext.js';
 import { buildTextContext } from '../ai/textContext.js';
 import { parseTextSuggestions, textRequest } from '../ai/textPrompt.js';
@@ -88,11 +89,12 @@ export async function aiRoutes(app: FastifyInstance): Promise<void> {
     if (target.kind === 'sceneBlock') {
       // Scene blocks are scoped to their assignment; generating is allowed on an empty block.
       const ctx = await loadSceneBlockContext(app.db, bookId, target.assignmentId, target.blockId);
-      aiRequest = sceneBlockRequest(ctx, body);
+      aiRequest = sceneBlockRequest(withMentions(ctx, ctx.characters, body.text), body);
     } else {
-      const ctx = buildTextContext(await loadBook(app.db, bookId), body);
+      const book = await loadBook(app.db, bookId);
+      const ctx = buildTextContext(book, body);
       if (body.action === 'generate' && !ctx.hasText) return reply.code(400).send({ error: 'empty_context' });
-      aiRequest = textRequest(ctx, body);
+      aiRequest = textRequest(withMentions(ctx, book.characters, body.text), body);
     }
     try {
       return { suggestions: parseTextSuggestions(await app.ai!.complete(aiRequest), body) };

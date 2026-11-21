@@ -110,7 +110,7 @@ describe('sceneBlockRequest', () => {
     action, text: '', selection: null, draft: {}, ...(length && { length }),
   } as AiTextBody);
   const ctx = (targetWords: { min: number; max: number } | null) => ({
-    fieldLabel: 'Szenentext' as const, context: {}, hasText: true as const, targetWords,
+    fieldLabel: 'Szenentext' as const, context: {}, hasText: true as const, targetWords, characters: [],
   });
 
   const OVERRIDE = 'Abweichend von den Längenangaben oben („1–3 Sätze“) gilt für diesen Block: Umfang:';
