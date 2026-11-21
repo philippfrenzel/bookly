@@ -10,6 +10,7 @@ import type { BookStyle, Id, ManuscriptResponse, TeamStyle } from '@bookly/share
 import { api } from '../api/client';
 import { Icon } from '../ui/Icon';
 import { manuscriptError, useManuscriptMutation } from './manuscriptApi';
+import { ProseField } from '../editor/ProseField';
 
 /** The style tab. */
 export function StylePanel({ bookId, ms }: { bookId: Id; ms: ManuscriptResponse }) {
@@ -71,7 +72,7 @@ function StyleEditor({ bookId, ms }: { bookId: Id; ms: ManuscriptResponse }) {
         )}
         <label>
           Eigene Ergänzungen
-          <textarea rows={3} value={style.addition} maxLength={STYLE_LIMITS.addition} onChange={(e) => { setSaved(false); setStyle((s) => ({ ...s, addition: e.target.value })); }} placeholder="z. B. Dialoge im Dialekt, Kapitel enden ruhig" />
+          <ProseField ariaLabel="Eigene Ergänzungen" rows={3} value={style.addition} maxLength={STYLE_LIMITS.addition} onChange={(value) => { setSaved(false); setStyle((s) => ({ ...s, addition: value })); }} placeholder="z. B. Dialoge im Dialekt, Kapitel enden ruhig" />
         </label>
         <div className="actions">
           <button type="submit" className="primary" disabled={mutate.isPending}>Stil speichern</button>
@@ -112,7 +113,7 @@ function TeamStyles({ bookId, styles }: { bookId: Id; styles: TeamStyle[] }) {
       {adding ? (
         <form className="ms-reviewer-form" onSubmit={add} aria-label="Neuer Grundstil">
           <label>Name<input value={name} maxLength={STYLE_LIMITS.name} onChange={(e) => setName(e.target.value)} /></label>
-          <label>Beschreibung<textarea rows={2} value={description} maxLength={STYLE_LIMITS.description} onChange={(e) => setDescription(e.target.value)} /></label>
+          <label>Beschreibung<ProseField ariaLabel="Beschreibung" rows={2} value={description} maxLength={STYLE_LIMITS.description} onChange={(value) => setDescription(value)} /></label>
           <div className="actions">
             <button type="submit" className="primary" disabled={create.isPending}>Anlegen</button>
             <button type="button" onClick={() => setAdding(false)}>Abbrechen</button>

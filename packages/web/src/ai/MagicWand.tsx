@@ -1,15 +1,22 @@
-/** The AI "magic wand" for one text field: action menu, request, and an in-place suggestion bar. */
+/**
+ * The AI "magic wand" for one text field: action menu, request, and a suggestion bar.
+ * On a native input the suggestion is written in place; on a ProseField (CodeMirror) it is shown as a
+ * change over the text and only written when the author accepts it.
+ */
 import { useEffect, useId, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
 import { draftHasText, fieldLimit, fitSuggestion, targetRange } from '@bookly/shared';
 import type { AiTextAction, AiTextBody, AiTextDraft, AiTextResult, AiTextTarget, Id, LengthChoice } from '@bookly/shared';
 import { api } from '../api/client';
 import { Icon } from '../ui/Icon';
+import { isProse } from '../editor/ProseField';
+import type { ProseHandle } from '../editor/ProseField';
 import { replaceRange } from './replaceRange';
 import { menuItems } from './wandState';
 import type { MenuItem } from './wandState';
 
-type Field = HTMLInputElement | HTMLTextAreaElement;
+type Native = HTMLInputElement | HTMLTextAreaElement;
+type Field = Native | ProseHandle;
 type Selection = { start: number; end: number } | null;
 
 /** Props of the magic wand; the caller wraps the field and the wand in one `div.wand-field`. */
@@ -41,6 +48,8 @@ interface BarState {
   suggestions: string[];
   /** The field's full value as the wand last left it; bar operations only act on a field that still shows it. */
   shown: string;
+  /** True on a ProseField: the suggestion is an overlay held by the editor, not text in the field. */
+  prose: boolean;
 }
 
 const FAILED = 'Vorschlag fehlgeschlagen.';
@@ -71,7 +80,7 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
   const wrapper = (): HTMLElement | null => buttonRef.current?.closest<HTMLElement>('.wand-field') ?? buttonRef.current?.parentElement ?? null;
 
   /** Writes into the field without triggering the "user typed" close. */
-  const apply = (el: Field, start: number, end: number, value: string) => {
+  const apply = (el: Native, start: number, end: number, value: string) => {
     applying.current = true;
     try {
       replaceRange(el, start, end, value);
@@ -86,11 +95,17 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
    */
   const barField = (): Field | null => {
     const el = getField();
-    return el && bar && el.value === bar.shown ? el : null;
+    if (!el || !bar) return null;
+    if (isProse(el)) return el.suggestion() ? el : null;
+    return el.value === bar.shown ? el : null;
   };
 
   const switchBy = (delta: number) => {
     const el = barField();
+    if (el && isProse(el)) {
+      el.cycle(delta);
+      return;
+    }
     if (!el || !bar) {
       setBar(null);
       return;
@@ -104,15 +119,39 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
 
   const restore = () => {
     const el = barField();
-    if (el && bar) apply(el, 0, el.value.length, bar.original);
+    if (el && isProse(el)) el.reject();
+    else if (el && bar) apply(el, 0, el.value.length, bar.original);
     setBar(null);
   };
 
+  /** ProseField only: writes the shown suggestion into the text. */
+  const accept = () => {
+    const el = barField();
+    if (el && isProse(el)) el.accept();
+    setBar(null);
+  };
+
+  // ProseField: the editor owns the suggestion (Tab, Esc, Alt+arrows and typing act on it there);
+  // the bar follows it and closes once it is accepted or discarded.
+  const proseBar = bar?.prose ?? false;
+  useEffect(() => {
+    if (!proseBar) return;
+    const el = getField();
+    if (!el || !isProse(el)) return;
+    return el.subscribe((s) => {
+      if (!mounted.current) return;
+      if (!s) setBar(null);
+      else setBar((b) => (b ? { ...b, index: s.index } : b));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proseBar]);
+
   // While the bar is open: keys on the field, typing, clicks outside and leaving the field.
   useEffect(() => {
-    const el: HTMLElement | null = getField();
+    const field = getField();
     const box = wrapper();
-    if (!bar || !el || !box) return;
+    if (!bar || bar.prose || !field || isProse(field) || !box) return;
+    const el: HTMLElement = field;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -217,8 +256,13 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
       setMessage('Kein Vorschlag.');
       return;
     }
+    if (isProse(cur)) {
+      cur.suggest(range.start, range.end, suggestions);
+      setBar({ original: text, start: range.start, currentLength: range.end - range.start, index: 0, suggestions, shown: text, prose: true });
+      return;
+    }
     apply(cur, range.start, range.end, suggestions[0]!);
-    setBar({ original: text, start: range.start, currentLength: suggestions[0]!.length, index: 0, suggestions, shown: cur.value });
+    setBar({ original: text, start: range.start, currentLength: suggestions[0]!.length, index: 0, suggestions, shown: cur.value, prose: false });
   };
 
   const onMenuKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -312,12 +356,25 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
           <button type="button" className="icon-button" aria-label="Nächster Vorschlag" disabled={bar.suggestions.length < 2} onMouseDown={keepFocus} onClick={() => switchBy(1)}>
             <Icon name="next" />
           </button>
-          <button type="button" className="icon-button" aria-label="Rückgängig" onMouseDown={keepFocus} onClick={restore}>
-            <Icon name="undo" />
-          </button>
-          <button type="button" className="icon-button" aria-label="Vorschläge schließen" onMouseDown={keepFocus} onClick={restore}>
-            <Icon name="close" />
-          </button>
+          {bar.prose ? (
+            <>
+              <button type="button" className="icon-button" aria-label="Vorschlag verwerfen" title="Verwerfen (Esc)" onMouseDown={keepFocus} onClick={restore}>
+                <Icon name="close" />
+              </button>
+              <button type="button" className="wand-accept" aria-label="Vorschlag übernehmen" title="Übernehmen (Tab)" onMouseDown={keepFocus} onClick={accept}>
+                <Icon name="check" /> Übernehmen
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" className="icon-button" aria-label="Rückgängig" onMouseDown={keepFocus} onClick={restore}>
+                <Icon name="undo" />
+              </button>
+              <button type="button" className="icon-button" aria-label="Vorschläge schließen" onMouseDown={keepFocus} onClick={restore}>
+                <Icon name="close" />
+              </button>
+            </>
+          )}
         </div>
       )}
       <p role="status" className={message === FAILED ? 'wand-status is-error' : 'wand-status'}>

@@ -4,11 +4,13 @@
  * structural changes are saved at once (spec 2026-11-21-szenen-schreiben-design.md, A2/A3).
  */
 import { useEffect, useRef, useState } from 'react';
-import type { MouseEvent as ReactMouseEvent, SyntheticEvent } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import { SCENE_BLOCK_LIMITS, splitBlockText } from '@bookly/shared';
 import type { Id, LengthChoice, SceneAssignment, SceneBlock } from '@bookly/shared';
 import { LengthSelect } from '../ai/LengthSelect';
 import { MagicWand } from '../ai/MagicWand';
+import { ProseField } from '../editor/ProseField';
+import type { ProseHandle } from '../editor/ProseField';
 import { insertAfter, removeEmpty, splitAt, undoSplit } from './blockOps';
 import type { DraftBlock, SplitRecord } from './blockOps';
 import { useBlockSaver, type AfterSave, type BuildBlocks } from './useBlockSaver';
@@ -49,7 +51,7 @@ export function SceneBlocks({ bookId, assignment, aiEnabled, name }: SceneBlocks
   const [focusId, setFocusId] = useState<Id | null>(null);
   const [structureSaving, setStructureSaving] = useState(false);
   const structureLocked = useRef(false);
-  const fields = useRef(new Map<Id, HTMLTextAreaElement>());
+  const fields = useRef(new Map<Id, ProseHandle>());
 
   // A block inserted by "Block einfügen" gets the focus once it is rendered from the response.
   useEffect(() => {
@@ -77,8 +79,7 @@ export function SceneBlocks({ bookId, assignment, aiEnabled, name }: SceneBlocks
   const canUndo = split !== null && undoSplit(blocks, split) !== null;
   const canRemove = !!activeBlock && activeBlock.text === '' && blocks.length > 1;
 
-  const track = (id: Id) => (e: SyntheticEvent<HTMLTextAreaElement>) =>
-    setActive({ id, start: e.currentTarget.selectionStart, end: e.currentTarget.selectionEnd });
+  const track = (id: Id) => (start: number, end: number) => setActive({ id, start, end });
 
   const onSplit = () => {
     if (!active) return;
@@ -157,24 +158,22 @@ export function SceneBlocks({ bookId, assignment, aiEnabled, name }: SceneBlocks
         const label = `Block ${i + 1} Szene ${name}`;
         return (
           <div className="wand-field" key={b.id}>
-            <textarea
+            <ProseField
               ref={(el) => {
                 if (el) fields.current.set(b.id, el);
                 else fields.current.delete(b.id);
               }}
-              aria-label={label}
+              ariaLabel={label}
               maxLength={SCENE_BLOCK_LIMITS.text}
               placeholder="Text dieses Blocks"
               value={b.text}
               readOnly={structureSaving}
-              onChange={(e) => {
-                if (!structureLocked.current) saver.edit(b.id, e.target.value);
+              rows={4}
+              onChange={(text) => {
+                if (!structureLocked.current) saver.edit(b.id, text);
               }}
               onBlur={() => onBlur(b)}
-              onFocus={track(b.id)}
               onSelect={track(b.id)}
-              onKeyUp={track(b.id)}
-              onClick={track(b.id)}
             />
             <MagicWand
               getField={() => structureLocked.current ? null : fields.current.get(b.id) ?? null}

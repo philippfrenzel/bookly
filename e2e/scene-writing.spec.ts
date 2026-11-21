@@ -5,6 +5,7 @@
  * paragraph breaks, and keeps its own independent block list.
  */
 import { expect, test } from '@playwright/test';
+import { expectProse, selectProse } from './prose';
 
 const FIRST = 'Mara fragte: „Wohin gehst du?“ ';
 const LAST = 'Jon antwortete: „Zum Hafen.“';
@@ -92,35 +93,34 @@ test('scene writing in ordered blocks', async ({ page }) => {
   await scenes.getByRole('button', { name: 'Zuordnen' }).click();
 
   const block = (n: number) => scenes.getByLabel(`Block ${n} Szene Hafen`, { exact: true });
-  await expect(block(1)).toHaveValue(FIRST + LAST);
+  await expectProse(block(1), FIRST + LAST);
   await expect(block(2)).toHaveCount(0);
 
   // Split exactly before „Jon antwortete“.
-  await block(1).evaluate((el: HTMLTextAreaElement, i) => {
-    el.focus();
-    el.setSelectionRange(i, i);
-  }, FIRST.length);
-  // A key release reports the caret to the component without moving it.
-  await page.keyboard.press('Shift');
+  await selectProse(block(1), FIRST.length);
   await scenes.getByRole('button', { name: 'Hier teilen' }).click();
-  await expect(block(2)).toHaveValue(LAST);
-  await expect(block(1)).toHaveValue(FIRST);
+  await expectProse(block(2), LAST);
+  await expectProse(block(1), FIRST);
 
   // Insert an empty block after block 1; it becomes block 2 and takes focus.
   await block(1).focus();
   await scenes.getByRole('button', { name: 'Block einfügen' }).click();
-  await expect(block(3)).toHaveValue(LAST);
-  await expect(block(2)).toHaveValue('');
+  await expectProse(block(3), LAST);
+  await expectProse(block(2), '');
   await expect(block(2)).toBeFocused();
 
   // Draft only the empty block.
   await scenes.getByRole('button', { name: 'KI-Assistent: Block 2 Szene Hafen', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Vorschlagen' }).click();
-  await expect(block(2)).toHaveValue('KI-Vorschlag 1');
-  await expect(block(1)).toHaveValue(FIRST);
-  await expect(block(3)).toHaveValue(LAST);
+  // The draft is shown as a change and written only when accepted (Tab).
+  await expect(block(2).locator('.cm-ai-ins')).toHaveText('KI-Vorschlag 1');
+  await expectProse(block(2), '');
+  await page.keyboard.press('Tab');
+  await expectProse(block(2), 'KI-Vorschlag 1');
+  await expectProse(block(1), FIRST);
+  await expectProse(block(3), LAST);
 
-  // Leave the drafted block so the suggestion is kept and saved (wait for the request so the reload cannot abort it).
+  // Leave the drafted block so the accepted text is saved (wait for the request so the reload cannot abort it).
   const saved = page.waitForResponse((r) => r.request().method() !== 'GET' && r.url().includes('/api/') && r.ok());
   await block(1).click();
   await saved;
@@ -128,9 +128,9 @@ test('scene writing in ordered blocks', async ({ page }) => {
   await page.getByRole('button', { name: 'Storyline „Reise“' }).click();
   await panel.getByRole('tab', { name: 'Zeitpunkte' }).click();
   await panel.getByRole('button', { name: 'Abschnitt „Abfahrt“ bearbeiten' }).click();
-  await expect(block(1)).toHaveValue(FIRST);
-  await expect(block(2)).toHaveValue('KI-Vorschlag 1');
-  await expect(block(3)).toHaveValue(LAST);
+  await expectProse(block(1), FIRST);
+  await expectProse(block(2), 'KI-Vorschlag 1');
+  await expectProse(block(3), LAST);
   await expect(scenes.getByLabel(/^Block \d+ Szene Hafen$/)).toHaveCount(3);
   await panel.getByRole('button', { name: 'Fertig' }).click();
 
@@ -145,7 +145,7 @@ test('scene writing in ordered blocks', async ({ page }) => {
   // It starts from the latest description, split into blocks at the paragraph breaks.
   await expect(side.getByLabel(/^Block \d+ Szene Hafen$/)).toHaveCount(3);
   for (const [i, text] of [FIRST, 'KI-Vorschlag 1', LAST].entries()) {
-    await expect(side.getByLabel(`Block ${i + 1} Szene Hafen`, { exact: true })).toHaveValue(text);
+    await expectProse(side.getByLabel(`Block ${i + 1} Szene Hafen`, { exact: true }), text);
   }
   await sideBlock.fill('Nur am Nebenstrang.');
   await sideBlock.blur();
@@ -154,14 +154,14 @@ test('scene writing in ordered blocks', async ({ page }) => {
   await page.reload();
   await page.getByRole('button', { name: 'Storyline „Erinnerung“' }).click();
   await panel.getByRole('tab', { name: 'Szenen' }).click();
-  await expect(panel.getByRole('group', { name: 'Szenen' }).getByLabel('Block 1 Szene Hafen', { exact: true })).toHaveValue('Nur am Nebenstrang.');
+  await expectProse(panel.getByRole('group', { name: 'Szenen' }).getByLabel('Block 1 Szene Hafen', { exact: true }), 'Nur am Nebenstrang.');
 
   // The main section is untouched.
   await page.getByRole('button', { name: 'Zurück zum Buch' }).click();
   await page.getByRole('button', { name: 'Storyline „Reise“' }).click();
   await panel.getByRole('tab', { name: 'Zeitpunkte' }).click();
   await panel.getByRole('button', { name: 'Abschnitt „Abfahrt“ bearbeiten' }).click();
-  await expect(block(1)).toHaveValue(FIRST);
-  await expect(block(2)).toHaveValue('KI-Vorschlag 1');
-  await expect(block(3)).toHaveValue(LAST);
+  await expectProse(block(1), FIRST);
+  await expectProse(block(2), 'KI-Vorschlag 1');
+  await expectProse(block(3), LAST);
 });

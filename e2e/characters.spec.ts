@@ -57,7 +57,7 @@ test('character profile with AI warning flow', async ({ page }) => {
   await expect(linked).toBeChecked();
   await panel.getByRole('button', { name: 'Ergänzung für Anna' }).click();
   const addition = panel.getByLabel('Verhalten Ergänzung Anna', { exact: true });
-  // The addition textareas span the editor's full content width (they do not shrink to their cols).
+  // The addition fields span the editor's full content width (they do not shrink to their cols).
   const widthRatio = await addition.evaluate((el) => {
     const editor = el.closest('.addition-editor')!;
     const cs = getComputedStyle(editor);
@@ -69,7 +69,7 @@ test('character profile with AI warning flow', async ({ page }) => {
 
   // A storyline text with the fake AI trigger starts a check after the quiet period.
   await panel.getByRole('tab', { name: 'Storyline' }).click();
-  const description = panel.locator('textarea').first()  // the storyline's own description, above the section form;
+  const description = panel.locator('.prose-field [contenteditable]').first()  // the storyline's own description, above the section form;
   await description.fill('Anna flieht. FAKE-WIDERSPRUCH');
   await description.blur();
 

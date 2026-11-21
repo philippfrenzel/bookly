@@ -11,6 +11,7 @@ import { useSaveFeedback, type SaveFeedback } from '../book/saveFeedback';
 import { Icon } from '../ui/Icon';
 import { sceneTargets, TargetSelect } from './SceneAssignments';
 import { descriptionErrorMessage, imageProblem, sceneImageUrl, uploadErrorMessage, useSceneDescription, useUploadSceneImage } from './sceneApi';
+import { ProseField } from '../editor/ProseField';
 
 /** A place a scene is assigned to (a section, or a whole storyline when `sectionId` is null), with what is needed to show and open it. */
 interface AssignedSection {
@@ -148,14 +149,14 @@ function SceneItem({ book, scene, sections, assignments, aiEnabled, fb, onOpenSe
         <span className="scene-label">Notizen</span>
         {scene.notes.map((n, i) => (
           <div key={n.id} className="scene-note">
-            <textarea
-              aria-label={`Notiz ${i + 1} Szene ${scene.name}`}
+            <ProseField
+              ariaLabel={`Notiz ${i + 1} Szene ${scene.name}`}
               key={`${n.text}-${fb.resetKey}`}
               maxLength={SCENE_LIMITS.note}
               placeholder="Notiz"
               defaultValue={n.text}
-              onBlur={(e) => {
-                if (e.target.value.trim() !== n.text) saveNote.mutate({ id: n.id, text: e.target.value }, { onError });
+              onBlur={(value) => {
+                if (value.trim() !== n.text) saveNote.mutate({ id: n.id, text: value }, { onError });
               }}
             />
             <button type="button" className="icon-button" aria-label={`Notiz ${i + 1} der Szene „${scene.name}“ löschen`} title="Notiz löschen" onClick={() => removeNote.mutate({ id: n.id }, { onError })}>

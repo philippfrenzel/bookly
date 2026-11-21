@@ -9,6 +9,7 @@ import type { Id, LengthChoice, ManuscriptBlock } from '@bookly/shared';
 import { LengthSelect } from '../ai/LengthSelect';
 import { Icon } from '../ui/Icon';
 import { isLocked, manuscriptError, useBlockDraft, useManuscriptMutation } from './manuscriptApi';
+import { ProseField } from '../editor/ProseField';
 
 interface Props {
   bookId: Id;
@@ -88,17 +89,17 @@ export function BlockEditor({ bookId, block, mode, onClose }: Props) {
       </label>
       <label>
         Inhalt (Plan)
-        <textarea rows={2} value={synopsis} maxLength={MANUSCRIPT_LIMITS.synopsis} onChange={(e) => setSynopsis(e.target.value)} />
+        <ProseField ariaLabel="Inhalt (Plan)" rows={2} value={synopsis} maxLength={MANUSCRIPT_LIMITS.synopsis} onChange={(value) => setSynopsis(value)} />
       </label>
       {mode === 'edit' && (
         <label>
           Anweisung für diesen Baustein
-          <textarea rows={2} value={instruction} maxLength={MANUSCRIPT_LIMITS.instruction} onChange={(e) => setInstruction(e.target.value)} placeholder="z. B. aus Miras Sicht, kurze Sätze, endet mit einem Cliffhanger" />
+          <ProseField ariaLabel="Anweisung für diesen Baustein" rows={2} value={instruction} maxLength={MANUSCRIPT_LIMITS.instruction} onChange={(value) => setInstruction(value)} placeholder="z. B. aus Miras Sicht, kurze Sätze, endet mit einem Cliffhanger" />
         </label>
       )}
       <label>
         Text
-        <textarea className="ms-text-input" rows={12} value={text} onChange={(e) => setText(e.target.value)} />
+        <ProseField ariaLabel="Text" className="ms-text-input" rows={12} value={text} onChange={(value) => setText(value)} />
       </label>
       {mode === 'suggest' && (
         <label>
