@@ -1,11 +1,12 @@
 /**
- * Book-wide hint list at the top of the side panel: open contradictions first, each one able to
- * highlight its connection on the plan and open it; acknowledged hints fold away. Never blocks anything.
+ * Book-wide hint list at the top of the side panel, kept to one line while all is well: open contradictions
+ * and character warnings list below it, each able to open its place; acknowledged ones fold away. Never blocks anything.
  */
 import { useState } from 'react';
 import type { Book, CharacterWarning, Hint, Id } from '@bookly/shared';
 import { useBookMutation } from '../api/hooks';
 import { CharacterWarningItem } from './CharacterWarningItem';
+import { Icon } from '../ui/Icon';
 
 interface Props {
   book: Book;
@@ -63,22 +64,34 @@ export function BookHints({ book, hints, warnings, aiEnabled, onShowStoryline, o
   );
   return (
     <section className="book-hints" aria-label="Hinweise im Buch">
-      <h2>
-        Hinweise{openCount > 0 && <span className="count-badge">{openCount}</span>}
-      </h2>
-      {openCount === 0 ? (
-        <p className="all-clear">Keine offenen Widersprüche. Die Geschichte hält zusammen.</p>
-      ) : (
-        open.length > 0 && <ul>{open.map(item)}</ul>
-      )}
-      <div className="book-hints-group">
-        <h3>Figuren</h3>
-        <button type="button" disabled={!aiEnabled || checkAll.isPending} onClick={startCheckAll}>
+      <div className="book-hints-bar">
+        <h2>
+          Hinweise{openCount > 0 && <span className="count-badge">{openCount}</span>}
+        </h2>
+        {openCount === 0 && (
+          <p className="all-clear" title="Keine offenen Widersprüche. Die Geschichte hält zusammen.">
+            <Icon name="check" />
+            Alles stimmig
+          </p>
+        )}
+        <button
+          type="button"
+          className="book-hints-check"
+          title="Alle Storylines mit der KI auf Widersprüche zu den Figuren prüfen"
+          disabled={!aiEnabled || checkAll.isPending}
+          onClick={startCheckAll}
+        >
           Alle prüfen
         </button>
       </div>
+      {open.length > 0 && <ul>{open.map(item)}</ul>}
       {checkFailed && <p className="error" role="alert">Prüfung konnte nicht gestartet werden.</p>}
-      {openWarnings.length > 0 && <ul>{openWarnings.map(warningItem)}</ul>}
+      {openWarnings.length > 0 && (
+        <>
+          <h3 className="book-hints-group">Figuren</h3>
+          <ul>{openWarnings.map(warningItem)}</ul>
+        </>
+      )}
       {ackCount > 0 && (
         <details>
           <summary>{ackCount} bewusst so belassen</summary>

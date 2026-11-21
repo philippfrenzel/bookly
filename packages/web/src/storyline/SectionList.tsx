@@ -1,4 +1,4 @@
-/** Sections of a main strand: ordered list with reorder, add (button), direct-save editing and delete. */
+/** Sections of a main strand: ordered list with reorder, add (form behind a button), direct-save editing and delete. */
 import { useState } from 'react';
 import type { Book, Id, Section, Storyline, TimeRange } from '@bookly/shared';
 import { useBookMutation } from '../api/hooks';
@@ -7,6 +7,7 @@ import { CharacterChecks } from './CharacterChecks';
 import { noteOrNull, validateWithStoryline } from './draft';
 import { TextInput } from './fields';
 import { RangePicker } from './RangePicker';
+import { Icon } from '../ui/Icon';
 
 /** Editable fields of a section. */
 interface SectionDraft {
@@ -64,6 +65,12 @@ function SectionFields({ book, name, values, live, resetKey, onCommit, aiEnabled
   );
 }
 
+/** Short time label of a section, e.g. „Anfang“ or „Anfang – Mitte“. */
+function rangeOf(book: Book, r: TimeRange): string {
+  const name = (id: Id) => book.timePoints.find((t) => t.id === id)?.name ?? '?';
+  return r.startId === r.endId ? name(r.startId) : `${name(r.startId)} – ${name(r.endId)}`;
+}
+
 /** Form values of a stored section. */
 function draftOf(s: Section): SectionDraft {
   return { title: s.title, description: s.description, range: s.range, characterIds: s.characterIds, note: s.note ?? '' };
@@ -78,9 +85,10 @@ function toBody(d: Partial<SectionDraft>) {
 }
 
 /** Section management for one main strand. */
-export function SectionList({ book, storyline, aiEnabled }: { book: Book; storyline: Storyline; aiEnabled: boolean }) {
+export function SectionList({ book, storyline, aiEnabled, focusId = null, startAdding = false }: { book: Book; storyline: Storyline; aiEnabled: boolean; focusId?: Id | null; startAdding?: boolean }) {
   const fb = useSaveFeedback();
-  const [editingId, setEditingId] = useState<Id | null>(null);
+  const [editingId, setEditingId] = useState<Id | null>(focusId);
+  const [adding, setAdding] = useState(startAdding);
   // Bumped after a successful add so the add form starts empty again; a failed add keeps the input.
   const [addKey, setAddKey] = useState(0);
   const base = `/api/books/${book.id}`;
@@ -133,6 +141,7 @@ export function SectionList({ book, storyline, aiEnabled }: { book: Book; storyl
   return (
     <section aria-label="Abschnitte">
       <h3>Abschnitte</h3>
+      {ordered.length === 0 && !adding && <p className="muted">Noch keine Abschnitte. Teile den Hauptstrang in Etappen auf.</p>}
       {fb.feedback}
       <ul className="panel-list">
         {ordered.map((s, i) => (
@@ -150,7 +159,10 @@ export function SectionList({ book, storyline, aiEnabled }: { book: Book; storyl
               </div>
             ) : (
               <>
-                <span>{s.title}</span>
+                <span className="section-name">
+                  <span className="section-range">{rangeOf(book, s.range)}</span>
+                  {s.title}
+                </span>
                 <button type="button" aria-label={`Abschnitt „${s.title}“ nach oben`} disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
                 <button type="button" aria-label={`Abschnitt „${s.title}“ nach unten`} disabled={i === ordered.length - 1} onClick={() => move(i, 1)}>↓</button>
                 <button type="button" aria-label={`Abschnitt „${s.title}“ bearbeiten`} onClick={() => setEditingId(s.id)}>Bearbeiten</button>
@@ -160,6 +172,12 @@ export function SectionList({ book, storyline, aiEnabled }: { book: Book; storyl
           </li>
         ))}
       </ul>
+      {!adding ? (
+        <button type="button" className="with-icon" onClick={() => setAdding(true)}>
+          <Icon name="plus" />
+          Neuer Abschnitt
+        </button>
+      ) : (
       <AddSection
         key={addKey}
         book={book}
@@ -168,17 +186,19 @@ export function SectionList({ book, storyline, aiEnabled }: { book: Book; storyl
         initial={{ title: '', description: '', range: storyline.range, characterIds: [], note: '' }}
         resetKey={fb.resetKey}
         onSubmit={(draft) => {
-          if (check('draft', draft)) create.mutate(draft, { onError: fb.onError, onSuccess: () => setAddKey((k) => k + 1) });
+          if (check('draft', draft)) create.mutate(draft, { onError: fb.onError, onSuccess: () => { setAddKey((k) => k + 1); setAdding(false); } });
         }}
+        onCancel={() => setAdding(false)}
       />
+      )}
     </section>
   );
 }
 
 /** The add-section form: local draft, one button. Remounted by the parent after a successful add. */
 function AddSection({
-  book, initial, resetKey, onSubmit, aiEnabled, storylineId,
-}: { book: Book; initial: SectionDraft; resetKey: number; onSubmit: (draft: SectionDraft) => void; aiEnabled: boolean; storylineId: Id }) {
+  book, initial, resetKey, onSubmit, onCancel, aiEnabled, storylineId,
+}: { book: Book; initial: SectionDraft; resetKey: number; onSubmit: (draft: SectionDraft) => void; onCancel: () => void; aiEnabled: boolean; storylineId: Id }) {
   const [draft, setDraft] = useState(initial);
   return (
     <div className="storyline-form">
@@ -188,7 +208,8 @@ function AddSection({
         onCommit={(patch) => setDraft((d) => ({ ...d, ...patch }))}
       />
       <div className="actions">
-        <button type="button" onClick={() => onSubmit(draft)}>Abschnitt hinzufügen</button>
+        <button type="button" onClick={onCancel}>Abbrechen</button>
+        <button type="button" className="primary" onClick={() => onSubmit(draft)}>Abschnitt hinzufügen</button>
       </div>
     </div>
   );
