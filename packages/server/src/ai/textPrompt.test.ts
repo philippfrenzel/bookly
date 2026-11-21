@@ -28,6 +28,12 @@ describe('textRequest', () => {
     expect(textRequest(ctx, body({ action: 'continue' })).system).toContain('Fortsetz');
   });
 
+  it('explains the input fields in the system prompt', () => {
+    const { system } = textRequest(ctx, body({}));
+    expect(system).toContain('markierung');
+    expect(system).toContain('kontext');
+  });
+
   it('sends the selected substring as markierung, or null', () => {
     const sel = JSON.parse(textRequest(ctx, body({ selection: { start: 4, end: 8 } })).user);
     expect(sel.markierung).toBe('Held');

@@ -14,7 +14,8 @@ Schreibe auf Deutsch. Behalte Ton, Zeitform, Erzählperspektive und Wortschatz d
 Erfinde keine Fakten, die dem Kontext widersprechen.
 Die Länge entspricht etwa der Zielpassage (beim Umformulieren und Verbessern) bzw. umfasst 1–3 Sätze (beim Fortsetzen und Vorschlagen). Titel sind kurz (höchstens etwa 8 Wörter).
 Liefere genau 3 deutlich verschiedene Varianten.
-Gib nur den Ersatztext aus, ohne Anführungszeichen, Erklärungen oder Wiederholung des Kontexts.`;
+Eingabe als JSON: text ist der ganze Feldtext, markierung (falls nicht null) ist die zu bearbeitende Passage, sonst ist der ganze Text das Ziel; kontext dient nur als Hintergrund und wird nie verändert.
+Gib nur den Ersatztext für genau diese Zielpassage aus (beim Fortsetzen nur den neuen Text an der Einfügestelle nach markierung bzw. am Ende von text), nicht den ganzen Feldtext, ohne Anführungszeichen, Erklärungen oder Wiederholung des Kontexts.`;
 
 const ACTION_LINES: Record<AiTextAction, string> = {
   rephrase: 'Aufgabe: Formuliere die Zielpassage mit anderen Worten um und behalte ihre Bedeutung.',
