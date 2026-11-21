@@ -52,10 +52,12 @@ test('magic wand on a storyline description', async ({ page }) => {
   await expect(description).toHaveValue('KI-Vorschlag 2');
 
   // Leaving the field keeps the suggestion and closes the bar.
+  const saved = page.waitForResponse((r) => r.request().method() === 'PATCH' && r.ok());
   await panel.getByLabel('Titel', { exact: true }).click();
   await expect(page.getByRole('button', { name: 'Nächster Vorschlag' })).toBeHidden();
 
-  // The blur saved it.
+  // The blur saved it (wait for the PATCH so the reload cannot abort it).
+  await saved;
   await page.reload();
   await page.getByRole('button', { name: 'Storyline „Flucht“' }).click();
   await expect(panel.getByLabel('Kurzbeschreibung', { exact: true })).toHaveValue('KI-Vorschlag 2');
@@ -67,6 +69,7 @@ test('magic wand on a storyline description', async ({ page }) => {
   await panel.getByRole('button', { name: 'KI-Assistent: Kurzbeschreibung', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Stil verbessern' }).click();
   await expect(page.getByRole('button', { name: 'Rückgängig' })).toBeVisible();
+  await expect(reopened).not.toHaveValue('KI-Vorschlag 2');
   await page.keyboard.press('Escape');
   await expect(reopened).toHaveValue('KI-Vorschlag 2');
 });
