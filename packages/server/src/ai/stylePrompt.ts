@@ -18,7 +18,8 @@ export const NATURAL_PROSE = [
   'Wähle konkrete Formulierungen, die zu Szene, Figuren und Angaben im Kontext passen (Orte, Gegenstände, Sinneseindrücke, Details aus Inhalt und Szenen),',
   'und lieber eine genaue Beobachtung mit eigenem Rhythmus als eine allgemein gefällige Wendung.',
   'Variiere Satzbau, Satzlänge und Satzanfänge; kurze und lange Sätze dürfen einander abwechseln.',
-  'Vermeide Floskeln und Standardwendungen, abgegriffene Bilder und Körperklischees, die man aus vielen Romanen kennt (greife sie auch nicht verneinend auf), unnötige Wiederholungen, ein erklärendes oder moralisierendes Schlussresümee, allgemeine Einstiegssätze und die Gewohnheit, Eigenschaften in Dreierreihen aufzuzählen.',
+  'Vermeide Floskeln und Standardwendungen, unnötige Wiederholungen, ein erklärendes oder moralisierendes Schlussresümee, allgemeine Einstiegssätze und die Gewohnheit, Eigenschaften in Dreierreihen aufzuzählen.',
+  'Verwende keine abgegriffenen Bilder und Körperklischees (etwa weiße Knöchel, ein Kloß im Hals, Staub, der im Licht tanzt), auch nicht verneint oder abgewandelt.',
   'Beende den Text mit einer konkreten Handlung, einem Bild oder einem Satz wörtlicher Rede statt mit einem Satz, der das Geschehen deutet oder zusammenfasst.',
   'Erfinde nichts, was dem Kontext widerspricht, und keine neuen Hauptfiguren oder handlungsentscheidenden Ereignisse; szenische Details, Gesten und Dialoge im Rahmen des Inhalts sind erwünscht.',
 ].join(' ');
