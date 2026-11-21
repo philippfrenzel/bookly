@@ -1,9 +1,11 @@
-/** Book list page: shows the user's books; creates, renames (inline) and deletes them. */
+/** Book list page: greets the author, offers the last edited book and shows all books as cards; creates, renames and deletes them. */
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import type { BookSummary } from '@bookly/shared';
 import { useBooks, useCreateBook, useDeleteBook, useLogout, useMe, useRenameBook } from '../api/hooks';
 import { useSaveFeedback } from '../book/saveFeedback';
+import { Icon } from '../ui/Icon';
+import { BookCard, ContinueCard } from './BookCard';
 
 /** Landing page after sign-in. */
 export function BookListPage() {
@@ -33,19 +35,35 @@ export function BookListPage() {
     );
   };
 
+  const list = books.data ?? [];
+  const latest = mostRecent(list);
+  const name = me.data?.displayName;
+  const storylines = list.reduce((n, b) => n + b.storylineCount, 0);
+
   return (
     <>
       <header className="app-header">
         <span className="wordmark">Bookly</span>
         <span className="header-spacer" />
-        <span className="user-name">{me.data?.displayName}</span>
+        {name && (
+          <span className="user-chip">
+            <span className="avatar" aria-hidden="true">{name.trim().charAt(0).toUpperCase()}</span>
+            <span className="user-name">{name}</span>
+          </span>
+        )}
         <button type="button" className="header-quiet" onClick={() => logout.mutate(undefined, { onSuccess: () => navigate('/login') })}>
           Abmelden
         </button>
       </header>
       <main className="page">
         <div className="page-title">
-          <h1>Meine Bücher</h1>
+          <div className="greeting">
+            <h1>Meine Bücher</h1>
+            <p className="greeting-line">
+              {name ? `Hallo ${name}, schön, dass du da bist.` : 'Schön, dass du da bist.'}
+              {list.length > 0 && ` ${summaryLine(list.length, storylines)}`}
+            </p>
+          </div>
           {adding ? (
             <form className="inline-form" onSubmit={submit}>
               <label>
@@ -61,6 +79,7 @@ export function BookListPage() {
             </form>
           ) : (
             <button type="button" className="primary" onClick={() => setAdding(true)}>
+              <Icon name="plus" />
               Neues Buch
             </button>
           )}
@@ -74,82 +93,60 @@ export function BookListPage() {
         {fb.feedback}
         {books.isPending && <p className="muted">Laden …</p>}
         {books.isError && <p className="error">Bücher konnten nicht geladen werden.</p>}
-        {books.data && books.data.length === 0 && <p className="muted">Noch keine Bücher. Lege dein erstes an.</p>}
-        <ul className="book-list">
-          {books.data?.map((b) => (
-            <BookRow
-              key={b.id}
-              book={b}
-              resetKey={fb.resetKey}
-              onRename={(id, next) => {
-                fb.clear();
-                rename.mutate({ id, title: next }, { onError: fb.onError });
-              }}
-              onDelete={(id) => {
-                fb.clear();
-                remove.mutate({ id }, { onError: fb.onError });
-              }}
-            />
-          ))}
-        </ul>
+        {books.data && list.length === 0 && (
+          <div className="empty-shelf">
+            <p className="empty-shelf-title">Noch keine Bücher.</p>
+            <p className="muted">Lege dein erstes an und zieh die erste Linie deiner Geschichte.</p>
+          </div>
+        )}
+        {latest && list.length > 1 && <ContinueCard book={latest} />}
+        {list.length > 0 && (
+          <section className="shelf" aria-labelledby="shelf-title">
+            <h2 id="shelf-title" className="section-title">Alle Bücher</h2>
+            <ul className="book-grid">
+              {list.map((b) => (
+                <BookCard
+                  key={b.id}
+                  book={b}
+                  resetKey={fb.resetKey}
+                  onRename={(id, next) => {
+                    fb.clear();
+                    rename.mutate({ id, title: next }, { onError: fb.onError });
+                  }}
+                  onDelete={(id) => {
+                    fb.clear();
+                    remove.mutate({ id }, { onError: fb.onError });
+                  }}
+                />
+              ))}
+              {!adding && (
+                <li>
+                  <button type="button" className="new-book-card" onClick={() => setAdding(true)}>
+                    <span className="new-book-plus" aria-hidden="true">
+                      <Icon name="plus" />
+                    </span>
+                    <span className="new-book-title">Neue Linie ziehen</span>
+                    <span className="muted">Ein neues Buch beginnen</span>
+                  </button>
+                </li>
+              )}
+            </ul>
+          </section>
+        )}
       </main>
     </>
   );
 }
 
-interface RowProps {
-  book: BookSummary;
-  resetKey: number;
-  onRename: (id: string, title: string) => void;
-  onDelete: (id: string) => void;
+/** The book changed most recently, or undefined for an empty list. */
+function mostRecent(list: BookSummary[]): BookSummary | undefined {
+  return list.reduce<BookSummary | undefined>((best, b) => (!best || b.updatedAt > best.updatedAt ? b : best), undefined);
 }
 
-/** One list entry: link, inline rename (saves on blur, Enter confirms, Escape cancels) and delete with confirmation. */
-function BookRow({ book, resetKey, onRename, onDelete }: RowProps) {
-  const [editing, setEditing] = useState(false);
-  return (
-    <li>
-      {editing ? (
-        <input
-          aria-label={`Titel Buch ${book.title}`}
-          defaultValue={book.title}
-          key={resetKey}
-          maxLength={200}
-          autoFocus
-          onBlur={(e) => {
-            const next = e.target.value.trim();
-            setEditing(false);
-            if (next !== '' && next !== book.title) onRename(book.id, next);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') e.currentTarget.blur();
-            if (e.key === 'Escape') {
-              e.currentTarget.value = book.title;
-              e.currentTarget.blur();
-            }
-          }}
-        />
-      ) : (
-        <Link to={`/books/${book.id}`}>
-          <span className="route-mark" aria-hidden="true" />
-          {book.title}
-        </Link>
-      )}
-      <span className="muted">
-        {book.storylineCount} {book.storylineCount === 1 ? 'Handlungsstrang' : 'Handlungsstränge'}
-      </span>
-      <button type="button" aria-label={`Buch „${book.title}“ umbenennen`} onClick={() => setEditing(true)}>
-        Umbenennen
-      </button>
-      <button
-        type="button"
-        aria-label={`Buch „${book.title}“ löschen`}
-        onClick={() => {
-          if (window.confirm(`Buch „${book.title}“ löschen? Alle Storylines dieses Buchs werden entfernt.`)) onDelete(book.id);
-        }}
-      >
-        Löschen
-      </button>
-    </li>
-  );
+/** „2 Bücher und 7 Handlungsstränge warten auf dich.“ */
+function summaryLine(books: number, storylines: number): string {
+  const b = books === 1 ? '1 Buch' : `${books} Bücher`;
+  if (storylines === 0) return `${b} ${books === 1 ? 'wartet' : 'warten'} auf dich.`;
+  const s = storylines === 1 ? '1 Handlungsstrang' : `${storylines} Handlungsstränge`;
+  return `${b} und ${s} warten auf dich.`;
 }

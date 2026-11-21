@@ -1,27 +1,21 @@
 /** Book routes: list, create, read, rename, delete. */
-import { asc, count, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { BookBody } from '@bookly/shared';
-import type { BookResponse } from '@bookly/shared';
+import type { BookResponse, BookSummary } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
 import { bookResponse } from '../db/bookResponse.js';
 import { loadBook } from '../db/loadBook.js';
-import { books, storylines } from '../db/schema.js';
+import { books } from '../db/schema.js';
+import { bookSummaries } from './summaries.js';
 import { bookGuard } from './guard.js';
 
 /** Registers the /api/books routes. */
 export async function bookRoutes(app: FastifyInstance): Promise<void> {
   const guarded = { preHandler: [requireUser, bookGuard()] };
 
-  app.get('/api/books', { preHandler: requireUser }, async (request) => {
-    const rows = await app.db
-      .select({ id: books.id, title: books.title, storylineCount: count(storylines.id) })
-      .from(books)
-      .leftJoin(storylines, eq(storylines.bookId, books.id))
-      .where(eq(books.userId, request.user!.id))
-      .groupBy(books.id)
-      .orderBy(asc(books.createdAt), asc(books.id));
-    return rows.map((r) => ({ id: r.id, title: r.title, storylineCount: Number(r.storylineCount) }));
+  app.get('/api/books', { preHandler: requireUser }, async (request): Promise<BookSummary[]> => {
+    return bookSummaries(app.db, request.user!.id);
   });
 
   app.post('/api/books', { preHandler: requireUser }, async (request, reply) => {

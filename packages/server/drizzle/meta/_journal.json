@@ -15,6 +15,13 @@
       "when": 1795205155997,
       "tag": "0001_bored_namora",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795248939998,
+      "tag": "0002_book_updated_at",
+      "breakpoints": true
     }
   ]
 }

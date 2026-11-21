@@ -35,6 +35,8 @@ export const books = pgTable('books', {
     .references(() => users.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   createdAt: createdAt(),
+  /** Bumped by every mutation of the book; drives "zuletzt bearbeitet" on the book list. */
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const timePoints = pgTable('time_points', {

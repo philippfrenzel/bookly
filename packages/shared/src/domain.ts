@@ -78,8 +78,18 @@ export interface Book {
 /** Authenticated user as returned by /api/auth/*. */
 export interface SessionUser { id: Id; email: string; displayName: string }
 
-/** Entry of the book list. */
-export interface BookSummary { id: Id; title: string; storylineCount: number }
+/** One storyline as drawn in a book card's preview: colour, kind and its span as 0–1 fractions of the time axis. */
+export interface BookLinePreview { color: string; kind: StorylineKind; start: number; end: number }
+
+/** Entry of the book list. `updatedAt` is an ISO timestamp of the last change to the book. */
+export interface BookSummary {
+  id: Id;
+  title: string;
+  storylineCount: number;
+  characterCount: number;
+  updatedAt: string;
+  lines: BookLinePreview[];
+}
 
 /** AI warning about a contradiction between a storyline and a character. */
 export interface CharacterWarning {
