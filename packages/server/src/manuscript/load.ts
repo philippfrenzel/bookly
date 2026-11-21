@@ -13,7 +13,7 @@ import type {
   TrashItem,
 } from '@bookly/shared';
 import type { Db } from '../db/client.js';
-import type { Tx } from '../db/loadBook.js';
+import { targetWordsOf, type Tx } from '../db/loadBook.js';
 import {
   blockComments,
   blockSuggestions,
@@ -71,7 +71,7 @@ export async function loadManuscript(
 ): Promise<ManuscriptResponse> {
   const isAuthor = access.role === 'author';
   const [[book], chapterRows, blockRows, lines, sectionRows, sceneRows, proposalRows, reviewerRows] = await Promise.all([
-    db.select({ id: books.id, title: books.title }).from(books).where(eq(books.id, bookId)),
+    db.select({ id: books.id, title: books.title, targetWordsMin: books.targetWordsMin, targetWordsMax: books.targetWordsMax }).from(books).where(eq(books.id, bookId)),
     db.select().from(chapters).where(eq(chapters.bookId, bookId)).orderBy(asc(chapters.position), asc(chapters.createdAt)),
     db.select().from(blocks).where(eq(blocks.bookId, bookId)).orderBy(asc(blocks.position), asc(blocks.createdAt)),
     db.select({ id: storylines.id, title: storylines.title, color: storylines.color }).from(storylines).where(eq(storylines.bookId, bookId)).orderBy(asc(storylines.title)),
@@ -156,7 +156,7 @@ export async function loadManuscript(
       })),
   ].sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
   return {
-    book: { ...book!, targetWords: null }, // Task 2 loads the stored target range.
+    book: { id: book!.id, title: book!.title, targetWords: targetWordsOf(book!) },
     role: access.role,
     rights: access.rights,
     chapters: chapterList,

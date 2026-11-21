@@ -3,9 +3,9 @@ import { asc, eq, inArray } from 'drizzle-orm';
 import type { Id, Scene, SceneAssignment, SceneImageType } from '@bookly/shared';
 import type { Db } from './client.js';
 import type { Tx } from './loadBook.js';
-import { sceneAssignments, sceneImages, sceneNotes, scenes } from './schema.js';
+import { sceneAssignmentBlocks, sceneAssignments, sceneImages, sceneNotes, scenes } from './schema.js';
 
-/** Scenes sorted by name (notes by position) and all assignments of the book's scenes. */
+/** Scenes sorted by name (notes by position) and all assignments of the book's scenes with their blocks by position. */
 export async function loadScenes(db: Db | Tx, bookId: Id): Promise<{ scenes: Scene[]; sceneAssignments: SceneAssignment[] }> {
   const rows = await db.select().from(scenes).where(eq(scenes.bookId, bookId)).orderBy(asc(scenes.name), asc(scenes.id));
   if (rows.length === 0) return { scenes: [], sceneAssignments: [] };
@@ -18,6 +18,20 @@ export async function loadScenes(db: Db | Tx, bookId: Id): Promise<{ scenes: Sce
     db.select().from(sceneNotes).where(inArray(sceneNotes.sceneId, ids)).orderBy(asc(sceneNotes.position), asc(sceneNotes.createdAt)),
     db.select().from(sceneAssignments).where(inArray(sceneAssignments.sceneId, ids)).orderBy(asc(sceneAssignments.updatedAt), asc(sceneAssignments.id)),
   ]);
+  const assignmentIds = assignments.map((a) => a.id);
+  const blockRows = assignmentIds.length
+    ? await db
+        .select({ id: sceneAssignmentBlocks.id, assignmentId: sceneAssignmentBlocks.assignmentId, text: sceneAssignmentBlocks.text })
+        .from(sceneAssignmentBlocks)
+        .where(inArray(sceneAssignmentBlocks.assignmentId, assignmentIds))
+        .orderBy(asc(sceneAssignmentBlocks.assignmentId), asc(sceneAssignmentBlocks.position))
+    : [];
+  const blocksBy = new Map<Id, { id: Id; text: string }[]>();
+  for (const b of blockRows) {
+    const list = blocksBy.get(b.assignmentId) ?? [];
+    list.push({ id: b.id, text: b.text });
+    blocksBy.set(b.assignmentId, list);
+  }
   const imageBy = new Map(images.map((i) => [i.sceneId, i]));
   return {
     scenes: rows.map((r) => {
@@ -35,9 +49,8 @@ export async function loadScenes(db: Db | Tx, bookId: Id): Promise<{ scenes: Sce
       sectionId: a.sectionId,
       storylineId: a.storylineId,
       description: a.description,
-      // Task 2 replaces this with the stored blocks and revision.
-      blocks: [{ id: a.id, text: a.description }],
-      revision: 0,
+      blocks: blocksBy.get(a.id) ?? [],
+      revision: a.revision,
       updatedAt: a.updatedAt.toISOString(),
     })),
   };

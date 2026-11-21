@@ -1,7 +1,7 @@
-/** Book routes: list, create, read, rename, delete. */
+/** Book routes: list, create, read, rename / set the target word range, delete. */
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import { BookBody } from '@bookly/shared';
+import { BookBody, BookPatchBody } from '@bookly/shared';
 import type { BookResponse, BookSummary } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
 import { bookResponse } from '../db/bookResponse.js';
@@ -43,11 +43,19 @@ export async function bookRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch('/api/books/:bookId', guarded, async (request, reply) => {
-    const parsed = BookBody.safeParse(request.body);
+    const parsed = BookPatchBody.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: 'invalid_body', details: parsed.error.flatten() });
     const { bookId } = request.params as { bookId: string };
+    const { title, targetWords } = parsed.data;
+    // Only the given fields change; `targetWords: null` clears the range.
     return app.mutate(bookId, async (tx) => {
-      await tx.update(books).set({ title: parsed.data.title }).where(eq(books.id, bookId));
+      await tx
+        .update(books)
+        .set({
+          ...(title !== undefined ? { title } : {}),
+          ...(targetWords !== undefined ? { targetWordsMin: targetWords?.min ?? null, targetWordsMax: targetWords?.max ?? null } : {}),
+        })
+        .where(eq(books.id, bookId));
     });
   });
 
