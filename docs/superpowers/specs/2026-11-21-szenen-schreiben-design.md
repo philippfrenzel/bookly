@@ -40,7 +40,7 @@ B und C verletzen A2 (exakter Text/Leser) bzw. A3 (stabiles Ziel). **A** ist der
 | Abgeleitete `description` | Bei jedem Block-Schreiben: Texte in Reihenfolge, getrennt durch `"\n\n"`. Ein einzelner Block → exakt sein Text, also identisch zu alten Daten. Readers (Strukturvorschlag, KI-Entwurf) kürzen die Szenenfassung auf 2000 Zeichen, damit lange Szenentexte die Prompts nicht sprengen. |
 | Speichern der Blöcke | `PUT /api/books/:bookId/scene-assignments/:id/blocks` mit `{ revision, blocks: [{ id?, text }] }`: ersetzt die geordnete Liste atomar (Buchzeile gesperrt via `app.mutate`). Bekannte IDs müssen zur Zuordnung gehören (sonst 400 `unknown_block`), doppelte IDs 400, neue Blöcke ohne `id`. `revision` ≠ gespeicherte → **409 `stale`**; nichts wird geschrieben. Erfolg erhöht `revision`. |
 | Grenzen | Je Block höchstens 10 000 Zeichen, 1–200 Blöcke je Zuordnung (mindestens einer). Texte werden **nicht** getrimmt, damit eine Teilung exakt bleibt. |
-| Alte Anfragen | `PATCH …/scene-assignments/:id` mit `description` bleibt: ersetzt alle Blöcke durch einen Block mit diesem Text (das bisherige „ganze Beschreibung ersetzen“, z. B. „Frühere Beschreibung einsetzen“ + „Übernehmen“). Optionales `revision` im Body prüft wie oben auf 409; ohne `revision` verhält es sich wie früher. Anlegen (`POST`) legt einen Block mit der Startbeschreibung an. |
+| Alte Anfragen | `PATCH …/scene-assignments/:id` mit `description` bleibt: ersetzt alle Blöcke durch den Text, an Leerzeilen (`"\n\n"`) in Blöcke geteilt (exakt umkehrbar; mehr als 200 Teile → Rest im 200. Block; ein Block über 10 000 Zeichen → 400) (das bisherige „ganze Beschreibung ersetzen“, z. B. „Frühere Beschreibung einsetzen“ + „Übernehmen“). Optionales `revision` im Body prüft wie oben auf 409; ohne `revision` verhält es sich wie früher. Anlegen (`POST`) teilt die Startbeschreibung ebenso. Die Grenze von 2000 Zeichen gilt für diese Fassung nicht mehr (sie ist jetzt die verbundene Szenenfassung). |
 | Teilen | „Hier teilen“ teilt den aktiven Block an der Schreibmarke: `vorher = text.slice(0, c)`, `nachher = text.slice(c)` – keine Zeichen gehen verloren oder kommen hinzu. Nur aktiv, wenn `0 < c < Länge` und keine Markierung. |
 | Teilung rückgängig | Nach einer Teilung erscheint „Teilung rückgängig“; es verbindet die beiden Blöcke wieder zum Originaltext, solange beide Hälften unverändert sind (sonst verschwindet die Option, damit keine Bearbeitung verloren geht). |
 | Block einfügen | „Block einfügen“ legt hinter dem aktiven Block (ohne aktiven Block: am Ende) einen leeren Block an und fokussiert ihn. Ein leerer Block kann mit „Leeren Block entfernen“ wieder weg (nur leer, damit kein Text verloren geht). |
@@ -54,10 +54,10 @@ B und C verletzen A2 (exakter Text/Leser) bzw. A3 (stabiles Ziel). **A** ist der
 
 ## 6. Grenzen (ehrlich)
 
-- Gleichzeitige Bearbeitung derselben Zuordnung in zwei Tabs: der zweite Speichervorgang bekommt 409 und lädt neu; ungespeicherter Text des abgelehnten Blocks muss neu eingegeben werden (Meldung sagt das). Kein Zusammenführen.
+- Gleichzeitige Bearbeitung derselben Zuordnung in zwei Tabs: gespeichert wird gegen die Revision, auf der die lokale Änderung begann; der zweite Speichervorgang bekommt 409 und lädt neu; ungespeicherter Text des abgelehnten Blocks muss neu eingegeben werden (Meldung sagt das). Kein Zusammenführen.
 - Der Zauberstab sieht andere Blöcke nur im gespeicherten Stand (sie werden beim Verlassen gespeichert, also praktisch immer aktuell).
 - Die KI kann trotz Prompt den Umfang verfehlen; die Antwort wird auf 10 000 Zeichen je Block gekürzt.
-- „Frühere Beschreibung einsetzen“ und „Neu erzeugen“ ersetzen weiterhin die **ganze** Fassung einer Zuordnung (ausdrückliche Wahl mit „Übernehmen“) und fassen dabei die Blöcke zu einem zusammen; das ist die bisherige Funktion und wird im UI so beschriftet.
+- „Frühere Beschreibung einsetzen“ und „Neu erzeugen“ ersetzen weiterhin die **ganze** Fassung einer Zuordnung (ausdrückliche Wahl mit „Übernehmen“); die neue Fassung wird an Leerzeilen in Blöcke geteilt. Das UI sagt es: „Übernehmen ersetzt den ganzen Szenentext (alle Blöcke) durch diesen Text.“
 - Die abgeleitete Gesamtfassung verbindet Blöcke mit einer Leerzeile; wer einen Block selbst mit Leerzeile beginnt, sieht sie in der Gesamtfassung doppelt.
 
 ## 7. Abbildung Akzeptanz → Nachweis
@@ -68,3 +68,8 @@ B und C verletzen A2 (exakter Text/Leser) bzw. A3 (stabiles Ziel). **A** ist der
 | A2 | Migrationstest (alte Zeile → ein Block, exakter Text), Server-Tests PUT (Reihenfolge, Atomarität bei ungültiger ID, 409 bei veralteter Revision, fremde Block-ID), beide Zielarten, Web-Tests Teilen/Einfügen/Rückgängig |
 | A3 | Server-Test Kontext (Figuren der Zuordnung, umgebender Text, Fremd-ID 404), Web-Test Zauberstab ersetzt nur Markierung/aktiven Block |
 | A4 | E2E `scene-writing.spec.ts` mit Fake-KI: Dialog teilen, Block einfügen, nur Antwort erzeugen, Reihenfolge nach Neuladen |
+
+## 8. Weitere Grenzen nach dem Abschluss-Review
+
+- `POST`/`PATCH` mit ganzer Fassung nutzen weiterhin die Standard-Körpergrenze von Fastify (1 MiB); nur `PUT …/blocks` erlaubt 4 MiB. Eine fast volle Fassung (200 × 10 000 Zeichen) kann daher nur über Blöcke, nicht als Ganzes übernommen werden (413).
+- Enthält ein Block selbst Leerzeilen, entstehen beim Übernehmen dieser Fassung an anderer Stelle mehr Blöcke als im Original.
