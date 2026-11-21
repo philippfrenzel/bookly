@@ -7,7 +7,9 @@ import type { Book, Id, Scene, SceneAssignment, SceneTarget } from '@bookly/shar
 import { hasSceneContext, parseTargetKey, previousDescriptions, SCENE_LIMITS, targetKey } from '@bookly/shared';
 import { useBook, useBookMutation } from '../api/hooks';
 import { useSaveFeedback } from '../book/saveFeedback';
+import { SceneBlocks } from './SceneBlocks';
 import { descriptionErrorMessage, useSceneDescription } from './sceneApi';
+import { useStaleNotice } from './staleNotice';
 
 /** Why "generate" is not available for a scene, or null when it is (EC-003). */
 function generateBlocker(scene: Scene | undefined, aiEnabled: boolean): string | null {
@@ -67,9 +69,10 @@ interface RowProps {
 }
 
 /**
- * One assignment: description saved on blur; "Neu erzeugen" or an earlier description from the list
- * puts a proposal into the field, which the author takes over or discards (Q-002: never generated
- * without a click). "Verschieben nach" moves the assignment with its description to another section.
+ * One assignment: its text as ordered blocks (SceneBlocks); "Neu erzeugen" or an earlier description from
+ * the list puts a proposal into a single field, which the author takes over (replacing all blocks with
+ * one) or discards (Q-002: never generated without a click). "Verschieben nach" moves the assignment
+ * with its text to another section.
  */
 function AssignmentRow({ bookId, target, assignment, scene, aiEnabled, earlier, targets, onSave, onMove, onRemove, resetKey }: RowProps) {
   const name = scene?.name ?? 'Szene';
@@ -98,16 +101,17 @@ function AssignmentRow({ bookId, target, assignment, scene, aiEnabled, earlier, 
   return (
     <li className="scene-assignment">
       <span className="scene-label">{name}</span>
-      <textarea
-        aria-label={`Beschreibung Szene ${name}`}
-        maxLength={SCENE_LIMITS.description}
-        placeholder="Beschreibung der Szene in diesem Abschnitt"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={() => {
-          if (!proposal && text.trim() !== assignment.description) onSave(text);
-        }}
-      />
+      {proposal ? (
+        <textarea
+          aria-label={`Beschreibung Szene ${name}`}
+          maxLength={SCENE_LIMITS.description}
+          placeholder="Beschreibung der Szene in diesem Abschnitt"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
+      ) : (
+        <SceneBlocks bookId={bookId} assignment={assignment} aiEnabled={aiEnabled} name={name} />
+      )}
       {!proposal && earlier.length > 0 && (
         <select aria-label={`Frühere Beschreibung für Szene ${name} einsetzen`} value="" onChange={(e) => {
           const chosen = earlier[Number(e.target.value)];
@@ -224,9 +228,10 @@ const isAt = (a: SceneAssignment, target: SceneTarget) => targetKey(a) === targe
 export function SceneAssignments({ bookId, target, aiEnabled, legend = 'Szenen' }: { bookId: Id; target: SceneTarget; aiEnabled: boolean; legend?: string }) {
   const data = useBook(bookId).data;
   const fb = useSaveFeedback();
+  const stale = useStaleNotice(bookId);
   const base = `/api/books/${bookId}/scene-assignments`;
   const create = useBookMutation<{ sceneId: Id; description: string }>(bookId, 'POST', () => base, (v) => ({ ...v, ...target }));
-  const update = useBookMutation<{ id: Id; description: string }>(bookId, 'PATCH', (v) => `${base}/${v.id}`, (v) => ({ description: v.description }));
+  const update = useBookMutation<{ id: Id; description: string; revision: number }>(bookId, 'PATCH', (v) => `${base}/${v.id}`, (v) => ({ description: v.description, revision: v.revision }));
   const move = useBookMutation<{ id: Id; to: SceneTarget }>(bookId, 'PATCH', (v) => `${base}/${v.id}`, (v) => v.to);
   const remove = useBookMutation<{ id: Id }>(bookId, 'DELETE', (v) => `${base}/${v.id}`);
   if (!data) return null;
@@ -240,6 +245,7 @@ export function SceneAssignments({ bookId, target, aiEnabled, legend = 'Szenen' 
     <fieldset className="scene-assignments">
       <legend>{legend}</legend>
       {fb.feedback}
+      {stale.notice}
       {own.length > 0 && (
         <ul className="panel-list">
           {own.map((a) => (
@@ -253,7 +259,11 @@ export function SceneAssignments({ bookId, target, aiEnabled, legend = 'Szenen' 
               earlier={previousDescriptions(a.sceneId, all.filter((x) => x.id !== a.id)).filter((d) => d !== a.description)}
               targets={sceneTargets(data.book, a.sceneId, all)}
               resetKey={fb.resetKey}
-              onSave={(description) => { fb.clear(); update.mutate({ id: a.id, description }, { onError }); }}
+              onSave={(description) => {
+                fb.clear();
+                stale.clear();
+                update.mutate({ id: a.id, description, revision: a.revision }, { onError: (e) => { if (!stale.handle(e)) onError(e); } });
+              }}
               onMove={(to) => { fb.clear(); move.mutate({ id: a.id, to }, { onError }); }}
               onRemove={() => { fb.clear(); remove.mutate({ id: a.id }, { onError }); }}
             />

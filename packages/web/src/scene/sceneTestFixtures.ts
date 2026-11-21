@@ -27,7 +27,8 @@ export function scene(over: Partial<Scene> = {}): Scene {
   return { id: 'sc1', name: 'Bergsee', image: null, notes: [], ...over };
 }
 
-/** An assignment; override fields as needed. */
+/** An assignment; override fields as needed. Without `blocks` it has one block holding the description, as after migration. */
 export function assignment(over: Partial<SceneAssignment> = {}): SceneAssignment {
-  return { id: 'a1', sceneId: 'sc1', sectionId: 'sec1', storylineId: null, description: '', blocks: [{ id: 'blk1', text: '' }], revision: 0, updatedAt: '2026-11-01T00:00:00.000Z', ...over };
+  const description = over.description ?? '';
+  return { id: 'a1', sceneId: 'sc1', sectionId: 'sec1', storylineId: null, description, blocks: [{ id: 'blk1', text: description }], revision: 0, updatedAt: '2026-11-01T00:00:00.000Z', ...over };
 }
