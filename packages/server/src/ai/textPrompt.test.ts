@@ -34,6 +34,14 @@ describe('textRequest', () => {
     expect(system).toContain('kontext');
   });
 
+  it('asks for concrete feelings and working-note descriptions for every action', () => {
+    for (const action of ['rephrase', 'polish', 'continue', 'generate'] as const) {
+      const { system } = textRequest(ctx, body({ action }));
+      expect(system).toContain('Stimmungswörtern');
+      expect(system).toContain('Arbeitsnotizen');
+    }
+  });
+
   it('asks for natural, human-sounding text without stock phrases for every action', () => {
     const actions = ['rephrase', 'polish', 'continue', 'generate'] as const;
     for (const action of actions) {

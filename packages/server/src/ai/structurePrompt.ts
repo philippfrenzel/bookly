@@ -195,7 +195,8 @@ export interface DraftContext {
 const DRAFT_SYSTEM = [
   'Du schreibst für eine Autorin oder einen Autor einen ersten Entwurf einer Romanpassage auf Deutsch.',
   'Erzähle, was im Inhalt des Bausteins steht, mit den genannten Figuren am genannten Schauplatz.',
-  'Schließe stilistisch und inhaltlich an den vorherigen Text an, falls vorhanden. Etwa 300 bis 600 Wörter.',
+  'Schließe stilistisch und inhaltlich an den vorherigen Text an, falls vorhanden. Wiederhole den vorherigen Text nicht, sondern setze nach ihm ein. Etwa 300 bis 600 Wörter.',
+  'Setze wörtliche Rede in deutsche Anführungszeichen („…“).',
   'Halte dich vorrangig an die "anweisung" des Autors, falls vorhanden.',
   NATURAL_PROSE,
   'Kein Titel, keine Erklärungen. Antworte als JSON-Objekt mit dem Feld "text".',

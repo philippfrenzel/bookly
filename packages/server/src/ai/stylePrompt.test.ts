@@ -26,7 +26,7 @@ describe('styleText', () => {
 
 describe('prompt rules', () => {
   test('NATURAL_PROSE asks for natural, concrete, varied prose without stock phrases', () => {
-    for (const word of ['natürlich', 'Floskeln', 'Satzbau', 'Erfinde nichts', 'widerspricht']) expect(NATURAL_PROSE).toContain(word);
+    for (const word of ['natürlich', 'Floskeln', 'Satzbau', 'Erfinde nichts', 'widerspricht', 'Körperklischees', 'deutet oder zusammenfasst']) expect(NATURAL_PROSE).toContain(word);
     expect(NATURAL_PROSE).not.toContain('Zahlen');
   });
 

@@ -47,6 +47,8 @@ describe('draftRequest', () => {
   test('without a style: no voice rule, payload shape unchanged', () => {
     const req = draftRequest(draftCtx);
     expect(req.system).toContain(NATURAL_PROSE);
+    expect(req.system).toContain('Wiederhole den vorherigen Text nicht');
+    expect(req.system).toContain('„…“');
     expect(req.system).not.toContain(STYLE_VOICE);
     expect(req.system).not.toContain('"stil"');
     expect(Object.keys(JSON.parse(req.user))).toEqual(['buch', 'kapitel', 'baustein', 'inhalt', 'quelle', 'figuren', 'szenen', 'vorherigerText']);
