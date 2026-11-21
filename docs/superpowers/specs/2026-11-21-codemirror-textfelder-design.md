@@ -22,8 +22,15 @@ Entschieden von Pepe:
    - `MagicWand`: auf einem `ProseField` geht der Vorschlag ins Overlay; die Leiste zeigt ◀ n/m ▶, „Verwerfen“ und „Übernehmen“.
      Auf einem `<input>` bleibt das bisherige Verhalten (direkt einsetzen, ↶ stellt wieder her).
    - Verlassen des Felds übernimmt nichts: gespeichert wird nur, was übernommen wurde.
-2. **Leiste an der Markierung und freie Anweisung**: kleine Leiste über markiertem Text, neuer Menüeintrag
-   „Eigene Anweisung …“ (Strg+K), neue Server-Aktion für frei formulierte Anweisungen.
+2. **Leiste an der Markierung und freie Anweisung** (umgesetzt)
+   - Neue Aktion `instruct` mit Feld `instruction` (höchstens 300 Zeichen, nur bei `instruct`, dort Pflicht).
+     Der Prompt bekommt `anweisung`; die Zielpassage ist wie beim Umformulieren die Markierung oder der ganze Text.
+   - Zauberstab-Menü: „Eigene Anweisung …“ öffnet ein Eingabefeld mit Beispielen (spannender, kürzer, mehr Dialog);
+     funktioniert in allen Feldern, auch einzeiligen.
+   - `editor/selectionTools.ts`: Leiste über markiertem Text (mind. 3 Zeichen) mit Umformulieren, Stil verbessern,
+     Anweisung …; Strg+K öffnet die Anweisung für die Markierung oder den Absatz am Cursor. Die Leiste erscheint nur,
+     wenn ein Zauberstab am Feld hängt und KI eingerichtet ist (`ProseHandle.setAssist`), und tritt zurück, solange ein
+     Vorschlag angezeigt wird. Tooltips hängen an `<body>`, damit schmale Panels sie nicht abschneiden.
 3. **@Figuren und Orte, Lektor-Hinweise, Schreibhilfe beim Tippen**: Erwähnungen als KI-Kontext, Unterstreichungen
    für Füllwörter und Wiederholungen, grauer Folgesatz (abschaltbar).
 

@@ -28,6 +28,13 @@ describe('textRequest', () => {
     expect(textRequest(ctx, body({ action: 'continue' })).system).toContain('Fortsetz');
   });
 
+  it('passes the author\'s instruction as anweisung only for instruct', () => {
+    const req = textRequest(ctx, body({ action: 'instruct', instruction: 'aus Miras Sicht' }));
+    expect(req.system).toContain('Anweisung der Autorin');
+    expect(JSON.parse(req.user)).toMatchObject({ aktion: 'instruct', anweisung: 'aus Miras Sicht' });
+    expect(JSON.parse(textRequest(ctx, body({})).user)).not.toHaveProperty('anweisung');
+  });
+
   it('explains the input fields in the system prompt', () => {
     const { system } = textRequest(ctx, body({}));
     expect(system).toContain('markierung');

@@ -11,6 +11,8 @@ import { api } from '../api/client';
 import { Icon } from '../ui/Icon';
 import { isProse } from '../editor/ProseField';
 import type { ProseHandle } from '../editor/ProseField';
+import type { AssistAction } from '../editor/selectionTools';
+import { InstructionForm } from './InstructionForm';
 import { replaceRange } from './replaceRange';
 import { menuItems } from './wandState';
 import type { MenuItem } from './wandState';
@@ -38,7 +40,10 @@ interface MenuState {
   items: MenuItem[];
   hint: string | null;
   selection: Selection;
+  /** True while the free-instruction form replaces the action list. */
+  instructing?: boolean;
 }
+
 
 interface BarState {
   original: string;
@@ -218,18 +223,28 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
     buttonRef.current?.focus();
   };
 
-  const send = async (action: AiTextAction) => {
+  /** Sends `action` for `selection` (null = whole text) of the current field and shows the reply. */
+  const send = async (action: AiTextAction, selection: Selection, instruction?: string) => {
     const el = getField();
-    if (!el || !menu) return;
-    const { selection } = menu;
+    if (!el || loading) return;
     const text = el.value;
+    setBar(null);
+    setMessage(null);
     setMenu(null);
     setLoading(true);
     el.focus();
     // The live value replaces a possibly stale stored one of the target field in the context.
     const context: AiTextDraft = { ...(draft?.() ?? {}) };
     if (target.field !== 'label' && target.field !== 'text') context[target.field] = text;
-    const body: AiTextBody = { target, action, text, selection, draft: context, ...(length ? { length } : {}) };
+    const body: AiTextBody = {
+      target,
+      action,
+      text,
+      selection,
+      draft: context,
+      ...(length ? { length } : {}),
+      ...(action === 'instruct' && instruction ? { instruction } : {}),
+    };
     let result: AiTextResult;
     try {
       result = await api<AiTextResult>('POST', `/api/books/${bookId}/ai/text`, body);
@@ -264,6 +279,35 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
     apply(cur, range.start, range.end, suggestions[0]!);
     setBar({ original: text, start: range.start, currentLength: suggestions[0]!.length, index: 0, suggestions, shown: cur.value, prose: false });
   };
+
+  // ProseField: the toolbar goes away with the wand.
+  useEffect(
+    () => () => {
+      const el = getField();
+      if (isProse(el)) el.setAssist(null);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  // ProseField: offer the wand's actions in the toolbar over selected text (and via Ctrl+K).
+  useEffect(() => {
+    const el = getField();
+    if (!isProse(el)) return;
+    el.setAssist(
+      enabled && !loading
+        ? {
+            run: (action: AssistAction, instruction?: string) => {
+              const cur = getField();
+              if (!cur) return;
+              const start = cur.selectionStart ?? 0;
+              const end = cur.selectionEnd ?? 0;
+              void send(action, start === end ? null : { start, end }, instruction);
+            },
+          }
+        : null,
+    );
+  });
 
   const onMenuKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? []);
@@ -323,22 +367,36 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
       </button>
       {menu && (
         <div className="wand-menu">
-          <div
-            ref={menuRef}
-            role="menu"
-            tabIndex={-1}
-            aria-label={`KI-Assistent: ${fieldLabel}`}
-            aria-describedby={menu.hint ? hintId : undefined}
-            onKeyDown={onMenuKeyDown}
-            onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setMenu(null)}
-          >
-            {menu.items.map((item) => (
-              <button key={item.action} type="button" role="menuitem" disabled={item.disabled} onClick={() => void send(item.action)}>
-                {item.label}
-              </button>
-            ))}
-          </div>
-          {menu.hint && (
+          {menu.instructing ? (
+            <InstructionForm
+              onSubmit={(instruction) => void send('instruct', menu.selection, instruction)}
+              onCancel={closeMenu}
+            />
+          ) : (
+            <div
+              ref={menuRef}
+              role="menu"
+              tabIndex={-1}
+              aria-label={`KI-Assistent: ${fieldLabel}`}
+              aria-describedby={menu.hint ? hintId : undefined}
+              onKeyDown={onMenuKeyDown}
+              onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setMenu(null)}
+            >
+              {menu.items.map((item) => (
+                <button
+                  key={item.action}
+                  type="button"
+                  role="menuitem"
+                  disabled={item.disabled}
+                  onMouseDown={item.action === 'instruct' ? keepFocus : undefined}
+                  onClick={() => (item.action === 'instruct' ? setMenu({ ...menu, instructing: true }) : void send(item.action, menu.selection))}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {menu.hint && !menu.instructing && (
             <p id={hintId} className="wand-hint">
               {menu.hint}
             </p>

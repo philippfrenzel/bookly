@@ -6,10 +6,12 @@
  */
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef } from 'react';
 import { Compartment, EditorState } from '@codemirror/state';
-import { EditorView, keymap, placeholder as placeholderExt } from '@codemirror/view';
+import { EditorView, keymap, placeholder as placeholderExt, tooltips } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { acceptSuggestion, cycleSuggestion, rejectSuggestion, setSuggestion, suggestionField, suggestions } from './suggestion';
 import type { Suggestion } from './suggestion';
+import { assistIsOn, selectionTools, setAssistOn } from './selectionTools';
+import type { Assist } from './selectionTools';
 
 /** Textarea-like handle on a ProseField, plus the suggestion controls the magic wand uses. */
 export interface ProseHandle {
@@ -29,6 +31,8 @@ export interface ProseHandle {
   reject(): void;
   /** Calls `fn` whenever the pending suggestion changes (shown, switched, accepted, discarded). */
   subscribe(fn: (s: Suggestion | null) => void): () => void;
+  /** Registers the wand behind this field (null: none or disabled); shows the toolbar over selected text. */
+  setAssist(assist: Assist | null): void;
 }
 
 /** True when a field handle is a ProseField rather than a native input. */
@@ -62,6 +66,7 @@ export const ProseField = forwardRef<ProseHandle, ProseFieldProps>(function Pros
   const host = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const listeners = useRef(new Set<(s: Suggestion | null) => void>());
+  const assist = useRef<Assist | null>(null);
   const latest = useRef(props);
   latest.current = props;
   const readOnlyConf = useRef(new Compartment());
@@ -81,6 +86,9 @@ export const ProseField = forwardRef<ProseHandle, ProseFieldProps>(function Pros
         extensions: [
           history(),
           suggestions(),
+          selectionTools(() => assist.current),
+          // Tooltips live in <body>, so panels with overflow: hidden cannot clip the toolbar.
+          tooltips({ parent: document.body }),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorView.lineWrapping,
           labelConf.current.of(labelling()),
@@ -157,6 +165,12 @@ export const ProseField = forwardRef<ProseHandle, ProseFieldProps>(function Pros
       subscribe: (fn) => {
         listeners.current.add(fn);
         return () => listeners.current.delete(fn);
+      },
+      setAssist: (next) => {
+        assist.current = next;
+        // Compare with the editor's own state: the view can be recreated (e.g. React StrictMode) while the wand stays.
+        const view = viewRef.current;
+        if (view && assistIsOn(view.state) !== (next !== null)) view.dispatch({ effects: setAssistOn.of(next !== null) });
       },
     }),
     [],

@@ -1,4 +1,4 @@
-/** End-to-end flow: the AI magic wand on a storyline description (fake AI): suggest, cycle, keep, save on blur, discard with Escape. */
+/** End-to-end flow: the AI magic wand on a storyline description (fake AI): suggest, cycle, keep, save on blur, discard with Escape, free instruction from the toolbar over selected text. */
 import { expect, test } from '@playwright/test';
 import { expectProse, selectProse } from './prose';
 
@@ -81,4 +81,16 @@ test('magic wand on a storyline description', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Vorschlag verwerfen' })).toBeHidden();
   await expectProse(reopened, 'KI-Vorschlag 2');
+
+  // Toolbar over selected text: a free instruction for the selection.
+  await selectProse(reopened, 0, 'KI-Vorschlag'.length);
+  const tools = page.getByRole('toolbar', { name: 'KI für die Markierung' });
+  await expect(tools).toBeVisible();
+  await tools.getByRole('button', { name: 'Anweisung …' }).click();
+  await page.getByRole('button', { name: 'kürzer' }).click();
+  // „KI-Vorschlag“ → „KI-Vorschlag 1 (kürzer)“: only the addition is marked.
+  await expect(reopened.locator('.cm-ai-ins')).toContainText('1 (kürzer)');
+  await expect(reopened.locator('.cm-ai-del')).toHaveCount(0);
+  await page.keyboard.press('Tab');
+  await expectProse(reopened, 'KI-Vorschlag 1 (kürzer) 2');
 });
