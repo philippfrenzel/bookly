@@ -140,6 +140,11 @@ Der Browser schickt, **welches Feld** gemeint ist, den **aktuellen Feldtext** (a
 
 - Prompt-Vorgaben: Deutsch; Tonalität, Zeitform, Perspektive und Vokabular des vorhandenen Textes übernehmen; keine Fakten erfinden, die dem Kontext widersprechen; Länge ähnlich dem Zielbereich (Umformulieren / Stil verbessern) bzw. 1–3 Sätze (Fortsetzen / Vorschlagen); Titel kurz (max. ~8 Wörter); 3 **deutlich unterschiedliche** Varianten; nur der Ersatztext, ohne Anführungszeichen, Erklärungen oder Wiederholung des Kontexts.
 - Bewertung bleibt manuell durch den Nutzer (NFR-001); keine automatische Qualitätsmessung.
+
+**Verbindliche Ergänzung für Spookly (NFR-001, 2026-11-21).** Generierte Textvorschläge müssen in jedem auswählbaren Stil natürlich und wie von einem Menschen formuliert klingen. Der gewählte Stil muss erkennbar bleiben. Die Vorschläge verwenden konkrete, zum Feld und seinem Kontext passende Formulierungen und variieren den Satzbau, soweit die Textlänge das zulässt. Sie vermeiden austauschbare Floskeln, unnötige Wiederholungen und schematische KI-Formulierungen.
+
+- Die Vorgaben für die Textgenerierung berücksichtigen diese Qualitätsmerkmale für jeden angebotenen Stil. Formulierungen und Satzbau richten sich nach dem gewählten Stil und dem konkreten Kontext.
+- Für die manuelle Abnahme werden für jeden auswählbaren Stil mehrere Beispielvorschläge anhand derselben repräsentativen Feldkontexte beurteilt. Bewertet werden Natürlichkeit, Erkennbarkeit des Stils, Kontextbezug, sprachliche Abwechslung sowie Floskeln, Wiederholungen und schematische Formulierungen. Jeder Stil muss die Kriterien eigenständig erfüllen.
 - Zeitlimit der KI-Anfrage: 20 s *(Builder-Wahl; heute 30 s bei Figuren)*. Zielwert für typische Anfragen: unter 5 s (abhängig vom gewählten Modell, nicht garantiert).
 
 ## 7. Technischer Entwurf

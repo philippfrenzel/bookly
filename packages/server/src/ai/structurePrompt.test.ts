@@ -1,7 +1,9 @@
 /** Unit tests for parsing the AI structure proposal. */
 import { describe, expect, test } from 'vitest';
 import { AiError } from './client.js';
-import { parseStructure, type KnownIds } from './structurePrompt.js';
+import type { Book } from '@bookly/shared';
+import { draftRequest, parseStructure, structureRequest, type KnownIds } from './structurePrompt.js';
+import { NATURAL_PROSE, STYLE_VOICE } from './stylePrompt.js';
 
 const A = '00000000-0000-4000-8000-00000000000a';
 const B = '00000000-0000-4000-8000-00000000000b';
@@ -28,5 +30,48 @@ describe('parseStructure', () => {
   test('throws when nothing usable is left', () => {
     expect(() => parseStructure({ summary: '', chapters: [] }, ids)).toThrow(AiError);
     expect(() => parseStructure(null, ids)).toThrow(AiError);
+  });
+});
+
+const draftCtx = { bookTitle: 'B', chapterTitle: 'K', title: 'T', synopsis: 'S', source: null, characters: [], scenes: [], previousText: 'Vorher.' };
+
+describe('draftRequest', () => {
+  test('with a style: natural prose, then precedence sentence, then the style voice', () => {
+    const { system } = draftRequest({ ...draftCtx, style: 'Knapp: kurze Sätze.' });
+    expect(system).toContain(NATURAL_PROSE);
+    expect(system).toContain(STYLE_VOICE);
+    expect(system.indexOf('vorrangig an die "anweisung"')).toBeGreaterThan(-1);
+    expect(system.indexOf('vorrangig an die "anweisung"')).toBeLessThan(system.indexOf(STYLE_VOICE));
+  });
+
+  test('without a style: no voice rule, payload shape unchanged', () => {
+    const req = draftRequest(draftCtx);
+    expect(req.system).toContain(NATURAL_PROSE);
+    expect(req.system).toContain('Wiederhole den vorherigen Text nicht');
+    expect(req.system).toContain('„…“');
+    expect(req.system).not.toContain(STYLE_VOICE);
+    expect(req.system).not.toContain('"stil"');
+    expect(req.system).toContain('Ton des vorherigen Textes geht den allgemeinen Abwechslungsregeln vor');
+    expect(Object.keys(JSON.parse(req.user))).toEqual(['buch', 'kapitel', 'baustein', 'inhalt', 'quelle', 'figuren', 'szenen', 'vorherigerText']);
+  });
+});
+
+describe('draftRequest payload with instruction and style', () => {
+  test('orders anweisung before stil before vorherigerText', () => {
+    const keys = Object.keys(JSON.parse(draftRequest({ ...draftCtx, instruction: 'Kürzer.', style: 'Knapp' }).user));
+    expect(keys.indexOf('anweisung')).toBeGreaterThan(-1);
+    expect(keys.indexOf('anweisung')).toBeLessThan(keys.indexOf('stil'));
+    expect(keys.indexOf('stil')).toBeLessThan(keys.indexOf('vorherigerText'));
+  });
+});
+
+describe('structureRequest', () => {
+  test('asks for concrete titles and synopses without stock phrases and passes the style on', () => {
+    const book = { title: 'B', timePoints: [], characters: [], storylines: [] } as unknown as Book;
+    const req = structureRequest(book, { scenes: [], assignments: [] }, [], { style: 'Knapp' });
+    expect(req.system).toContain('Floskeln');
+    expect(req.system).toContain('"stil"');
+    expect(req.system).toContain('Ton');
+    expect(JSON.parse(req.user).stil).toBe('Knapp');
   });
 });
