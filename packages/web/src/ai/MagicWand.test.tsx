@@ -75,7 +75,13 @@ describe('MagicWand', () => {
     render(<Harness value="Mira geht weg" />);
     field().focus();
     field().setSelectionRange(5, 9);
-    await choose('Umformulieren');
+    const user = userEvent.setup();
+    await user.pointer({ keys: '[MouseLeft>]', target: wand() });
+    expect(document.activeElement).toBe(field());
+    expect([field().selectionStart, field().selectionEnd]).toEqual([5, 9]);
+    await user.pointer({ keys: '[/MouseLeft]', target: wand() });
+    await user.click(screen.getByRole('menuitem', { name: 'Umformulieren' }));
+    await screen.findByText('1/3');
     expect(bodies[0]).toMatchObject({ selection: { start: 5, end: 9 } });
     expect(field().value).toBe('Mira A1 weg');
   });
@@ -228,12 +234,14 @@ describe('MagicWand', () => {
     await userEvent.click(wand());
     await userEvent.click(screen.getByRole('menuitem', { name: 'Umformulieren' }));
     await waitFor(() => expect(bodies).toHaveLength(1));
+    const el = field();
     unmount();
     await act(async () => {
       release();
       await new Promise((r) => setTimeout(r, 30));
     });
     expect(error).not.toHaveBeenCalled();
+    expect(el.value).toBe('Mira geht.');
   });
 
   it('shows Vorschlag fehlgeschlagen. on 502', async () => {
