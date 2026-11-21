@@ -32,7 +32,7 @@ test('storyline flow with contradiction hint', async ({ page }) => {
 
   // Main strand „Annas Flucht“, Tag 2 – Tag 3.
   await page.getByRole('button', { name: 'Neue Storyline' }).click();
-  await panel.getByLabel('Titel').fill('Annas Flucht');
+  await panel.getByLabel('Titel', { exact: true }).fill('Annas Flucht');
   await panel.getByLabel('Hauptstrang').check();
   await panel.getByLabel('Zeitraum Start').selectOption({ label: 'Tag 2' });
   await panel.getByLabel('Zeitraum Ende').selectOption({ label: 'Tag 3' });
@@ -41,7 +41,7 @@ test('storyline flow with contradiction hint', async ({ page }) => {
 
   // Side strand „Der Brief“, Tag 1 – Tag 1.
   await page.getByRole('button', { name: 'Neue Storyline' }).click();
-  await panel.getByLabel('Titel').fill('Der Brief');
+  await panel.getByLabel('Titel', { exact: true }).fill('Der Brief');
   await panel.getByLabel('Nebenstrang').check();
   await panel.getByLabel('Zeitraum Start').selectOption({ label: 'Tag 1' });
   await panel.getByLabel('Zeitraum Ende').selectOption({ label: 'Tag 1' });

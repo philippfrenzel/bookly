@@ -32,18 +32,18 @@ test('character profile with AI warning flow', async ({ page }) => {
   // Character with a behaviour.
   await page.getByRole('tab', { name: 'Figuren' }).click();
   await page.getByRole('button', { name: 'Figur', exact: true }).click();
-  const name = page.getByLabel('Name Figur Neue Figur');
+  const name = page.getByLabel('Name Figur Neue Figur', { exact: true });
   await expect(name).toBeVisible();
   await name.fill('Anna');
   await name.blur();
-  const behavior = page.getByLabel('Verhalten Figur Anna');
+  const behavior = page.getByLabel('Verhalten Figur Anna', { exact: true });
   await behavior.fill('Anna ist mutig.');
   await behavior.blur();
 
   // Storyline linking the character.
   await page.getByRole('button', { name: 'Neue Storyline' }).click();
   const panel = page.getByRole('region', { name: 'Storyline bearbeiten' });
-  await panel.getByLabel('Titel').fill('Annas Flucht');
+  await panel.getByLabel('Titel', { exact: true }).fill('Annas Flucht');
   await panel.getByLabel('Hauptstrang').check();
   await panel.getByLabel('Zeitraum Start').selectOption({ label: 'Tag 1' });
   await panel.getByLabel('Zeitraum Ende').selectOption({ label: 'Tag 2' });
@@ -55,7 +55,7 @@ test('character profile with AI warning flow', async ({ page }) => {
   await linked.click();
   await expect(linked).toBeChecked();
   await panel.getByRole('button', { name: 'Ergänzung für Anna' }).click();
-  const addition = panel.getByLabel('Verhalten Ergänzung Anna');
+  const addition = panel.getByLabel('Verhalten Ergänzung Anna', { exact: true });
   await addition.fill('Hier zögert sie.');
   await addition.blur();
 
