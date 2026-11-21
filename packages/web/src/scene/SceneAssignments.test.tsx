@@ -271,6 +271,50 @@ describe('SceneAssignments', () => {
     expect(within(block).queryByText(hint)).not.toBeInTheDocument();
   });
 
+  it('shows the wand icon on „Beschreibung erzeugen“ in the section form', async () => {
+    server.use(meOk, bookOk(bookWithSections(), { scenes: [withNote] }));
+    const block = await openSection();
+    await userEvent.selectOptions(within(block).getByLabelText('Szene zuordnen'), 'sc1');
+    const button = within(block).getByRole('button', { name: 'Beschreibung erzeugen' });
+    expect(button).toHaveClass('with-icon');
+    expect(button.querySelector('svg.icon')).not.toBeNull();
+  });
+
+  it('shows the wand icon on „Beschreibung erzeugen“ in a side strand „Szenen“ tab', async () => {
+    server.use(meOk, bookOk(bookWithSideStrand(), { scenes: [withNote] }));
+    renderApp('/books/b1');
+    await userEvent.click(await screen.findByRole('button', { name: 'Storyline „Erinnerung“' }));
+    await userEvent.click(await screen.findByRole('tab', { name: 'Szenen' }));
+    const block = screen.getByRole('group', { name: 'Szenen' });
+    await userEvent.selectOptions(within(block).getByLabelText('Szene zuordnen'), 'sc1');
+    const button = within(block).getByRole('button', { name: 'Beschreibung erzeugen' });
+    expect(button.querySelector('svg.icon')).not.toBeNull();
+  });
+
+  it('keeps the icon and disables the button while generating, then fills the field', async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    server.use(
+      meOk,
+      bookOk(bookWithSections(), { scenes: [withNote] }),
+      http.post('/api/books/b1/scenes/sc1/description', async () => {
+        await gate;
+        return HttpResponse.json({ description: 'Nebel liegt über dem See.' });
+      }),
+    );
+    const block = await openSection();
+    await userEvent.selectOptions(within(block).getByLabelText('Szene zuordnen'), 'sc1');
+    await userEvent.click(within(block).getByRole('button', { name: 'Beschreibung erzeugen' }));
+    const pending = await within(block).findByRole('button', { name: 'Erzeuge …' });
+    expect(pending).toBeDisabled();
+    expect(pending.querySelector('svg.icon')).not.toBeNull();
+    release();
+    expect(await within(block).findByDisplayValue('Nebel liegt über dem See.')).toBeInTheDocument();
+    const done = within(block).getByRole('button', { name: 'Beschreibung erzeugen' });
+    expect(done).toBeEnabled();
+    expect(done.querySelector('svg.icon')).not.toBeNull();
+  });
+
   it('shows the scenes of a main strand by section in its „Szenen“ tab', async () => {
     server.use(meOk, bookOk(bookWithSections(), { scenes: [scene()], sceneAssignments: [assignment({ sectionId: 'sec2' })] }));
     renderApp('/books/b1');

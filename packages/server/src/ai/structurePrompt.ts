@@ -6,6 +6,7 @@ import type { Book, Id, LengthChoice, ManuscriptChapter, ProposalChapter, SceneA
 import { MANUSCRIPT_LIMITS } from '@bookly/shared';
 import { AiError, type AiRequest } from './client.js';
 import { bookTotalSentence, lengthGuidance } from './lengthGuidance.js';
+import { NATURAL_PROSE, STYLE_VOICE } from './stylePrompt.js';
 
 /** Scene data the structure prompt may use. */
 export interface SceneInfo {
@@ -22,6 +23,7 @@ const STRUCTURE_SYSTEM = [
   'Gibt es bereits eine Struktur ("aktuelleStruktur"), schlage Anpassungen vor: behalte vorhandene Bausteine mit ihrer blockId,',
   'verschiebe sie, wo es der Geschichte hilft, und begründe jede Änderung kurz im Feld reason des Kapitels.',
   'Schreibe Titel, Inhalte (synopsis, 1 bis 3 Sätze) und Begründungen auf Deutsch.',
+  'Titel und Inhalte sind konkret und ohne Floskeln formuliert und treffen, falls ein "stil" angegeben ist, dessen Ton.',
   'Antworte als JSON-Objekt mit "summary" (ein Satz zum Vorschlag) und "chapters".',
 ].join(' ');
 
@@ -209,15 +211,24 @@ const DRAFT_LENGTH = 'Etwa 300 bis 600 Wörter.';
 const DRAFT_SYSTEM = [
   'Du schreibst für eine Autorin oder einen Autor einen ersten Entwurf einer Romanpassage auf Deutsch.',
   'Erzähle, was im Inhalt des Bausteins steht, mit den genannten Figuren am genannten Schauplatz.',
-  'Schließe stilistisch und inhaltlich an den vorherigen Text an, falls vorhanden. Etwa 300 bis 600 Wörter.',
-  'Halte dich vorrangig an die "anweisung" des Autors, falls vorhanden, und schreibe im angegebenen "stil".',
+  'Schließe stilistisch und inhaltlich an den vorherigen Text an, falls vorhanden. Wiederhole den vorherigen Text nicht, sondern setze nach ihm ein. Etwa 300 bis 600 Wörter.',
+  'Setze wörtliche Rede in deutsche Anführungszeichen („…“).',
+  'Halte dich vorrangig an die "anweisung" des Autors, falls vorhanden.',
+  NATURAL_PROSE,
+  'Der Ton des vorherigen Textes geht den allgemeinen Abwechslungsregeln vor.',
   'Kein Titel, keine Erklärungen. Antworte als JSON-Objekt mit dem Feld "text".',
 ].join(' ');
+
+/** The draft system prompt: length guidance in place of the fixed span, plus the style voice when a style is set. */
+function draftSystem(ctx: DraftContext): string {
+  const base = DRAFT_SYSTEM.replace(DRAFT_LENGTH, () => lengthGuidance(ctx.targetWords, ctx.length, DRAFT_LENGTH));
+  return ctx.style ? `${base} Schreibe im angegebenen "stil". ${STYLE_VOICE}` : base;
+}
 
 /** Builds the draft request. */
 export function draftRequest(ctx: DraftContext): AiRequest {
   return {
-    system: DRAFT_SYSTEM.replace(DRAFT_LENGTH, () => lengthGuidance(ctx.targetWords, ctx.length, DRAFT_LENGTH)),
+    system: draftSystem(ctx),
     user: JSON.stringify({
       buch: ctx.bookTitle,
       kapitel: ctx.chapterTitle,
