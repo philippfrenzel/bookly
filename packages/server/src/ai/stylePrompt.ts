@@ -15,11 +15,11 @@ export function styleText(style: BookStyle, teamStyles: TeamStyle[]): string {
 /** Prose-quality rule for generated passages (NFR-001): natural, concrete, varied German instead of schematic AI prose. */
 export const NATURAL_PROSE = [
   'Der Text klingt natürlich und wie von einem Menschen geschrieben, nicht wie glatt generierte KI-Prosa.',
-  'Wähle konkrete Formulierungen, die zu Szene, Figuren und Angaben im Kontext passen (Zahlen, Orte, Gegenstände, Details aus Inhalt und Szenen),',
+  'Wähle konkrete Formulierungen, die zu Szene, Figuren und Angaben im Kontext passen (Orte, Gegenstände, Sinneseindrücke, Details aus Inhalt und Szenen),',
   'und lieber eine genaue Beobachtung mit eigenem Rhythmus als eine allgemein gefällige Wendung.',
   'Variiere Satzbau, Satzlänge und Satzanfänge; kurze und lange Sätze dürfen einander abwechseln.',
   'Vermeide Floskeln und Standardwendungen, unnötige Wiederholungen, ein erklärendes oder moralisierendes Schlussresümee, allgemeine Einstiegssätze und die Gewohnheit, Eigenschaften in Dreierreihen aufzuzählen.',
-  'Erfinde nichts, was über den Kontext hinausgeht: keine neuen Fakten, Namen oder Ereignisse.',
+  'Erfinde nichts, was dem Kontext widerspricht, und keine neuen Hauptfiguren oder handlungsentscheidenden Ereignisse; szenische Details, Gesten und Dialoge im Rahmen des Inhalts sind erwünscht.',
 ].join(' ');
 
 /** Rule for applying the work's "stil" as a recognisable voice; only added to a prompt when a style is set. */
@@ -27,4 +27,5 @@ export const STYLE_VOICE = [
   'Setze den "stil" als erkennbare Erzählstimme um, nicht als Schlagwort: über Satzlänge, Rhythmus, Bildsprache, Erzählabstand und die Art der Dialoge, nicht indem du Stilbegriffe nennst.',
   'Besteht der "stil" aus mehreren Einträgen, werden sie kombiniert; die "Ergänzung des Autors" verfeinert sie.',
   'Widerspricht der "stil" der "anweisung" des Autors, hat die "anweisung" Vorrang.',
+  'Der "stil" und der Ton des vorherigen Textes gehen den allgemeinen Abwechslungsregeln vor.',
 ].join(' ');

@@ -196,7 +196,7 @@ const DRAFT_SYSTEM = [
   'Du schreibst für eine Autorin oder einen Autor einen ersten Entwurf einer Romanpassage auf Deutsch.',
   'Erzähle, was im Inhalt des Bausteins steht, mit den genannten Figuren am genannten Schauplatz.',
   'Schließe stilistisch und inhaltlich an den vorherigen Text an, falls vorhanden. Etwa 300 bis 600 Wörter.',
-  'Halte dich vorrangig an die "anweisung" des Autors, falls vorhanden, und schreibe im angegebenen "stil".',
+  'Halte dich vorrangig an die "anweisung" des Autors, falls vorhanden.',
   NATURAL_PROSE,
   'Kein Titel, keine Erklärungen. Antworte als JSON-Objekt mit dem Feld "text".',
 ].join(' ');
@@ -204,7 +204,7 @@ const DRAFT_SYSTEM = [
 /** Builds the draft request. */
 export function draftRequest(ctx: DraftContext): AiRequest {
   return {
-    system: ctx.style ? `${DRAFT_SYSTEM} ${STYLE_VOICE}` : DRAFT_SYSTEM,
+    system: ctx.style ? `${DRAFT_SYSTEM} Schreibe im angegebenen "stil". ${STYLE_VOICE}` : DRAFT_SYSTEM,
     user: JSON.stringify({
       buch: ctx.bookTitle,
       kapitel: ctx.chapterTitle,

@@ -48,6 +48,7 @@ describe('draftRequest', () => {
     const req = draftRequest(draftCtx);
     expect(req.system).toContain(NATURAL_PROSE);
     expect(req.system).not.toContain(STYLE_VOICE);
+    expect(req.system).not.toContain('"stil"');
     expect(Object.keys(JSON.parse(req.user))).toEqual(['buch', 'kapitel', 'baustein', 'inhalt', 'quelle', 'figuren', 'szenen', 'vorherigerText']);
   });
 });
@@ -57,6 +58,8 @@ describe('structureRequest', () => {
     const book = { title: 'B', timePoints: [], characters: [], storylines: [] } as unknown as Book;
     const req = structureRequest(book, { scenes: [], assignments: [] }, [], { style: 'Knapp' });
     expect(req.system).toContain('Floskeln');
+    expect(req.system).toContain('"stil"');
+    expect(req.system).toContain('Ton');
     expect(JSON.parse(req.user).stil).toBe('Knapp');
   });
 });

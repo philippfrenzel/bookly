@@ -26,11 +26,12 @@ describe('styleText', () => {
 
 describe('prompt rules', () => {
   test('NATURAL_PROSE asks for natural, concrete, varied prose without stock phrases', () => {
-    for (const word of ['natürlich', 'Floskeln', 'Satzbau', 'Erfinde nichts']) expect(NATURAL_PROSE).toContain(word);
+    for (const word of ['natürlich', 'Floskeln', 'Satzbau', 'Erfinde nichts', 'widerspricht']) expect(NATURAL_PROSE).toContain(word);
+    expect(NATURAL_PROSE).not.toContain('Zahlen');
   });
 
   test('STYLE_VOICE applies the style as a voice, combines entries and lets the author win', () => {
-    for (const word of ['Satzlänge', 'Rhythmus', 'Erzählabstand', 'Dialog', 'kombiniert', 'Ergänzung des Autors', '"anweisung"']) {
+    for (const word of ['Satzlänge', 'Rhythmus', 'Erzählabstand', 'Dialog', 'kombiniert', 'Ergänzung des Autors', '"anweisung"', 'Abwechslungsregeln']) {
       expect(STYLE_VOICE).toContain(word);
     }
   });
