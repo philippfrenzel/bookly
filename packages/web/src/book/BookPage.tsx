@@ -17,6 +17,7 @@ import { StorylinePanel, type PanelTarget, type SectionFocus } from '../storylin
 import type { StorylineTab } from '../storyline/StorylineHeader';
 import { Timetable } from '../storyline/Timetable';
 import { Icon } from '../ui/Icon';
+import { MentionNamesProvider } from '../editor/MentionNames';
 import { BookHints } from './BookHints';
 import { CharacterPanel } from './CharacterPanel';
 import { SidePanel } from './SidePanel';
@@ -78,6 +79,7 @@ export function BookPage() {
   };
 
   return (
+    <MentionNamesProvider names={book?.characters.flatMap((c) => (c.name ? [c.name] : [])) ?? []}>
     <div className="book-page">
       <header className="app-header">
         <Link to="/" className="wordmark">Bookly</Link>
@@ -179,6 +181,7 @@ export function BookPage() {
         </div>
       )}
     </div>
+    </MentionNamesProvider>
   );
 }
 

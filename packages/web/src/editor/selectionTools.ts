@@ -19,6 +19,8 @@ export type AssistAction = 'rephrase' | 'polish' | 'instruct';
 /** The wand behind a field; `run` acts on the field's current selection. */
 export interface Assist {
   run(action: AssistAction, instruction?: string): void;
+  /** Quietly asks for a continuation of the whole text (typing assistant); null when there is none. */
+  complete?(): Promise<string | null>;
 }
 
 /** Turns the toolbar on (a wand is registered and enabled) or off. */

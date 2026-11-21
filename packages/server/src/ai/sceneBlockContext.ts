@@ -36,6 +36,8 @@ export interface SceneBlockContext extends TextContext {
   hasText: true;
   /** The book's target word range, for the length line of the system prompt. */
   targetWords: WordRange | null;
+  /** All characters of the book, to add those the text names (see mentions.ts). */
+  characters: Book['characters'];
 }
 
 /** Name and description of the given characters of `book`, in the order of `ids`. */
@@ -85,6 +87,7 @@ export async function loadSceneBlockContext(
     fieldLabel: 'Szenentext',
     hasText: true,
     targetWords,
+    characters: book.characters,
     context: {
       buch: book.title,
       szene: {

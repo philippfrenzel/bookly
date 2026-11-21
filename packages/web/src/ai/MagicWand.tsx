@@ -5,13 +5,14 @@
  */
 import { useEffect, useId, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
-import { draftHasText, fieldLimit, fitSuggestion, targetRange } from '@bookly/shared';
+import { draftHasText, fieldLimit, fitSuggestion, MIN_CONTINUE_ROOM, targetRange } from '@bookly/shared';
 import type { AiTextAction, AiTextBody, AiTextDraft, AiTextResult, AiTextTarget, Id, LengthChoice } from '@bookly/shared';
 import { api } from '../api/client';
 import { Icon } from '../ui/Icon';
 import { isProse } from '../editor/ProseField';
 import type { ProseHandle } from '../editor/ProseField';
 import type { AssistAction } from '../editor/selectionTools';
+import { setEditorPref, useEditorPrefs } from '../editor/preferences';
 import { InstructionForm } from './InstructionForm';
 import { replaceRange } from './replaceRange';
 import { menuItems } from './wandState';
@@ -42,7 +43,12 @@ interface MenuState {
   selection: Selection;
   /** True while the free-instruction form replaces the action list. */
   instructing?: boolean;
+  /** True on a ProseField: the menu also offers the switchable writing aids. */
+  prose?: boolean;
 }
+
+/** Menu items for a ProseField's writing aids. */
+const MENU_ITEMS = '[role="menuitem"]:not(:disabled), [role="menuitemcheckbox"]:not(:disabled)';
 
 
 interface BarState {
@@ -74,6 +80,7 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
   /** True while the wand itself writes into the field, so its own `input` events do not close the bar. */
   const applying = useRef(false);
   const hintId = useId();
+  const prefs = useEditorPrefs();
 
   useEffect(() => {
     mounted.current = true;
@@ -193,7 +200,7 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
   const menuOpen = menu !== null;
   useEffect(() => {
     if (!menuOpen) return;
-    const first = menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)');
+    const first = menuRef.current?.querySelector<HTMLButtonElement>(MENU_ITEMS);
     (first ?? menuRef.current)?.focus();
     const onMouseDown = (e: MouseEvent) => {
       if (!wrapper()?.contains(e.target as Node)) setMenu(null);
@@ -215,7 +222,7 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
     const end = el.selectionEnd ?? 0;
     const selection = start === end ? null : { start, end };
     const contextHasText = draftHasText(target, draft?.() ?? {});
-    setMenu({ ...menuItems({ text: el.value, selection, target, contextHasText }), selection });
+    setMenu({ ...menuItems({ text: el.value, selection, target, contextHasText }), selection, prose: isProse(el) });
   };
 
   const closeMenu = () => {
@@ -223,16 +230,8 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
     buttonRef.current?.focus();
   };
 
-  /** Sends `action` for `selection` (null = whole text) of the current field and shows the reply. */
-  const send = async (action: AiTextAction, selection: Selection, instruction?: string) => {
-    const el = getField();
-    if (!el || loading) return;
-    const text = el.value;
-    setBar(null);
-    setMessage(null);
-    setMenu(null);
-    setLoading(true);
-    el.focus();
+  /** Asks the server for `action` on `text` and returns the suggestions fitted into the field (may throw). */
+  const request = async (action: AiTextAction, text: string, selection: Selection, instruction?: string): Promise<string[]> => {
     // The live value replaces a possibly stale stored one of the target field in the context.
     const context: AiTextDraft = { ...(draft?.() ?? {}) };
     if (target.field !== 'label' && target.field !== 'text') context[target.field] = text;
@@ -245,9 +244,25 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
       ...(length ? { length } : {}),
       ...(action === 'instruct' && instruction ? { instruction } : {}),
     };
-    let result: AiTextResult;
+    const result = await api<AiTextResult>('POST', `/api/books/${bookId}/ai/text`, body);
+    const range = targetRange(action, text, selection);
+    const limit = fieldLimit(target);
+    return result.suggestions.map((s) => fitSuggestion(s, text, range, limit, action)).filter((s) => s !== '');
+  };
+
+  /** Sends `action` for `selection` (null = whole text) of the current field and shows the reply. */
+  const send = async (action: AiTextAction, selection: Selection, instruction?: string) => {
+    const el = getField();
+    if (!el || loading) return;
+    const text = el.value;
+    setBar(null);
+    setMessage(null);
+    setMenu(null);
+    setLoading(true);
+    el.focus();
+    let suggestions: string[];
     try {
-      result = await api<AiTextResult>('POST', `/api/books/${bookId}/ai/text`, body);
+      suggestions = await request(action, text, selection, instruction);
     } catch {
       if (mounted.current) {
         setLoading(false);
@@ -265,8 +280,6 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
     const active = document.activeElement;
     if (active && active !== document.body && !wrapper()?.contains(active)) return;
     const range = targetRange(action, text, selection);
-    const limit = fieldLimit(target);
-    const suggestions = result.suggestions.map((s) => fitSuggestion(s, text, range, limit, action)).filter((s) => s !== '');
     if (suggestions.length === 0) {
       setMessage('Kein Vorschlag.');
       return;
@@ -304,13 +317,23 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
               const end = cur.selectionEnd ?? 0;
               void send(action, start === end ? null : { start, end }, instruction);
             },
+            // Typing assistant: a quiet "continue" for the whole text; nothing while the menu or a suggestion is open.
+            complete: async () => {
+              const cur = getField();
+              if (!cur || menu || bar || fieldLimit(target).max - cur.value.length < MIN_CONTINUE_ROOM) return null;
+              try {
+                return (await request('continue', cur.value, null))[0] ?? null;
+              } catch {
+                return null;
+              }
+            },
           }
         : null,
     );
   });
 
   const onMenuKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
-    const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? []);
+    const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>(MENU_ITEMS) ?? []);
     const at = items.indexOf(document.activeElement as HTMLButtonElement);
     const focusAt = (i: number) => items[(i + items.length) % items.length]?.focus();
     switch (e.key) {
@@ -394,6 +417,13 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
                   {item.label}
                 </button>
               ))}
+              {menu.prose && (
+                <>
+                  <div role="separator" className="wand-sep" />
+                  <AidToggle label="Lektor-Hinweise" title="Füllwörter und Wiederholungen unterstreichen" checked={prefs.hints} onChange={(v) => setEditorPref('hints', v)} />
+                  <AidToggle label="Schreibhilfe beim Tippen" title="Nach einer Pause einen Folgesatz in Grau vorschlagen (Tab übernimmt)" checked={prefs.ghost} onChange={(v) => setEditorPref('ghost', v)} />
+                </>
+              )}
             </div>
           )}
           {menu.hint && !menu.instructing && (
@@ -439,5 +469,15 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
         {message}
       </p>
     </>
+  );
+}
+
+/** A switchable writing aid in the wand menu; the menu stays open when it is toggled. */
+function AidToggle({ label, title, checked, onChange }: { label: string; title: string; checked: boolean; onChange: (v: boolean) => void }): JSX.Element {
+  return (
+    <button type="button" role="menuitemcheckbox" aria-checked={checked} className="wand-toggle" title={title} onMouseDown={keepFocus} onClick={() => onChange(!checked)}>
+      <span className="wand-check" aria-hidden="true">{checked ? '✓' : ''}</span>
+      {label}
+    </button>
   );
 }

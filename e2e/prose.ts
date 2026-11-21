@@ -1,13 +1,13 @@
 /** Helpers for ProseField (CodeMirror) text fields in e2e tests: read their text and set the caret or selection. */
 import { expect, type Locator } from '@playwright/test';
 
-/** The field's text as the author sees it: lines joined by \n, without placeholder or AI suggestion overlay. */
+/** The field's text as the author sees it: lines joined by \n, without placeholder, AI suggestion overlay or grey continuation. */
 export function proseText(field: Locator): Promise<string> {
   return field.evaluate((el) =>
     [...el.querySelectorAll('.cm-line')]
       .map((line) => {
         const copy = line.cloneNode(true) as HTMLElement;
-        copy.querySelectorAll('.cm-placeholder, .cm-ai-ins, .cm-widgetBuffer').forEach((n) => n.remove());
+        copy.querySelectorAll('.cm-placeholder, .cm-ai-ins, .cm-ghost, .cm-widgetBuffer').forEach((n) => n.remove());
         return copy.textContent ?? '';
       })
       .join('\n'),

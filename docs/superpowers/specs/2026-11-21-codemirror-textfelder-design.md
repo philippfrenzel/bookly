@@ -31,8 +31,19 @@ Entschieden von Pepe:
      Anweisung …; Strg+K öffnet die Anweisung für die Markierung oder den Absatz am Cursor. Die Leiste erscheint nur,
      wenn ein Zauberstab am Feld hängt und KI eingerichtet ist (`ProseHandle.setAssist`), und tritt zurück, solange ein
      Vorschlag angezeigt wird. Tooltips hängen an `<body>`, damit schmale Panels sie nicht abschneiden.
-3. **@Figuren und Orte, Lektor-Hinweise, Schreibhilfe beim Tippen**: Erwähnungen als KI-Kontext, Unterstreichungen
-   für Füllwörter und Wiederholungen, grauer Folgesatz (abschaltbar).
+3. **@Figuren, Lektor-Hinweise, Schreibhilfe beim Tippen** (umgesetzt)
+   - `editor/mentions.ts`: „@“ bietet die Figuren des Buchs an (`MentionNamesProvider` auf der Buchseite), eingefügt
+     wird der reine Name; bekannte Namen sind eingefärbt. Orte gibt es im Datenmodell noch nicht, das Manuskript hat
+     (noch) keine Figurenliste, dort gibt es darum keine Erwähnungen.
+   - Server (`ai/mentions.ts`): Figuren, die im Text namentlich vorkommen und nicht schon im Kontext stehen, gehen als
+     `kontext.erwaehnt` (Profil: Beschreibung, Verhalten, Absichten, höchstens 8) an die KI. Ganzwort-Treffer, ohne „@“.
+   - `editor/hints.ts`: Wellenlinie unter Füllwörtern (eigentlich, plötzlich, irgendwie, …) und unter Substantiven, die
+     innerhalb von 25 Wörtern wiederkehren (Satzanfänge und Figurennamen ausgenommen). Lokal, ohne KI. Beim Überfahren
+     die Begründung und, mit Zauberstab, „Satz umformulieren lassen“.
+   - `editor/ghost.ts`: nach 1,1 s Tipp-Pause am Textende fragt das Feld den Zauberstab leise nach „Fortsetzen“ und zeigt
+     die Antwort grau. Tab übernimmt, Strg/Cmd+→ ein Wort, Esc oder Weitertippen verwirft.
+   - Schalter im Zauberstab-Menü (nur bei mehrzeiligen Feldern): „Lektor-Hinweise“ (Standard an) und „Schreibhilfe beim
+     Tippen“ (Standard aus, weil jede Pause eine KI-Anfrage kostet). Gemerkt pro Browser (`editor/preferences.ts`).
 
 ## Tests
 
