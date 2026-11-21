@@ -7,6 +7,7 @@ import type { Book, Id, Scene, SceneAssignment, SceneTarget } from '@bookly/shar
 import { hasSceneContext, parseTargetKey, previousDescriptions, SCENE_LIMITS, targetKey } from '@bookly/shared';
 import { useBook, useBookMutation } from '../api/hooks';
 import { useSaveFeedback } from '../book/saveFeedback';
+import { Icon } from '../ui/Icon';
 import { descriptionErrorMessage, useSceneDescription } from './sceneApi';
 
 /** Why "generate" is not available for a scene, or null when it is (EC-003). */
@@ -201,10 +202,12 @@ function AssignScene({ bookId, target, candidates, assignments, aiEnabled, onAss
           <div className="actions">
             <button
               type="button"
+              className="with-icon"
               disabled={blocker !== null || generate.isPending}
               title={blocker ?? undefined}
               onClick={() => generate.mutate({ sceneId: scene.id, ...target }, { onSuccess: (res) => setText(res.description) })}
             >
+              <Icon name="wand" />
               {generate.isPending ? 'Erzeuge …' : 'Beschreibung erzeugen'}
             </button>
             <button type="button" className="primary" onClick={() => onAssign({ sceneId: scene.id, description: text }, () => choose(''))}>Zuordnen</button>
