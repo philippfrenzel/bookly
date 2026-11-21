@@ -14,28 +14,18 @@ interface Props {
   character: Character;
   addition?: CharacterAddition;
   aiEnabled: boolean;
-  /** Increases whenever a storyline text changed and was saved; a change requests a new suggestion. */
-  suggestTick: number;
   /** Registers a getter for the live textarea values (null on unmount), so the parent sees unsaved text. */
   registerLive?: (getter: (() => { behavior: string; intentions: string }) | null) => void;
 }
 
 /** Two textareas saved on blur (PUT addition), the greyed base profile and the suggestion UI. */
-export function AdditionEditor({ bookId, storylineId, character: c, addition, aiEnabled, suggestTick, registerLive }: Props) {
+export function AdditionEditor({ bookId, storylineId, character: c, addition, aiEnabled, registerLive }: Props) {
   const label = characterLabel(c);
   const base = `/api/books/${bookId}/storylines/${storylineId}/characters/${c.id}`;
   const fb = useSaveFeedback();
   const save = useBookMutation<Partial<Record<Field, string>>>(bookId, 'PUT', () => `${base}/addition`, (x) => x);
   const { suggestion, loading, error, request, dismiss } = useSuggestion(`${base}/suggestion`);
   const areas = useRef<Partial<Record<Field, HTMLTextAreaElement | null>>>({});
-
-  // Only editors that are open when a storyline text is saved ask for a suggestion.
-  const seen = useRef(suggestTick);
-  useEffect(() => {
-    if (suggestTick === seen.current) return;
-    seen.current = suggestTick;
-    if (aiEnabled) request({});
-  }, [suggestTick, aiEnabled, request]);
 
   useEffect(() => {
     registerLive?.(() => ({ behavior: areas.current.behavior?.value ?? '', intentions: areas.current.intentions?.value ?? '' }));

@@ -447,31 +447,6 @@ describe('StorylinePanel', () => {
       expect(confirm).not.toHaveBeenCalled();
     });
 
-    it('requests a suggestion for an expanded editor after a description change', async () => {
-      let posts = 0;
-      server.use(
-        meOk,
-        bookOk(sampleBook()),
-        http.patch('/api/books/b1/storylines/s1', () => HttpResponse.json(bookResponse(sampleBook()))),
-        http.post('/api/books/b1/storylines/s1/characters/c1/suggestion', async ({ request }) => {
-          expect(await request.json()).toEqual({});
-          posts += 1;
-          return HttpResponse.json({ behavior: 'vorsichtig', intentions: 'Flucht' });
-        }),
-      );
-      renderApp('/books/b1');
-      await openStoryline('Hauptstrang');
-      await userEvent.type(await screen.findByLabelText('Kurzbeschreibung'), 'Neu');
-      await userEvent.tab();
-      await new Promise((r) => setTimeout(r, 50));
-      expect(posts).toBe(0);
-      await userEvent.click(screen.getByRole('button', { name: toggleName }));
-      await userEvent.type(screen.getByLabelText('Kurzbeschreibung'), '!');
-      await userEvent.tab();
-      await vi.waitFor(() => expect(posts).toBe(1));
-      expect(await screen.findByText('vorsichtig')).toBeInTheDocument();
-    });
-
     it.each([
       ['pending', 'Prüfe Figuren…'],
       ['running', 'Prüfe Figuren…'],
@@ -534,6 +509,95 @@ describe('StorylinePanel', () => {
       await openStoryline('Hauptstrang');
       expect(await screen.findByText('KI nicht eingerichtet')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Figuren prüfen' })).toBeDisabled();
+    });
+  });
+  describe('magic wand', () => {
+    const textHandler = (bodies: unknown[] = []) =>
+      http.post('/api/books/b1/ai/text', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({ suggestions: ['A1', 'A2', 'A3'] });
+      });
+    const patchHandler = (bodies: unknown[]) =>
+      http.patch('/api/books/b1/storylines/s1', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json(bookResponse(sampleBook()));
+      });
+    /** Sample book whose main strand already has a description, so „Umformulieren“ is offered. */
+    const describedBook = () => {
+      const book = sampleBook();
+      book.storylines[0]!.description = 'Die Flucht über das Meer beginnt im Morgengrauen.';
+      return book;
+    };
+    const wand = (label: string) => screen.getByRole('button', { name: `KI-Assistent: ${label}` });
+
+    it('edit description: kept suggestion is saved once on blur', async () => {
+      const patches: unknown[] = [];
+      server.use(meOk, bookOk(describedBook()), textHandler(), patchHandler(patches));
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      await userEvent.click(await screen.findByRole('button', { name: 'KI-Assistent: Kurzbeschreibung' }));
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Umformulieren' }));
+      await screen.findByText('1/3');
+      await userEvent.click(screen.getByRole('button', { name: 'Nächster Vorschlag' }));
+      await screen.findByText('2/3');
+      await userEvent.tab();
+      await vi.waitFor(() => expect(patches).toEqual([{ description: 'A2' }]));
+      await new Promise((r) => setTimeout(r, 50));
+      expect(patches).toHaveLength(1);
+    });
+
+    it('no PATCH after Escape', async () => {
+      const patches: unknown[] = [];
+      server.use(meOk, bookOk(describedBook()), textHandler(), patchHandler(patches));
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      await userEvent.click(await screen.findByRole('button', { name: 'KI-Assistent: Kurzbeschreibung' }));
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Umformulieren' }));
+      await screen.findByText('1/3');
+      await userEvent.keyboard('{Escape}');
+      await userEvent.tab();
+      await new Promise((r) => setTimeout(r, 50));
+      expect(patches).toEqual([]);
+    });
+
+    it('create draft receives inserted text', async () => {
+      const posts: Record<string, unknown>[] = [];
+      const texts: unknown[] = [];
+      server.use(
+        meOk,
+        bookOk(sampleBook()),
+        textHandler(texts),
+        http.post('/api/books/b1/storylines', async ({ request }) => {
+          posts.push((await request.json()) as Record<string, unknown>);
+          return HttpResponse.json(bookResponse(sampleBook()), { status: 201 });
+        }),
+      );
+      renderApp('/books/b1');
+      await userEvent.click(await screen.findByRole('button', { name: 'Neue Storyline' }));
+      await userEvent.type(screen.getByLabelText('Titel'), 'Flucht');
+      await userEvent.click(screen.getByRole('button', { name: 'KI-Assistent: Kurzbeschreibung' }));
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Vorschlagen' }));
+      await screen.findByText('1/3');
+      await userEvent.click(screen.getByRole('button', { name: 'Anlegen' }));
+      await vi.waitFor(() => expect(posts).toHaveLength(1));
+      expect(posts[0]).toMatchObject({ title: 'Flucht', description: 'A1' });
+      expect(texts[0]).toMatchObject({ target: { kind: 'storyline', storylineId: null, field: 'description' } });
+    });
+
+    it('section title has a wand', async () => {
+      server.use(meOk, bookOk(richBook()));
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      await userEvent.click(await screen.findByRole('button', { name: 'Abschnitt „Teil 1“ bearbeiten' }));
+      expect(wand('Titel Teil 1')).toBeInTheDocument();
+      expect(wand('Titel neuer Abschnitt')).toBeInTheDocument();
+    });
+
+    it('wand disabled when AI is off', async () => {
+      server.use(meOk, bookOk(sampleBook(), { ai: { enabled: false } }));
+      renderApp('/books/b1');
+      await openStoryline('Hauptstrang');
+      expect(await screen.findByRole('button', { name: 'KI-Assistent: Kurzbeschreibung' })).toBeDisabled();
     });
   });
 });

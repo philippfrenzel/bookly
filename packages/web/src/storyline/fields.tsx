@@ -1,5 +1,7 @@
 /** Field inputs that either commit live (create forms) or on blur/change (edit forms that save directly). */
 import { useEffect, useRef, useState } from 'react';
+import type { AiTextDraft, AiTextTarget, Id } from '@bookly/shared';
+import { MagicWand } from '../ai/MagicWand';
 
 interface TextProps {
   /** The stored value (edit) or the draft value (create). */
@@ -12,13 +14,17 @@ interface TextProps {
   /** Changes after a failed or rejected save so the field falls back to `value`. */
   resetKey: number;
   onCommit: (value: string) => void;
+  /** Adds the AI wand next to the control. */
+  ai?: { bookId: Id; target: AiTextTarget; draft?: () => AiTextDraft; enabled: boolean };
 }
 
 /** Text input or textarea; edit forms keep a local buffer and commit on blur. */
-export function TextInput({ value, multiline, maxLength, ariaLabel, live, resetKey, onCommit }: TextProps) {
+export function TextInput({ value, multiline, maxLength, ariaLabel, live, resetKey, onCommit, ai }: TextProps) {
   const [text, setText] = useState(value);
+  const ref = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
   useEffect(() => setText(value), [value, resetKey]);
   const shared = {
+    ref,
     value: text,
     maxLength,
     'aria-label': ariaLabel,
@@ -30,10 +36,17 @@ export function TextInput({ value, multiline, maxLength, ariaLabel, live, resetK
     setText(next);
     if (live) onCommit(next);
   };
-  return multiline ? (
+  const control = multiline ? (
     <textarea {...shared} onChange={(e) => change(e.target.value)} />
   ) : (
     <input {...shared} onChange={(e) => change(e.target.value)} />
+  );
+  if (!ai) return control;
+  return (
+    <div className="wand-field">
+      {control}
+      <MagicWand getField={() => ref.current} fieldLabel={ariaLabel ?? ''} {...ai} />
+    </div>
   );
 }
 
