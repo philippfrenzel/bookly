@@ -12,6 +12,7 @@ import { ChapterSection } from './ChapterSection';
 import { manuscriptError, useManuscript, useManuscriptMutation } from './manuscriptApi';
 import { ProposalPanel } from './ProposalPanel';
 import { ReviewerPanel } from './ReviewerPanel';
+import { StylePanel } from './StylePanel';
 import { TrashPanel } from './TrashPanel';
 
 /** Loads the manuscript and lays out the page. */
@@ -33,6 +34,7 @@ export function ManuscriptPage() {
   const tabs: SideTab[] = ms
     ? [
         ...(author ? [{ id: 'ai', label: 'KI-Struktur', content: <ProposalPanel bookId={bookId} ms={ms} /> }] : []),
+        { id: 'style', label: 'Stil', content: <StylePanel bookId={bookId} ms={ms} /> },
         { id: 'trash', label: `Papierkorb${ms.trash.length ? ` (${ms.trash.length})` : ''}`, content: <TrashPanel bookId={bookId} ms={ms} /> },
         ...(author ? [{ id: 'reviewers', label: 'Lektoren', content: <ReviewerPanel bookId={bookId} ms={ms} /> }] : []),
       ]

@@ -65,7 +65,17 @@ const STRUCTURE_SCHEMA = {
 };
 
 /** Builds the structure request from the book, its scenes and the current live structure. */
-export function structureRequest(book: Book, sceneInfo: SceneInfo, current: ManuscriptChapter[], wish?: string): AiRequest {
+/** Optional parts of a structure request. */
+export interface StructureOptions {
+  wish?: string;
+  /** Style instruction of the work (FR-015..017). */
+  style?: string;
+  /** Only this chapter is to be reworked (FR-014). */
+  focusChapterId?: Id;
+}
+
+export function structureRequest(book: Book, sceneInfo: SceneInfo, current: ManuscriptChapter[], opts: StructureOptions = {}): AiRequest {
+  const { wish, style, focusChapterId } = opts;
   const tpName = new Map(book.timePoints.map((t) => [t.id, t.name]));
   const charName = new Map(book.characters.map((c) => [c.id, c.name ?? 'Unbenannt']));
   const scenesOf = (target: { sectionId?: Id; storylineId?: Id }) =>
@@ -101,6 +111,11 @@ export function structureRequest(book: Book, sceneInfo: SceneInfo, current: Manu
       bausteine: c.blocks.map((b) => ({ blockId: b.id, titel: b.title, inhalt: b.synopsis.slice(0, 400) })),
     })),
     ...(wish && { wunsch: wish }),
+    ...(style && { stil: style }),
+    ...(focusChapterId && {
+      fokusKapitel: focusChapterId,
+      hinweis: 'Schlage nur für das Kapitel fokusKapitel eine neue Ordnung seiner Bausteine vor (aufteilen, umstellen, neue Bausteine aus passenden Abschnitten). Gib genau dieses eine Kapitel mit seiner chapterId zurück.',
+    }),
   });
   return { system: STRUCTURE_SYSTEM, user, schemaName: 'structure_proposal', schema: STRUCTURE_SCHEMA, timeoutMs: 90000 };
 }
@@ -169,6 +184,8 @@ export interface DraftContext {
   scenes: { name: string; description: string }[];
   /** The author's concrete instructions for this block (FR-018); they take precedence. */
   instruction?: string;
+  /** Style instruction of the work. */
+  style?: string;
   /** End of the previous block's text, for continuity. */
   previousText: string;
 }
@@ -177,7 +194,7 @@ const DRAFT_SYSTEM = [
   'Du schreibst für eine Autorin oder einen Autor einen ersten Entwurf einer Romanpassage auf Deutsch.',
   'Erzähle, was im Inhalt des Bausteins steht, mit den genannten Figuren am genannten Schauplatz.',
   'Schließe stilistisch und inhaltlich an den vorherigen Text an, falls vorhanden. Etwa 300 bis 600 Wörter.',
-  'Halte dich vorrangig an die "anweisung" des Autors, falls vorhanden.',
+  'Halte dich vorrangig an die "anweisung" des Autors, falls vorhanden, und schreibe im angegebenen "stil".',
   'Kein Titel, keine Erklärungen. Antworte als JSON-Objekt mit dem Feld "text".',
 ].join(' ');
 
@@ -194,6 +211,7 @@ export function draftRequest(ctx: DraftContext): AiRequest {
       figuren: ctx.characters,
       szenen: ctx.scenes,
       ...(ctx.instruction && { anweisung: ctx.instruction }),
+      ...(ctx.style && { stil: ctx.style }),
       vorherigerText: ctx.previousText,
     }),
     schemaName: 'block_draft',

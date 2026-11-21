@@ -7,6 +7,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { ProposalRequestBody, UUID_RE } from '@bookly/shared';
 import type { Id, ProposalChapter } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
+import { styleText } from '../ai/stylePrompt.js';
 import { draftRequest, parseDraft, parseStructure, structureRequest } from '../ai/structurePrompt.js';
 import { loadBook, type Tx } from '../db/loadBook.js';
 import { loadScenes } from '../db/loadScenes.js';
@@ -17,7 +18,7 @@ import { loadManuscript } from './load.js';
 import { blockOf, insertBlock, liveBlockIds, liveChapterIds, writeBlockOrder, writeChapterOrder } from './store.js';
 
 /** Applies an accepted proposal: listed chapters and blocks first in the proposed order, everything unlisted keeps its place after them. */
-export async function applyProposal(tx: Tx, bookId: Id, proposal: ProposalChapter[], userId: Id): Promise<void> {
+export async function applyProposal(tx: Tx, bookId: Id, proposal: ProposalChapter[], userId: Id, keepChapterOrder = false): Promise<void> {
   const liveChapters = new Set(await liveChapterIds(tx, bookId));
   const chapterOrder: Id[] = [];
   const placed = new Set<Id>();
@@ -50,7 +51,7 @@ export async function applyProposal(tx: Tx, bookId: Id, proposal: ProposalChapte
   for (const id of allLive.filter((x) => !chapterOrder.includes(x))) {
     await writeBlockOrder(tx, id, await liveBlockIds(tx, id));
   }
-  await writeChapterOrder(tx, [...chapterOrder, ...allLive.filter((x) => !chapterOrder.includes(x))]);
+  if (!keepChapterOrder) await writeChapterOrder(tx, [...chapterOrder, ...allLive.filter((x) => !chapterOrder.includes(x))]);
 }
 
 /** Registers proposal and draft routes. */
@@ -71,9 +72,15 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
       loadManuscript(app.db, bookId, request.user!.id, request.work!, true),
     ]);
     if (book.storylines.length === 0) return reply.code(400).send({ error: 'no_storylines' });
+    const focus = parsed.data.chapterId ? current.chapters.find((c) => c.id === parsed.data.chapterId) : undefined;
+    if (parsed.data.chapterId && !focus) return reply.code(404).send({ error: 'not_found' });
     let result;
     try {
-      const raw = await app.ai!.complete(structureRequest(book, { scenes: sceneData.scenes, assignments: sceneData.sceneAssignments }, current.chapters, parsed.data.wish));
+      const raw = await app.ai!.complete(structureRequest(book, { scenes: sceneData.scenes, assignments: sceneData.sceneAssignments }, current.chapters, {
+        wish: parsed.data.wish,
+        style: styleText(current.style, current.teamStyles),
+        focusChapterId: focus?.id,
+      }));
       result = parseStructure(raw, {
         chapters: new Set(current.chapters.map((c) => c.id)),
         blocks: new Set(current.chapters.flatMap((c) => c.blocks.map((b) => b.id))),
@@ -81,6 +88,10 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
         storylines: new Set(book.storylines.map((l) => l.id)),
         scenes: new Set(sceneData.scenes.map((s) => s.id)),
       });
+      if (focus) {
+        const own = result.chapters.find((c) => c.chapterId === focus.id) ?? result.chapters[0]!;
+        result = { summary: result.summary, chapters: [{ ...own, chapterId: focus.id }] };
+      }
     } catch (err) {
       request.log.warn({ err }, 'ai structure proposal failed');
       return reply.code(502).send({ error: 'ai_failed' });
@@ -92,7 +103,8 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
         .where(and(eq(structureProposals.bookId, bookId), eq(structureProposals.status, 'open')));
       await tx.insert(structureProposals).values({
         bookId,
-        kind: current.chapters.length === 0 ? 'initial' : 'adjust',
+        kind: focus ? 'chapter' : current.chapters.length === 0 ? 'initial' : 'adjust',
+        chapterId: focus?.id ?? null,
         status: 'open',
         summary: result.summary,
         payload: result.chapters,
@@ -113,7 +125,7 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
         .where(and(eq(structureProposals.id, proposalId), eq(structureProposals.bookId, bookId)));
       if (!p) throw new HttpError(404, 'not_found');
       if (p.status !== 'open') throw new HttpError(409, 'decided');
-      if (decision === 'accept') await applyProposal(tx, bookId, p.payload as ProposalChapter[], request.user!.id);
+      if (decision === 'accept') await applyProposal(tx, bookId, p.payload as ProposalChapter[], request.user!.id, p.kind === 'chapter');
       await tx
         .update(structureProposals)
         .set({ status: decision === 'accept' ? 'accepted' : 'rejected', decidedAt: new Date() })
@@ -151,6 +163,7 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
           description: sceneData.sceneAssignments.find((a) => a.sceneId === s.id && (a.sectionId === section?.id || a.storylineId === line?.id))?.description ?? '',
         })),
         instruction: row.instruction,
+        style: styleText(ms.style, ms.teamStyles),
         previousText: prev?.text.slice(-1500) ?? '',
       }));
       return { text: parseDraft(raw) };

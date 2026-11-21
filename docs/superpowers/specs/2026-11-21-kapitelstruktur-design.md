@@ -39,3 +39,13 @@ per-chapter preselection (FR-014).
 - **Chapter-wise editing (FR-012/019)**: „Kapitel bearbeiten“ locks every live Baustein of the chapter at once (all or none, 423 when
   one is taken) and opens all editors; „Kapitel freigeben“ releases the caller's locks.
 - **Preview (FR-024)**: `/books/:id/manuskript/vorschau` (whole work) and `?kapitel=<id>` (one chapter), reading layout only.
+
+## Phase 3 (done)
+
+- **Styles per work (FR-015, FR-016)**: predefined styles (`STYLE_PRESETS`) and an own addition, stored per book in `book_styles`;
+  only the author changes them, reviewers see them read-only.
+- **Team base styles (FR-017)**: there are no teams or organisations in Bookly, so the "team" is the author's account: base styles
+  in `team_styles` belong to the author, are managed in the style tab and can be picked in every work of that author.
+- The style text goes into the AI draft and into structure proposals.
+- **Per-chapter preselection (FR-014)**: the AI tab can limit a proposal to one chapter (`kind: chapter`); accepting it only
+  reorders/extends that chapter and keeps the chapter order.
