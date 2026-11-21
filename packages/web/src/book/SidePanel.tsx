@@ -8,8 +8,11 @@ export interface SideTab {
   content: ReactNode;
 }
 
-/** Renders an optional top block, the tab buttons and the selected tab's content; pass `activeId` to control the selection. */
-export function SidePanel({ tabs, activeId, onActiveChange, top }: { tabs: SideTab[]; activeId?: string; onActiveChange?: (id: string) => void; top?: ReactNode }) {
+/**
+ * Renders an optional top block, the tab buttons and the selected tab's content; pass `activeId` to control the selection.
+ * `bar` replaces the tab buttons, e.g. with a way back while one storyline fills the panel.
+ */
+export function SidePanel({ tabs, activeId, onActiveChange, top, bar }: { tabs: SideTab[]; activeId?: string; onActiveChange?: (id: string) => void; top?: ReactNode; bar?: ReactNode }) {
   const [own, setOwn] = useState(tabs[0]?.id);
   const active = activeId ?? own;
   const setActive = (id: string) => {
@@ -20,20 +23,16 @@ export function SidePanel({ tabs, activeId, onActiveChange, top }: { tabs: SideT
   return (
     <aside className="side-panel" aria-label="Seitenleiste">
       {top}
-      <div role="tablist">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={t.id === current?.id}
-            onClick={() => setActive(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <div role="tabpanel">{current?.content}</div>
+      {bar ?? (
+        <div role="tablist">
+          {tabs.map((t) => (
+            <button key={t.id} type="button" role="tab" aria-selected={t.id === current?.id} onClick={() => setActive(t.id)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div role={bar ? undefined : 'tabpanel'}>{current?.content}</div>
     </aside>
   );
 }

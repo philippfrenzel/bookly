@@ -1,4 +1,7 @@
-/** Scene management tab: scenes with name, optional image and any number of notes (FR-001, FR-002). */
+/**
+ * Scene management tab: scenes with name, optional image and any number of notes (FR-001, FR-002).
+ * Each scene lists the sections it is assigned to; a click opens that section in its storyline.
+ */
 import { useState } from 'react';
 import type { Book, Id, Scene, SceneAssignment } from '@bookly/shared';
 import { SCENE_IMAGE_TYPES, SCENE_LIMITS } from '@bookly/shared';
@@ -7,15 +10,24 @@ import { useSaveFeedback, type SaveFeedback } from '../book/saveFeedback';
 import { Icon } from '../ui/Icon';
 import { imageProblem, sceneImageUrl, uploadErrorMessage, useUploadSceneImage } from './sceneApi';
 
+/** A section a scene is assigned to, with what is needed to show and open it. */
+interface AssignedSection {
+  storylineId: Id;
+  sectionId: Id;
+  title: string;
+  color: string;
+}
+
 interface ItemProps {
   bookId: Id;
   scene: Scene;
-  sectionTitles: string[];
+  sections: AssignedSection[];
   fb: SaveFeedback;
+  onOpenSection?: (storylineId: Id, sectionId: Id) => void;
 }
 
 /** One scene: name and notes saved on blur, image upload/remove, delete with confirmation. */
-function SceneItem({ bookId, scene, sectionTitles, fb }: ItemProps) {
+function SceneItem({ bookId, scene, sections, fb, onOpenSection }: ItemProps) {
   const base = `/api/books/${bookId}/scenes/${scene.id}`;
   const rename = useBookMutation<{ name: string }>(bookId, 'PATCH', () => base, (v) => v);
   const remove = useBookMutation<void>(bookId, 'DELETE', () => base);
@@ -35,7 +47,7 @@ function SceneItem({ bookId, scene, sectionTitles, fb }: ItemProps) {
   };
 
   const confirmDelete = () => {
-    const extra = sectionTitles.length > 0 ? ` Sie wird aus ${sectionTitles.length} Abschnitt(en) entfernt.` : '';
+    const extra = sections.length > 0 ? ` Sie wird aus ${sections.length} Abschnitt(en) entfernt.` : '';
     if (window.confirm(`Szene „${scene.name}“ löschen?${extra}`)) {
       fb.clear();
       remove.mutate(undefined, { onError });
@@ -113,21 +125,43 @@ function SceneItem({ bookId, scene, sectionTitles, fb }: ItemProps) {
         </button>
       </div>
 
-      <p className="muted scene-usage">
-        {sectionTitles.length > 0 ? `Zugeordnet zu: ${sectionTitles.join(', ')}` : 'Noch keinem Abschnitt zugeordnet.'}
-      </p>
+      <div className="scene-usage">
+        {sections.length === 0 ? (
+          <p className="muted">Noch keinem Abschnitt zugeordnet.</p>
+        ) : (
+          <>
+            <span className="scene-label">Zugeordnet zu</span>
+            <ul className="scene-sections">
+              {sections.map((a) => (
+                <li key={a.sectionId}>
+                  <button
+                    type="button"
+                    className="line-chip scene-section"
+                    style={{ ['--line' as string]: a.color }}
+                    aria-label={`Abschnitt „${a.title}“ öffnen`}
+                    disabled={!onOpenSection}
+                    onClick={() => onOpenSection?.(a.storylineId, a.sectionId)}
+                  >
+                    {a.title}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
     </li>
   );
 }
 
-/** Titles of the sections a scene is assigned to, in the order of the assignments. */
-function assignedSectionTitles(book: Book, sceneId: Id, assignments: SceneAssignment[]): string[] {
-  const titles = new Map(book.storylines.flatMap((l) => l.sections.map((s) => [s.id, s.title] as const)));
-  return assignments.filter((a) => a.sceneId === sceneId).map((a) => titles.get(a.sectionId) ?? '').filter((t) => t !== '');
+/** Sections a scene is assigned to, in the order of the assignments. */
+function assignedSections(book: Book, sceneId: Id, assignments: SceneAssignment[]): AssignedSection[] {
+  const byId = new Map(book.storylines.flatMap((l) => l.sections.map((s) => [s.id, { storylineId: l.id, sectionId: s.id, title: s.title, color: l.color }] as const)));
+  return assignments.filter((a) => a.sceneId === sceneId).flatMap((a) => byId.get(a.sectionId) ?? []);
 }
 
 /** Panel listing the book's scenes. */
-export function ScenePanel({ book, scenes, assignments }: { book: Book; scenes: Scene[]; assignments: SceneAssignment[] }) {
+export function ScenePanel({ book, scenes, assignments, onOpenSection }: { book: Book; scenes: Scene[]; assignments: SceneAssignment[]; onOpenSection?: (storylineId: Id, sectionId: Id) => void }) {
   const fb = useSaveFeedback();
   const create = useBookMutation<void>(book.id, 'POST', () => `/api/books/${book.id}/scenes`, () => ({ name: 'Neue Szene' }));
   return (
@@ -137,11 +171,11 @@ export function ScenePanel({ book, scenes, assignments }: { book: Book; scenes: 
       </button>
       {fb.feedback}
       {scenes.length === 0 && (
-        <p className="muted">Lege Szenen an – Orte mit Bild und Notizen – und ordne sie im Storyline-Reiter einzelnen Abschnitten zu.</p>
+        <p className="muted">Lege Szenen an, also Orte mit Bild und Notizen. Zuordnen kannst du sie in einer Storyline unter „Zeitpunkte“, wenn du einen Abschnitt bearbeitest.</p>
       )}
       <ul className="panel-list scene-list">
         {scenes.map((s) => (
-          <SceneItem key={s.id} bookId={book.id} scene={s} sectionTitles={assignedSectionTitles(book, s.id, assignments)} fb={fb} />
+          <SceneItem key={s.id} bookId={book.id} scene={s} sections={assignedSections(book, s.id, assignments)} fb={fb} onOpenSection={onOpenSection} />
         ))}
       </ul>
     </section>

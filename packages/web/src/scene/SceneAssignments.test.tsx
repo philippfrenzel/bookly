@@ -9,10 +9,11 @@ import { renderApp } from '../test/render';
 import { server } from '../test/setup';
 import { assignment, bookWithSections, scene } from './sceneTestFixtures';
 
-/** Opens the storyline and the edit form of section „Abschied“ (sec2). */
+/** Opens the storyline, its „Zeitpunkte“ tab and the edit form of section „Abschied“ (sec2). */
 async function openSection(name = 'Abschied') {
   renderApp('/books/b1');
   await userEvent.click(await screen.findByRole('button', { name: 'Storyline „Hauptstrang“' }));
+  await userEvent.click(await screen.findByRole('tab', { name: 'Zeitpunkte' }));
   await userEvent.click(await screen.findByRole('button', { name: `Abschnitt „${name}“ bearbeiten` }));
   return screen.getByRole('group', { name: 'Szenen' });
 }

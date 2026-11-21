@@ -55,7 +55,9 @@ test('scene management and assignment flow', async ({ page }) => {
   await panel.getByLabel('Zeitraum Ende').selectOption({ label: 'Tag 2' });
   await panel.getByRole('button', { name: 'Anlegen' }).click();
   await page.getByRole('button', { name: 'Storyline „Reise“' }).click();
+  await panel.getByRole('tab', { name: 'Zeitpunkte' }).click();
   for (const [title, tp] of [['Ankunft', 'Tag 1'], ['Abschied', 'Tag 2']] as const) {
+    await panel.getByRole('button', { name: 'Neuer Abschnitt' }).click();
     await panel.getByLabel('Titel neuer Abschnitt', { exact: true }).fill(title);
     await panel.getByLabel('Zeitraum neuer Abschnitt Start').selectOption({ label: tp });
     await panel.getByLabel('Zeitraum neuer Abschnitt Ende').selectOption({ label: tp });
@@ -83,6 +85,18 @@ test('scene management and assignment flow', async ({ page }) => {
   await scenes.getByRole('button', { name: 'Zuordnen' }).click();
   await expect(scenes.getByLabel('Beschreibung Szene Bergsee')).toBeVisible();
 
+  await panel.getByRole('button', { name: 'Fertig' }).click();
+
+  // The timetable below the map names the scene on both section cards.
+  const timetable = page.getByRole('region', { name: 'Fahrplan der Storyline' });
+  await expect(timetable.getByText('Bergsee')).toHaveCount(2);
+
+  // Back in the book, the scene lists its sections; a click opens the section in its storyline.
+  await page.getByRole('button', { name: 'Zurück zum Buch' }).click();
   await page.getByRole('tab', { name: 'Szenen' }).click();
-  await expect(page.getByText('Zugeordnet zu: Ankunft, Abschied')).toBeVisible();
+  const usage = page.getByRole('region', { name: 'Szenen' });
+  await expect(usage.getByRole('button', { name: 'Abschnitt „Ankunft“ öffnen' })).toBeVisible();
+  await usage.getByRole('button', { name: 'Abschnitt „Abschied“ öffnen' }).click();
+  await expect(panel.getByRole('tab', { name: 'Zeitpunkte' })).toHaveAttribute('aria-selected', 'true');
+  await expect(panel.getByRole('group', { name: 'Szenen' }).getByLabel('Beschreibung Szene Bergsee')).toBeVisible();
 });

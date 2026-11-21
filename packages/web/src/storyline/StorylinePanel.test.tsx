@@ -36,6 +36,18 @@ async function openStoryline(name: string) {
   await userEvent.click(await screen.findByRole('button', { name: `Storyline „${name}“` }));
 }
 
+/** Switches the shown storyline to one of its sub-tabs (Storyline, Figuren, Zeitpunkte). */
+async function showTab(name: string) {
+  const region = await screen.findByRole('region', { name: 'Storyline bearbeiten' });
+  await userEvent.click(within(region).getByRole('tab', { name }));
+}
+
+/** Opens a storyline straight on one of its sub-tabs. */
+async function openOn(name: string, tab: string) {
+  await openStoryline(name);
+  await showTab(tab);
+}
+
 describe('StorylinePanel', () => {
   it('creates a storyline with kind and range but without status', async () => {
     const bodies: Record<string, unknown>[] = [];
@@ -142,9 +154,10 @@ describe('StorylinePanel', () => {
   it('lists sections only for main strands', async () => {
     server.use(meOk, bookOk(richBook()));
     renderApp('/books/b1');
-    await openStoryline('Hauptstrang');
+    await openOn('Hauptstrang', 'Zeitpunkte');
     expect(screen.getByRole('region', { name: 'Abschnitte' })).toBeInTheDocument();
     await openStoryline('Rivale');
+    expect(screen.queryByRole('tab', { name: 'Zeitpunkte' })).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Abschnitte' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Abschnitt hinzufügen' })).not.toBeInTheDocument();
   });
@@ -160,7 +173,7 @@ describe('StorylinePanel', () => {
       }),
     );
     renderApp('/books/b1');
-    await openStoryline('Hauptstrang');
+    await openOn('Hauptstrang', 'Zeitpunkte');
     const region = screen.getByRole('region', { name: 'Abschnitte' });
     await userEvent.click(within(region).getByRole('button', { name: 'Abschnitt „Teil 1“ nach unten' }));
     await vi.waitFor(() => expect(bodies).toEqual([{ ids: ['x2', 'x1'] }]));
@@ -178,7 +191,7 @@ describe('StorylinePanel', () => {
       }),
     );
     renderApp('/books/b1');
-    await openStoryline('Hauptstrang');
+    await openOn('Hauptstrang', 'Zeitpunkte');
     await userEvent.click(screen.getByRole('button', { name: 'Abschnitt „Teil 2“ löschen' }));
     expect(confirm).toHaveBeenCalledWith('Abschnitt „Teil 2“ löschen?');
     await vi.waitFor(() => expect(deletes).toBe(1));
@@ -195,7 +208,8 @@ describe('StorylinePanel', () => {
       }),
     );
     renderApp('/books/b1');
-    await openStoryline('Hauptstrang');
+    await openOn('Hauptstrang', 'Zeitpunkte');
+    await userEvent.click(screen.getByRole('button', { name: 'Neuer Abschnitt' }));
     await userEvent.type(screen.getByLabelText('Titel neuer Abschnitt'), 'Prolog');
     await userEvent.click(screen.getByRole('button', { name: 'Abschnitt hinzufügen' }));
     await vi.waitFor(() => expect(bodies).toHaveLength(1));
@@ -232,8 +246,10 @@ describe('StorylinePanel', () => {
       await openStoryline('Hauptstrang');
       await userEvent.click(within(screen.getByRole('group', { name: 'Status' })).getByRole('radio', { name: 'abgeschlossen' }));
       await vi.waitFor(() => expect(bodies).toHaveLength(1));
+      await showTab('Figuren');
       await userEvent.click(within(within(screen.getByRole('region', { name: 'Storyline bearbeiten' })).getByRole('group', { name: 'Figuren' })).getByRole('checkbox', { name: 'Jon' }));
       await vi.waitFor(() => expect(bodies).toHaveLength(2));
+      await showTab('Storyline');
       fireEvent.change(screen.getByLabelText('Farbe'), { target: { value: '#112233' } });
       await vi.waitFor(() => expect(bodies).toHaveLength(3));
       expect(bodies).toEqual([{ status: 'completed' }, { characterIds: ['c1', 'c2'] }, { color: '#112233' }]);
@@ -300,7 +316,7 @@ describe('StorylinePanel', () => {
         }),
       );
       renderApp('/books/b1');
-      await openStoryline('Hauptstrang');
+      await openOn('Hauptstrang', 'Zeitpunkte');
       await userEvent.click(screen.getByRole('button', { name: 'Abschnitt „Teil 1“ bearbeiten' }));
       expect(screen.queryByRole('button', { name: 'Abschnitt speichern' })).not.toBeInTheDocument();
       const title = screen.getByLabelText('Titel Teil 1');
@@ -317,7 +333,8 @@ describe('StorylinePanel', () => {
         http.post('/api/books/b1/storylines/s1/sections', () => HttpResponse.json({ error: 'internal_error' }, { status: 500 })),
       );
       renderApp('/books/b1');
-      await openStoryline('Hauptstrang');
+      await openOn('Hauptstrang', 'Zeitpunkte');
+      await userEvent.click(screen.getByRole('button', { name: 'Neuer Abschnitt' }));
       await userEvent.type(screen.getByLabelText('Titel neuer Abschnitt'), 'Prolog');
       await userEvent.click(screen.getByRole('button', { name: 'Abschnitt hinzufügen' }));
       expect(await screen.findByText('Speichern fehlgeschlagen. Bitte erneut versuchen.')).toBeInTheDocument();
@@ -337,7 +354,7 @@ describe('StorylinePanel', () => {
     it('shows the base profile line when expanded and no toggle when creating', async () => {
       server.use(meOk, bookOk(additionBook()));
       renderApp('/books/b1');
-      await openStoryline('Hauptstrang');
+      await openOn('Hauptstrang', 'Figuren');
       const toggle = await screen.findByRole('button', { name: toggleName });
       expect(toggle).toHaveAttribute('aria-expanded', 'false');
       await userEvent.click(toggle);
@@ -352,7 +369,7 @@ describe('StorylinePanel', () => {
       book.characters[0]!.intentions = 'Heimkehr';
       server.use(meOk, bookOk(book));
       renderApp('/books/b1');
-      await openStoryline('Hauptstrang');
+      await openOn('Hauptstrang', 'Figuren');
       await userEvent.click(await screen.findByRole('button', { name: toggleName }));
       expect(screen.getByText('Grundprofil: Heimkehr')).toBeInTheDocument();
     });
@@ -360,7 +377,7 @@ describe('StorylinePanel', () => {
     it('hides the base profile line when the profile is empty', async () => {
       server.use(meOk, bookOk(sampleBook()));
       renderApp('/books/b1');
-      await openStoryline('Hauptstrang');
+      await openOn('Hauptstrang', 'Figuren');
       await userEvent.click(await screen.findByRole('button', { name: toggleName }));
       expect(screen.queryByText(/Grundprofil/)).not.toBeInTheDocument();
     });
@@ -376,7 +393,7 @@ describe('StorylinePanel', () => {
         }),
       );
       renderApp('/books/b1');
-      await openStoryline('Hauptstrang');
+      await openOn('Hauptstrang', 'Figuren');
       await userEvent.click(await screen.findByRole('button', { name: toggleName }));
       await userEvent.type(screen.getByLabelText('Verhalten Ergänzung Mira'), 'wird misstrauisch');
       await userEvent.tab();
@@ -401,7 +418,7 @@ describe('StorylinePanel', () => {
         }),
       );
       renderApp('/books/b1');
-      await openStoryline('Hauptstrang');
+      await openOn('Hauptstrang', 'Figuren');
       await userEvent.click(await miraCheckbox());
       expect(confirm).toHaveBeenCalledWith('Ergänzung für Mira geht verloren. Entfernen?');
       expect((await miraCheckbox())).toBeChecked();
@@ -421,7 +438,7 @@ describe('StorylinePanel', () => {
         }),
       );
       renderApp('/books/b1');
-      await openStoryline('Hauptstrang');
+      await openOn('Hauptstrang', 'Figuren');
       await userEvent.click(await screen.findByRole('button', { name: toggleName }));
       await userEvent.type(screen.getByLabelText('Verhalten Ergänzung Mira'), 'ungespeichert');
       await userEvent.click(await miraCheckbox());
@@ -441,7 +458,7 @@ describe('StorylinePanel', () => {
         }),
       );
       renderApp('/books/b1');
-      await openStoryline('Hauptstrang');
+      await openOn('Hauptstrang', 'Figuren');
       await userEvent.click(await miraCheckbox());
       await vi.waitFor(() => expect(bodies).toEqual([{ characterIds: [] }]));
       expect(confirm).not.toHaveBeenCalled();
@@ -455,7 +472,7 @@ describe('StorylinePanel', () => {
       const checks = [{ storylineId: 's1', status, finishedAt: null, error: null }];
       server.use(meOk, bookOk(sampleBook(), { characterChecks: checks }));
       renderApp('/books/b1');
-      await openStoryline('Hauptstrang');
+      await openOn('Hauptstrang', 'Figuren');
       expect(await screen.findByText(new RegExp(text))).toBeInTheDocument();
     });
 
@@ -464,7 +481,7 @@ describe('StorylinePanel', () => {
       const checks = [{ storylineId: 's1', status: 'done' as const, finishedAt: ago(3 * 60_000 + 5000), error: null }];
       server.use(meOk, bookOk(sampleBook(), { characterChecks: checks }));
       renderApp('/books/b1');
-      await openStoryline('Hauptstrang');
+      await openOn('Hauptstrang', 'Figuren');
       expect(await screen.findByText('Geprüft vor 3 min')).toBeInTheDocument();
     });
 
@@ -472,7 +489,7 @@ describe('StorylinePanel', () => {
       const checks = [{ storylineId: 's1', status: 'done' as const, finishedAt: new Date().toISOString(), error: null }];
       server.use(meOk, bookOk(sampleBook(), { characterChecks: checks }));
       renderApp('/books/b1');
-      await openStoryline('Hauptstrang');
+      await openOn('Hauptstrang', 'Figuren');
       expect(await screen.findByText('Geprüft gerade eben')).toBeInTheDocument();
     });
 
@@ -488,7 +505,7 @@ describe('StorylinePanel', () => {
         }),
       );
       renderApp('/books/b1');
-      await openStoryline('Hauptstrang');
+      await openOn('Hauptstrang', 'Figuren');
       await userEvent.click(await screen.findByRole('button', { name: 'Figuren prüfen' }));
       await vi.waitFor(() => expect(posts).toBe(1));
       await userEvent.click(screen.getByRole('button', { name: 'erneut versuchen' }));
@@ -498,7 +515,7 @@ describe('StorylinePanel', () => {
     it('shows only the button when no status row exists, and a disabled one when AI is off', async () => {
       server.use(meOk, bookOk(sampleBook()));
       renderApp('/books/b1');
-      await openStoryline('Hauptstrang');
+      await openOn('Hauptstrang', 'Figuren');
       expect(await screen.findByRole('button', { name: 'Figuren prüfen' })).toBeEnabled();
       expect(screen.queryByText(/Prüfe Figuren|Geprüft/)).not.toBeInTheDocument();
     });
@@ -506,7 +523,7 @@ describe('StorylinePanel', () => {
     it('disables the check when AI is not set up', async () => {
       server.use(meOk, bookOk(sampleBook(), { ai: { enabled: false } }));
       renderApp('/books/b1');
-      await openStoryline('Hauptstrang');
+      await openOn('Hauptstrang', 'Figuren');
       expect(await screen.findByText('KI nicht eingerichtet')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Figuren prüfen' })).toBeDisabled();
     });
@@ -587,9 +604,10 @@ describe('StorylinePanel', () => {
     it('section title has a wand', async () => {
       server.use(meOk, bookOk(richBook()));
       renderApp('/books/b1');
-      await openStoryline('Hauptstrang');
+      await openOn('Hauptstrang', 'Zeitpunkte');
       await userEvent.click(await screen.findByRole('button', { name: 'Abschnitt „Teil 1“ bearbeiten' }));
       expect(wand('Titel Teil 1')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Neuer Abschnitt' }));
       expect(wand('Titel neuer Abschnitt')).toBeInTheDocument();
     });
 

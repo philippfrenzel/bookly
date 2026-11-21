@@ -112,7 +112,7 @@ function AssignScene({ bookId, sectionId, candidates, assignments, aiEnabled, on
     generate.reset();
   };
 
-  if (candidates.length === 0) return <p className="muted">Alle Szenen sind diesem Abschnitt schon zugeordnet, oder es gibt noch keine. Szenen legst du im Reiter „Szenen“ an.</p>;
+  if (candidates.length === 0) return <p className="muted">Alle Szenen sind diesem Abschnitt schon zugeordnet, oder es gibt noch keine. Szenen legst du im Buch unter „Szenen“ an.</p>;
 
   return (
     <div className="scene-assign">

@@ -44,7 +44,7 @@ describe('ScenePanel', () => {
       }),
     );
     await openTab();
-    expect(screen.getByText('Zugeordnet zu: Ankunft')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Abschnitt „Ankunft“ öffnen' })).toBeInTheDocument();
     const name = screen.getByLabelText('Name Szene Bergsee');
     await userEvent.clear(name);
     await userEvent.tab();
@@ -53,6 +53,17 @@ describe('ScenePanel', () => {
     await userEvent.type(name, 'Alpensee');
     await userEvent.tab();
     expect(bodies).toEqual([{ name: 'Alpensee' }]);
+  });
+
+  it('opens an assigned section in its storyline and returns to the scene tab', async () => {
+    server.use(meOk, bookOk(bookWithSections(), { scenes: [scene()], sceneAssignments: [assignment({ sectionId: 'sec2' })] }));
+    await openTab();
+    await userEvent.click(screen.getByRole('button', { name: 'Abschnitt „Abschied“ öffnen' }));
+    expect(screen.getByRole('tab', { name: 'Zeitpunkte', selected: true })).toBeInTheDocument();
+    expect(screen.getByLabelText('Titel Abschied')).toHaveValue('Abschied');
+    expect(screen.getByRole('group', { name: 'Szenen' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Zurück zum Buch' }));
+    expect(screen.getByRole('tab', { name: 'Szenen', selected: true })).toBeInTheDocument();
   });
 
   it('adds, edits and deletes notes', async () => {
