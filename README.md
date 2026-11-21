@@ -38,6 +38,8 @@ npm run dev
 
 Starts the API (http://localhost:3000) and the web app (http://localhost:5173, proxies `/api` to the API).
 
+To restart on the latest main, run `./restart-dev.sh`: it stops running Bookly dev servers (ports 3000 and 5173), pulls main, runs `npm install` and starts `npm run dev` again. It aborts before pulling if tracked files have local changes.
+
 ## Tests
 
 ```sh
