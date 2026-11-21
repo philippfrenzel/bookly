@@ -37,6 +37,8 @@ interface BarState {
   currentLength: number;
   index: number;
   suggestions: string[];
+  /** The field's full value as the wand last left it; bar operations only act on a field that still shows it. */
+  shown: string;
 }
 
 const FAILED = 'Vorschlag fehlgeschlagen.';
@@ -76,18 +78,30 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
     }
   };
 
-  const switchBy = (delta: number) => {
+  /**
+   * The current field if it still shows what the wand left in it. The field may have been
+   * remounted meanwhile (edit forms key it on the stored value), so it is re-resolved each time.
+   */
+  const barField = (): Field | null => {
     const el = getField();
-    if (!el || !bar) return;
+    return el && bar && el.value === bar.shown ? el : null;
+  };
+
+  const switchBy = (delta: number) => {
+    const el = barField();
+    if (!el || !bar) {
+      setBar(null);
+      return;
+    }
     const n = bar.suggestions.length;
     const index = (bar.index + delta + n) % n;
     const next = bar.suggestions[index]!;
     apply(el, bar.start, bar.start + bar.currentLength, next);
-    setBar({ ...bar, index, currentLength: next.length });
+    setBar({ ...bar, index, currentLength: next.length, shown: el.value });
   };
 
   const restore = () => {
-    const el = getField();
+    const el = barField();
     if (el && bar) apply(el, 0, el.value.length, bar.original);
     setBar(null);
   };
@@ -171,7 +185,10 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
     setMenu(null);
     setLoading(true);
     el.focus();
-    const body: AiTextBody = { target, action, text, selection, draft: draft?.() ?? {} };
+    // The live value replaces a possibly stale stored one of the target field in the context.
+    const context: AiTextDraft = { ...(draft?.() ?? {}) };
+    if (target.field !== 'label') context[target.field] = text;
+    const body: AiTextBody = { target, action, text, selection, draft: context };
     let result: AiTextResult;
     try {
       result = await api<AiTextResult>('POST', `/api/books/${bookId}/ai/text`, body);
@@ -184,7 +201,13 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
     }
     if (!mounted.current) return;
     setLoading(false);
-    if (el.value !== text) return;
+    // Opening the menu blurred the field, so an edit form may have saved and remounted it during
+    // the request: use the field that is there now, and only if it still holds the sent text.
+    const cur = getField();
+    if (!cur || cur.value !== text) return;
+    // The user went on elsewhere: inserting would steal focus. A remount leaves focus on <body>.
+    const active = document.activeElement;
+    if (active && active !== document.body && !wrapper()?.contains(active)) return;
     const range = targetRange(action, text, selection);
     const limit = fieldLimit(target);
     const suggestions = result.suggestions.map((s) => fitSuggestion(s, text, range, limit, action)).filter((s) => s !== '');
@@ -192,8 +215,8 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
       setMessage('Kein Vorschlag.');
       return;
     }
-    apply(el, range.start, range.end, suggestions[0]!);
-    setBar({ original: text, start: range.start, currentLength: suggestions[0]!.length, index: 0, suggestions });
+    apply(cur, range.start, range.end, suggestions[0]!);
+    setBar({ original: text, start: range.start, currentLength: suggestions[0]!.length, index: 0, suggestions, shown: cur.value });
   };
 
   const onMenuKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {

@@ -67,7 +67,7 @@ describe('MagicWand', () => {
     render(<Harness value="Mira geht." />);
     await choose('Umformulieren');
     expect(field().value).toBe('A1');
-    expect(bodies).toEqual([{ target, action: 'rephrase', text: 'Mira geht.', selection: null, draft: { title: 'Titel' } }]);
+    expect(bodies).toEqual([{ target, action: 'rephrase', text: 'Mira geht.', selection: null, draft: { title: 'Titel', description: 'Mira geht.' } }]);
     expect(screen.getByText('1/3')).toBeInTheDocument();
   });
 
@@ -80,6 +80,10 @@ describe('MagicWand', () => {
     expect(document.activeElement).toBe(field());
     expect([field().selectionStart, field().selectionEnd]).toEqual([5, 9]);
     await user.pointer({ keys: '[/MouseLeft]', target: wand() });
+    // The open menu takes focus on purpose (arrow-key navigation); the field blurs, which may make an
+    // edit form save it, but its selection stays and a late reply copes with a remounted field.
+    expect(screen.getByRole('menuitem', { name: 'Umformulieren' })).toHaveFocus();
+    expect([field().selectionStart, field().selectionEnd]).toEqual([5, 9]);
     await user.click(screen.getByRole('menuitem', { name: 'Umformulieren' }));
     await screen.findByText('1/3');
     expect(bodies[0]).toMatchObject({ selection: { start: 5, end: 9 } });
@@ -225,6 +229,33 @@ describe('MagicWand', () => {
     await waitFor(() => expect(wand()).toBeEnabled());
     expect(field().value).toBe('Mira geht.X');
     expect(screen.queryByText('1/3')).not.toBeInTheDocument();
+  });
+
+  it('drops a reply silently when focus moved outside the field meanwhile', async () => {
+    const release = delayedHandler();
+    render(
+      <>
+        <Harness value="Mira geht." />
+        <input aria-label="Anderes Feld" />
+      </>,
+    );
+    await userEvent.click(wand());
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Umformulieren' }));
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    const other = screen.getByLabelText('Anderes Feld');
+    other.focus();
+    release();
+    await waitFor(() => expect(wand()).toBeEnabled());
+    expect(other).toHaveFocus();
+    expect(field().value).toBe('Mira geht.');
+    expect(screen.queryByText('1/3')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('');
+  });
+
+  it('sends the live field value in the draft instead of a stale stored one', async () => {
+    render(<Harness value="Mira geht." draft={() => ({ title: 'Titel', description: 'alt' })} />);
+    await choose('Umformulieren');
+    expect(bodies[0]).toMatchObject({ draft: { title: 'Titel', description: 'Mira geht.' } });
   });
 
   it('ignores a reply after unmount', async () => {

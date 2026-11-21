@@ -24,9 +24,11 @@ export function AdditionEditor({ bookId, storylineId, character: c, addition, ai
   const fb = useSaveFeedback();
   const save = useBookMutation<Partial<Record<Field, string>>>(bookId, 'PUT', () => `${base}/addition`, (x) => x);
   const areas = useRef<Partial<Record<Field, HTMLTextAreaElement | null>>>({});
+  /** Live (possibly unsaved) textarea values; reads the refs, so a stale closure is fine. */
+  const live = () => ({ behavior: areas.current.behavior?.value ?? '', intentions: areas.current.intentions?.value ?? '' });
 
   useEffect(() => {
-    registerLive?.(() => ({ behavior: areas.current.behavior?.value ?? '', intentions: areas.current.intentions?.value ?? '' }));
+    registerLive?.(live);
     return () => registerLive?.(null);
   }, [registerLive]);
 
@@ -40,7 +42,6 @@ export function AdditionEditor({ bookId, storylineId, character: c, addition, ai
   };
 
   const profile = [c.behavior, c.intentions].filter((p): p is string => !!p && p.trim() !== '').join(' · ');
-  const live = () => ({ behavior: areas.current.behavior?.value ?? '', intentions: areas.current.intentions?.value ?? '' });
   const textarea = (field: Field, title: string) => {
     const ariaLabel = `${title} Ergänzung ${label}`;
     return (

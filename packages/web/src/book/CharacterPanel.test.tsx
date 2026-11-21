@@ -219,6 +219,53 @@ describe('CharacterPanel', () => {
     await vi.waitFor(() => expect(bodies).toEqual([{ behavior: 'A1' }]));
   });
 
+  it('applies a late reply to the remounted field after the blur save', async () => {
+    const stored = sampleBook();
+    const patches: unknown[] = [];
+    let releasePatch = () => {};
+    let releaseAi = () => {};
+    const patchGate = new Promise<void>((r) => (releasePatch = r));
+    const aiGate = new Promise<void>((r) => (releaseAi = r));
+    let aiCalls = 0;
+    server.use(
+      meOk,
+      http.get('/api/books/b1', () => HttpResponse.json(bookResponse(stored))),
+      http.patch('/api/books/b1/characters/c2', async ({ request }) => {
+        const body = (await request.json()) as { description?: string };
+        patches.push(body);
+        await patchGate;
+        stored.characters[1] = { ...stored.characters[1]!, ...body };
+        return HttpResponse.json(bookResponse(stored));
+      }),
+      http.post('/api/books/b1/ai/text', async () => {
+        aiCalls += 1;
+        await aiGate;
+        return HttpResponse.json({ suggestions: ['A1', 'A2', 'A3'] });
+      }),
+    );
+    await openPanel();
+    const before = screen.getByLabelText('Beschreibung Figur Jon');
+    await userEvent.type(before, 'Mira geht.');
+    // Opening the menu moves focus to its first item, so the field blurs and saves.
+    await userEvent.click(screen.getByRole('button', { name: 'KI-Assistent: Beschreibung Figur Jon' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Umformulieren' }));
+    await vi.waitFor(() => expect(aiCalls).toBe(1));
+    expect(patches).toEqual([{ description: 'Mira geht.' }]);
+    releasePatch();
+    // The PATCH echoes the value, so the textarea is keyed anew and remounts.
+    await vi.waitFor(() => expect(screen.getByLabelText('Beschreibung Figur Jon')).not.toBe(before));
+    releaseAi();
+    await screen.findByText('1/3');
+    const field = screen.getByLabelText('Beschreibung Figur Jon');
+    expect(field).toHaveValue('A1');
+    await userEvent.click(screen.getByRole('button', { name: 'Nächster Vorschlag' }));
+    expect(screen.getByLabelText('Beschreibung Figur Jon')).toHaveValue('A2');
+    await userEvent.click(screen.getByRole('button', { name: 'Vorheriger Vorschlag' }));
+    expect(screen.getByLabelText('Beschreibung Figur Jon')).toHaveValue('A1');
+    await userEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+    expect(screen.getByLabelText('Beschreibung Figur Jon')).toHaveValue('Mira geht.');
+  });
+
   it('wand disabled when AI is off', async () => {
     server.use(meOk, bookOk(sampleBook(), { ai: { enabled: false } }));
     await openPanel();
