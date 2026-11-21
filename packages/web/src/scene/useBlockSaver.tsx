@@ -26,7 +26,7 @@ export interface BlockSaver {
   /** Records a local text of a block (not saved yet). */
   edit: (id: Id, text: string) => void;
   /** Queues a PUT built by `build` when its turn comes. */
-  run: (build: BuildBlocks, after?: AfterSave) => void;
+  run: (build: BuildBlocks, after?: AfterSave) => Promise<void>;
   /** Error and stale messages to render. */
   feedback: JSX.Element;
 }
@@ -98,6 +98,7 @@ export function useBlockSaver(bookId: Id, assignment: SceneAssignment): BlockSav
     run: (build, after) => {
       const queuedIn = generation.current;
       queue.current = queue.current.then(() => send(build, after, queuedIn));
+      return queue.current;
     },
     feedback: (
       <>

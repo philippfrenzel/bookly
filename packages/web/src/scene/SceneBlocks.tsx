@@ -11,7 +11,7 @@ import { LengthSelect } from '../ai/LengthSelect';
 import { MagicWand } from '../ai/MagicWand';
 import { insertAfter, removeEmpty, splitAt, undoSplit } from './blockOps';
 import type { DraftBlock, SplitRecord } from './blockOps';
-import { useBlockSaver } from './useBlockSaver';
+import { useBlockSaver, type AfterSave, type BuildBlocks } from './useBlockSaver';
 
 /** Props of {@link SceneBlocks}. */
 export interface SceneBlocksProps {
@@ -47,6 +47,8 @@ export function SceneBlocks({ bookId, assignment, aiEnabled, name }: SceneBlocks
   const [split, setSplit] = useState<SplitRecord | null>(null);
   const [length, setLength] = useState<LengthChoice>('book');
   const [focusId, setFocusId] = useState<Id | null>(null);
+  const [structureSaving, setStructureSaving] = useState(false);
+  const structureLocked = useRef(false);
   const fields = useRef(new Map<Id, HTMLTextAreaElement>());
 
   // A block inserted by "Block einfügen" gets the focus once it is rendered from the response.
@@ -56,6 +58,18 @@ export function SceneBlocks({ bookId, assignment, aiEnabled, name }: SceneBlocks
     el.focus();
     setFocusId(null);
   }, [focusId, blocks]);
+
+  const runStructure = async (build: BuildBlocks, after: AfterSave) => {
+    if (structureLocked.current) return;
+    structureLocked.current = true;
+    setStructureSaving(true);
+    try {
+      await run(build, after);
+    } finally {
+      structureLocked.current = false;
+      setStructureSaving(false);
+    }
+  };
 
   const activeBlock = active ? blocks.find((b) => b.id === active.id) : undefined;
   const full = blocks.length >= SCENE_BLOCK_LIMITS.count;
@@ -71,7 +85,7 @@ export function SceneBlocks({ bookId, assignment, aiEnabled, name }: SceneBlocks
     const el = fields.current.get(active.id);
     const caret = el ? el.selectionStart : active.start;
     const id = active.id;
-    run(
+    void runStructure(
       (list) => {
         const i = indexOf(list, id);
         return i === null ? null : splitAt(list, i, caret);
@@ -89,7 +103,7 @@ export function SceneBlocks({ bookId, assignment, aiEnabled, name }: SceneBlocks
 
   const onInsert = () => {
     const id = active?.id;
-    run(
+    void runStructure(
       (list) => insertAfter(list, indexOf(list, id)),
       (sent, saved) => {
         const fresh = saved[sent.findIndex((b) => b.id === undefined)];
@@ -103,7 +117,7 @@ export function SceneBlocks({ bookId, assignment, aiEnabled, name }: SceneBlocks
   const onUndo = () => {
     if (!split) return;
     const record = split;
-    run(
+    void runStructure(
       (list) => undoSplit(list, record),
       () => {
         setSplit(null);
@@ -114,7 +128,7 @@ export function SceneBlocks({ bookId, assignment, aiEnabled, name }: SceneBlocks
 
   const onRemove = () => {
     const id = active?.id;
-    run(
+    void runStructure(
       (list) => {
         const i = indexOf(list, id);
         return i === null ? null : removeEmpty(list, i);
@@ -125,18 +139,19 @@ export function SceneBlocks({ bookId, assignment, aiEnabled, name }: SceneBlocks
 
   /** Saves the blocks when the one being left differs from its stored text. */
   const onBlur = (block: SceneBlock) => {
+    if (structureLocked.current) return;
     const storedText = assignment.blocks.find((b) => b.id === block.id)?.text;
-    if (block.text !== storedText) run((list, changed) => (changed ? list : null));
+    if (block.text !== storedText) void run((list, changed) => (changed ? list : null));
   };
 
   return (
     <div className="scene-blocks">
-      <div className="actions" role="toolbar" aria-label={`Blöcke Szene ${name}`}>
+      <div className="actions" role="toolbar" aria-label={`Blöcke Szene ${name}`} aria-busy={structureSaving}>
         <LengthSelect value={length} onChange={setLength} />
-        <button type="button" disabled={!canSplit} onMouseDown={keepFocus} onClick={onSplit}>Hier teilen</button>
-        <button type="button" disabled={full} onMouseDown={keepFocus} onClick={onInsert}>Block einfügen</button>
-        {canUndo && <button type="button" onMouseDown={keepFocus} onClick={onUndo}>Teilung rückgängig</button>}
-        {canRemove && <button type="button" onMouseDown={keepFocus} onClick={onRemove}>Leeren Block entfernen</button>}
+        <button type="button" disabled={structureSaving || !canSplit} onMouseDown={keepFocus} onClick={onSplit}>Hier teilen</button>
+        <button type="button" disabled={structureSaving || full} onMouseDown={keepFocus} onClick={onInsert}>Block einfügen</button>
+        {canUndo && <button type="button" disabled={structureSaving} onMouseDown={keepFocus} onClick={onUndo}>Teilung rückgängig</button>}
+        {canRemove && <button type="button" disabled={structureSaving} onMouseDown={keepFocus} onClick={onRemove}>Leeren Block entfernen</button>}
       </div>
       {blocks.map((b, i) => {
         const label = `Block ${i + 1} Szene ${name}`;
@@ -151,7 +166,10 @@ export function SceneBlocks({ bookId, assignment, aiEnabled, name }: SceneBlocks
               maxLength={SCENE_BLOCK_LIMITS.text}
               placeholder="Text dieses Blocks"
               value={b.text}
-              onChange={(e) => saver.edit(b.id, e.target.value)}
+              readOnly={structureSaving}
+              onChange={(e) => {
+                if (!structureLocked.current) saver.edit(b.id, e.target.value);
+              }}
               onBlur={() => onBlur(b)}
               onFocus={track(b.id)}
               onSelect={track(b.id)}
@@ -159,10 +177,10 @@ export function SceneBlocks({ bookId, assignment, aiEnabled, name }: SceneBlocks
               onClick={track(b.id)}
             />
             <MagicWand
-              getField={() => fields.current.get(b.id) ?? null}
+              getField={() => structureLocked.current ? null : fields.current.get(b.id) ?? null}
               bookId={bookId}
               target={{ kind: 'sceneBlock', assignmentId: assignment.id, blockId: b.id, field: 'text' }}
-              enabled={aiEnabled}
+              enabled={aiEnabled && !structureSaving}
               fieldLabel={label}
               length={length}
             />

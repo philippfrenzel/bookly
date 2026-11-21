@@ -37,6 +37,7 @@ function fakeServer(initial: SceneBlock[], { side = false, beforePut }: { side?:
       const body = (await request.json()) as PutBody;
       puts.push(body);
       await beforePut?.();
+      await beforePut?.();
       if (body.revision !== state.revision) return HttpResponse.json({ error: 'stale' }, { status: 409 });
       state = { blocks: body.blocks.map((b) => ({ id: b.id ?? `new${++next}`, text: b.text })), revision: state.revision + 1 };
       return HttpResponse.json(response());
@@ -95,6 +96,28 @@ describe('SceneBlocks', () => {
     await waitFor(() => expect(values(group)).toEqual(['Mira sagt: Hallo.']));
     expect(fake.puts[1]).toEqual({ revision: 1, blocks: [{ id: 'b1', text: 'Mira sagt: Hallo.' }] });
     expect(within(group).queryByRole('button', { name: 'Teilung rückgängig' })).not.toBeInTheDocument();
+  });
+
+  it('prevents typing into the old block while a split is saving', async () => {
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => { release = resolve; });
+    const fake = fakeServer([{ id: 'b1', text: 'Frage? Antwort.' }], { beforePut: () => pending });
+    const group = await openSection();
+    placeCaret(blockField(group, 1), 7);
+    await userEvent.click(within(group).getByRole('button', { name: 'Hier teilen' }));
+    await waitFor(() => expect(fake.puts).toHaveLength(1));
+
+    try {
+      await userEvent.type(blockField(group, 1), ' Zusatz');
+      expect(values(group)).toEqual(['Frage? Antwort.']);
+    } finally {
+      release();
+    }
+
+    await waitFor(() => expect(values(group)).toEqual(['Frage? ', 'Antwort.']));
+    await waitFor(() => expect(blockField(group, 1)).not.toHaveAttribute('readonly'));
+    await userEvent.type(blockField(group, 1), 'Zusatz');
+    expect(blockField(group, 1)).toHaveValue('Frage? Zusatz');
   });
 
   it('includes an unsaved edit of the active block in the split and hides undo once a half changes', async () => {
