@@ -1,4 +1,4 @@
-/** Integration tests for check enqueueing on save and the AI check, ack and suggestion routes. */
+/** Integration tests for check enqueueing on save and the AI check, ack and AI text routes. */
 import { describe, expect, test } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { AiError, type AiClient } from '../ai/client.js';
@@ -167,66 +167,71 @@ describe('warning acknowledgements', () => {
   });
 });
 
-describe('suggestions', () => {
-  test('base profile suggestion returns the fake values and merges the draft over stored fields', async () => {
-    const seen: string[] = [];
-    const fake = createFakeAiClient();
-    const ai: AiClient = { model: fake.model, complete: async (r) => { seen.push(r.user); return fake.complete(r); } };
-    const { app, req, charId } = await setup(ai);
-    const res = await req('POST', `/characters/${charId}/suggestion`, { description: 'Entwurf' });
-    expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ behavior: 'Vorschlag Verhalten', intentions: 'Vorschlag Absichten' });
-    expect(JSON.parse(seen[0]!).character).toMatchObject({ name: 'Anna', description: 'Entwurf' });
-    await app.close();
-  });
+describe('ai text', () => {
+  const fakeSuggestions = ['KI-Vorschlag 1', 'KI-Vorschlag 2', 'KI-Vorschlag 3'];
+  const descTarget = (storylineId: string | null) => ({ kind: 'storyline', storylineId, field: 'description' });
 
-  test('storyline suggestion includes the storyline and needs a linked character', async () => {
-    const seen: string[] = [];
-    const fake = createFakeAiClient();
-    const ai: AiClient = { model: fake.model, complete: async (r) => { seen.push(r.user); return fake.complete(r); } };
-    const { app, req, charId, bookId, createStoryline } = await setup(ai);
+  test('returns three fake suggestions for a storyline description', async () => {
+    const { app, req, createStoryline } = await setup();
     const id = await createStoryline('Die Reise');
-    const res = await req('POST', `/storylines/${id}/characters/${charId}/suggestion`, {});
+    const res = await req('POST', '/ai/text', { target: descTarget(id), action: 'rephrase', text: 'Die Reise beginnt.', selection: null });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ behavior: 'Vorschlag Verhalten', intentions: 'Vorschlag Absichten' });
-    expect(JSON.parse(seen[0]!).storyline).toMatchObject({ title: 'Strang', description: 'Die Reise' });
-    const ben = await seedCharacter(app, bookId, 'Ben');
-    expect((await req('POST', `/storylines/${id}/characters/${ben}/suggestion`, {})).statusCode).toBe(404);
+    expect(res.json()).toEqual({ suggestions: fakeSuggestions });
     await app.close();
   });
 
-  test('502 ai_failed when the model fails', async () => {
+  test('generate on an empty new storyline returns 400 empty_context', async () => {
+    const { app, req } = await setup();
+    const res = await req('POST', '/ai/text', { target: descTarget(null), action: 'generate', text: '', selection: null, draft: {} });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toEqual({ error: 'empty_context' });
+    await app.close();
+  });
+
+  test('invalid selection returns 400 invalid_body', async () => {
+    const { app, req, createStoryline } = await setup();
+    const id = await createStoryline();
+    const res = await req('POST', '/ai/text', { target: descTarget(id), action: 'rephrase', text: 'Kurz', selection: { start: 0, end: 99 } });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe('invalid_body');
+    await app.close();
+  });
+
+  test('foreign storyline id returns 404', async () => {
+    const { app, req, cookie, createStoryline } = await setup();
+    const id = await createStoryline();
+    const other = (await app.inject({ method: 'POST', url: '/api/books', headers: { cookie }, payload: { title: 'X' } })).json().book.id;
+    const res = await req('POST', '/ai/text', { target: descTarget(id), action: 'rephrase', text: 'Text hier', selection: null }, other);
+    expect(res.statusCode).toBe(404);
+    await app.close();
+  });
+
+  test('ai failure returns 502 ai_failed', async () => {
     const ai: AiClient = { model: 'm', complete: async () => { throw new AiError('AI request timed out'); } };
-    const { app, req, charId } = await setup(ai);
-    const res = await req('POST', `/characters/${charId}/suggestion`, {});
+    const { app, req, createStoryline } = await setup(ai);
+    const id = await createStoryline();
+    const res = await req('POST', '/ai/text', { target: descTarget(id), action: 'rephrase', text: 'Text hier', selection: null });
     expect(res.statusCode).toBe(502);
     expect(res.json()).toEqual({ error: 'ai_failed' });
     await app.close();
   });
 
-  test('502 ai_failed on an invalid model reply', async () => {
-    const { app, req, charId } = await setup({ model: 'm', complete: async () => ({ foo: 1 }) });
-    expect((await req('POST', `/characters/${charId}/suggestion`, {})).json()).toEqual({ error: 'ai_failed' });
-    await app.close();
-  });
-
-  test('400 on an invalid body', async () => {
-    const { app, req, charId } = await setup();
-    expect((await req('POST', `/characters/${charId}/suggestion`, { name: 'x'.repeat(201) })).statusCode).toBe(400);
-    await app.close();
-  });
-
-  test('404 for a foreign character', async () => {
-    const { app, req, cookie, charId } = await setup();
-    const other = (await app.inject({ method: 'POST', url: '/api/books', headers: { cookie }, payload: { title: 'X' } })).json().book.id;
-    expect((await req('POST', `/characters/${charId}/suggestion`, {}, other)).statusCode).toBe(404);
+  test('addition for an unlinked character returns 404', async () => {
+    const { app, req, bookId, createStoryline } = await setup();
+    const id = await createStoryline();
+    const ben = await seedCharacter(app, bookId, 'Ben');
+    const res = await req('POST', '/ai/text', {
+      target: { kind: 'addition', storylineId: id, characterId: ben, field: 'behavior' },
+      action: 'rephrase', text: 'Text hier', selection: null,
+    });
+    expect(res.statusCode).toBe(404);
     await app.close();
   });
 });
 
 describe('AI off', () => {
-  test('503 ai_disabled for all four AI routes, ai.enabled false, saves create no checks', async () => {
-    const { app, req, createStoryline, charId, created } = await setup(null);
+  test('503 ai_disabled for all three AI routes, ai.enabled false, saves create no checks', async () => {
+    const { app, req, createStoryline, created } = await setup(null);
     expect(created.json().ai).toEqual({ enabled: false });
     const id = await createStoryline();
     const get = (await req('GET', '')).json();
@@ -236,10 +241,11 @@ describe('AI off', () => {
     for (const path of [
       `/storylines/${id}/character-check`,
       '/character-checks',
-      `/characters/${charId}/suggestion`,
-      `/storylines/${id}/characters/${charId}/suggestion`,
+      '/ai/text',
     ]) {
-      const res = await req('POST', path, {});
+      const res = await req('POST', path, path === '/ai/text'
+        ? { target: { kind: 'storyline', storylineId: id, field: 'description' }, action: 'rephrase', text: 'Text hier', selection: null }
+        : {});
       expect(res.statusCode, path).toBe(503);
       expect(res.json()).toEqual({ error: 'ai_disabled' });
     }

@@ -20,9 +20,6 @@ export function createFakeAiClient(): AiClient {
       if (req.schemaName === 'text_suggestions') {
         return { suggestions: ['KI-Vorschlag 1', 'KI-Vorschlag 2', 'KI-Vorschlag 3'] };
       }
-      if (req.schemaName === 'character_suggestion') {
-        return { behavior: 'Vorschlag Verhalten', intentions: 'Vorschlag Absichten' };
-      }
       const characterId = req.user.includes('FAKE-WIDERSPRUCH') ? firstCharacterId(req.user) : null;
       if (!characterId) return { warnings: [] };
       return { warnings: [{ characterId, criterion: 'behavior_change', message: 'Fake: Verhalten weicht ab.' }] };
