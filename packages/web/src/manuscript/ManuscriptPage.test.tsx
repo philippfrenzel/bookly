@@ -12,7 +12,7 @@ import { server } from '../test/setup';
 function block(over: Partial<ManuscriptBlock> = {}): ManuscriptBlock {
   return {
     id: 'k1', chapterId: 'c1', position: 0, title: 'Ankunft', synopsis: 'Mira erreicht den See.', text: 'Es war still.',
-    version: 1, sectionId: null, storylineId: 's1', sceneIds: [], lock: null, updatedAt: '2026-11-21T10:00:00Z', ...over,
+    version: 1, sectionId: null, storylineId: 's1', sceneIds: [], instruction: '', comments: [], suggestions: [], lock: null, updatedAt: '2026-11-21T10:00:00Z', ...over,
   };
 }
 
@@ -144,5 +144,96 @@ describe('ManuscriptPage', () => {
     await userEvent.click(within(form).getByRole('button', { name: 'Einladen' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('kein Konto');
     expect(bodies).toEqual([{ email: 'lektor@example.de', rights: ['read', 'comment', 'suggest', 'edit'] }]);
+  });
+
+  it('a reviewer with only the suggest right sends a suggestion; the author accepts it', async () => {
+    const bodies: unknown[] = [];
+    const sug = { id: 'g1', authorName: 'Lena', mine: false, baseVersion: 1, title: 'Ankunft', synopsis: 'Mira erreicht den See.', text: 'Kürzer.', note: 'straffen', createdAt: '2026-11-21T10:00:00Z' };
+    server.use(
+      meOk,
+      msOk(manuscript({ role: 'reviewer', rights: ['read', 'suggest'] })),
+      http.post('/api/books/b1/manuscript/blocks/k1/suggestions', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json(manuscript({ role: 'reviewer', rights: ['read', 'suggest'], chapters: [{ id: 'c1', position: 0, title: 'Aufbruch', blocks: [block({ suggestions: [{ ...sug, mine: true }] })] }] }), { status: 201 });
+      }),
+    );
+    const view = renderApp('/books/b1/manuskript');
+    await userEvent.click(await screen.findByRole('button', { name: 'Vorschlag machen' }));
+    const form = screen.getByRole('form', { name: 'Vorschlag für Ankunft' });
+    const text = within(form).getByLabelText('Text');
+    await userEvent.clear(text);
+    await userEvent.type(text, 'Kürzer.');
+    await userEvent.type(within(form).getByLabelText('Notiz an den Autor (optional)'), 'straffen');
+    await userEvent.click(within(form).getByRole('button', { name: 'Vorschlag senden' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Dein Vorschlag ist beim Autor');
+    expect(screen.getByRole('button', { name: 'Zurückziehen' })).toBeInTheDocument();
+    expect(bodies).toEqual([{ baseVersion: 1, title: 'Ankunft', synopsis: 'Mira erreicht den See.', text: 'Kürzer.', note: 'straffen' }]);
+    view.unmount();
+
+    const decided: string[] = [];
+    server.use(
+      msOk(manuscript({ chapters: [{ id: 'c1', position: 0, title: 'Aufbruch', blocks: [block({ suggestions: [sug] })] }] })),
+      http.post('/api/books/b1/manuscript/blocks/k1/suggestions/g1/accept', () => {
+        decided.push('accept');
+        return HttpResponse.json(manuscript({ chapters: [{ id: 'c1', position: 0, title: 'Aufbruch', blocks: [block({ text: 'Kürzer.', version: 2 })] }] }));
+      }),
+    );
+    renderApp('/books/b1/manuskript');
+    const card = await screen.findByRole('article', { name: 'Vorschlag von Lena' });
+    expect(within(card).getByText('„straffen“')).toBeInTheDocument();
+    await userEvent.click(within(card).getByRole('button', { name: 'Übernehmen' }));
+    expect(await screen.findByText('Kürzer.')).toBeInTheDocument();
+    expect(decided).toEqual(['accept']);
+  });
+
+  it('comments are written with the comment right', async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      meOk,
+      msOk(manuscript({ role: 'reviewer', rights: ['read', 'comment'] })),
+      http.post('/api/books/b1/manuscript/blocks/k1/comments', async ({ request }) => {
+        bodies.push(await request.json());
+        const comments = [{ id: 'm1', authorName: 'Lena', mine: true, text: 'Schöner Einstieg', createdAt: '2026-11-21T10:00:00Z' }];
+        return HttpResponse.json(manuscript({ role: 'reviewer', rights: ['read', 'comment'], chapters: [{ id: 'c1', position: 0, title: 'Aufbruch', blocks: [block({ comments })] }] }), { status: 201 });
+      }),
+    );
+    renderApp('/books/b1/manuskript');
+    await userEvent.click(await screen.findByRole('button', { name: 'Kommentieren' }));
+    await userEvent.type(screen.getByLabelText('Neuer Kommentar'), 'Schöner Einstieg');
+    await userEvent.click(screen.getByRole('button', { name: 'Senden' }));
+    expect(await screen.findByText('Schöner Einstieg')).toBeInTheDocument();
+    expect(bodies).toEqual([{ text: 'Schöner Einstieg' }]);
+  });
+
+  it('locks a whole chapter and opens every editor in it', async () => {
+    const mine = { mine: true, expiresAt: '2026-11-21T10:30:00Z' };
+    const two = (lock: typeof mine | null) => [block({ lock }), block({ id: 'k2', title: 'Abschied', position: 1, lock })];
+    server.use(
+      meOk,
+      msOk(manuscript({ chapters: [{ id: 'c1', position: 0, title: 'Aufbruch', blocks: two(null) }] })),
+      http.post('/api/books/b1/manuscript/chapters/c1/lock', () => HttpResponse.json(manuscript({ chapters: [{ id: 'c1', position: 0, title: 'Aufbruch', blocks: two(mine) }] }))),
+    );
+    renderApp('/books/b1/manuskript');
+    await userEvent.click(await screen.findByRole('button', { name: 'Kapitel bearbeiten' }));
+    expect(await screen.findByRole('form', { name: 'Baustein Ankunft bearbeiten' })).toBeInTheDocument();
+    expect(screen.getByRole('form', { name: 'Baustein Abschied bearbeiten' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kapitel freigeben' })).toBeInTheDocument();
+  });
+
+  it('shows the whole work or one chapter as a reading preview', async () => {
+    server.use(meOk, msOk(manuscript({ chapters: [
+      { id: 'c1', position: 0, title: 'Aufbruch', blocks: [block({ text: 'Erster Absatz.\n\nZweiter Absatz.' })] },
+      { id: 'c2', position: 1, title: 'Sturm', blocks: [block({ id: 'k2', chapterId: 'c2', text: 'Regen.' })] },
+    ] })));
+    const view = renderApp('/books/b1/manuskript/vorschau');
+    const paper = await screen.findByRole('article', { name: 'Vorschau' });
+    expect(within(paper).getByRole('heading', { name: 'Sturmland' })).toBeInTheDocument();
+    expect(within(paper).getByText('Zweiter Absatz.')).toBeInTheDocument();
+    expect(within(paper).getByText('Regen.')).toBeInTheDocument();
+    view.unmount();
+    renderApp('/books/b1/manuskript/vorschau?kapitel=c2');
+    const one = await screen.findByRole('article', { name: 'Vorschau' });
+    expect(within(one).getByText('Regen.')).toBeInTheDocument();
+    expect(within(one).queryByText('Zweiter Absatz.')).not.toBeInTheDocument();
   });
 });

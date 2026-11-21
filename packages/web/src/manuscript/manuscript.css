@@ -82,3 +82,33 @@
 @media (max-width: 900px) {
   .ms-blocks, .ms-empty-chapter, .ms-add-link, .ms-add-block { margin-left: 0; padding-left: 0; }
 }
+
+/* Phase 2: comments, suggestions, chapter editing, preview */
+.ms-info { margin: 0; font-size: 0.875rem; font-weight: 600; color: var(--accent); }
+.ms-chapter-edit { padding: 0.375rem 0.625rem; font-size: 0.8125rem; }
+.ms-chapter-tools { align-items: center; gap: 0.5rem !important; }
+.ms-comment-toggle { align-self: flex-start; }
+.ms-comments { display: flex; flex-direction: column; gap: 0.5rem; border-top: 1px dashed var(--rule-strong); padding-top: 0.5rem; }
+.ms-comments h5, .ms-suggestion h5 { margin: 0; }
+.ms-comments ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.ms-comments li { display: flex; gap: 0.5rem; align-items: flex-start; font-size: 0.875rem; }
+.ms-comments li > div { flex: 1; min-width: 0; }
+.ms-comments li p { margin: 0.125rem 0 0; }
+.ms-comment-avatar { width: 26px; height: 26px; border-radius: 9px; font-size: 0.75rem; flex: none; }
+.ms-comments .inline-form input { flex: 1; }
+.ms-suggestions { display: flex; flex-direction: column; gap: 0.5rem; }
+.ms-suggestion { display: flex; flex-direction: column; gap: 0.375rem; padding: 0.75rem; border-radius: 12px; background: var(--accent-wash); border-left: 3px solid var(--accent); }
+.ms-suggestion p { margin: 0; font-size: 0.875rem; }
+.ms-suggestion .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+
+.preview-page { min-height: 100vh; background: var(--page); }
+.preview-paper { max-width: 40rem; margin: 2rem auto 4rem; background: var(--ground); border-radius: var(--radius-lg); box-shadow: var(--shadow-soft); padding: 3rem 3.5rem; font-family: Georgia, 'Iowan Old Style', serif; font-size: 1.0625rem; line-height: 1.75; color: var(--ink); }
+.preview-title { font-family: var(--font-display); font-size: 2rem; text-align: center; margin-bottom: 0.25rem; }
+.preview-facts { text-align: center; font-family: var(--font); font-size: 0.875rem; margin: 0 0 2rem; }
+.preview-chapter { margin-top: 2.5rem; }
+.preview-chapter-title { font-family: var(--font-display); text-transform: none; letter-spacing: -0.01em; font-size: 1.5rem; font-weight: 750; text-align: center; margin: 0 0 1.5rem; display: flex; flex-direction: column; gap: 0.25rem; }
+.preview-chapter-title span { font-family: var(--font); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.preview-block p { margin: 0 0 1em; text-indent: 1.5em; }
+.preview-block p:first-of-type { text-indent: 0; }
+.preview-break { text-align: center; color: var(--muted); text-indent: 0 !important; margin: 1.5rem 0 !important; }
+@media (max-width: 700px) { .preview-paper { padding: 1.75rem 1.25rem; margin: 1rem; } }

@@ -150,6 +150,7 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
           name: s.name,
           description: sceneData.sceneAssignments.find((a) => a.sceneId === s.id && (a.sectionId === section?.id || a.storylineId === line?.id))?.description ?? '',
         })),
+        instruction: row.instruction,
         previousText: prev?.text.slice(-1500) ?? '',
       }));
       return { text: parseDraft(raw) };

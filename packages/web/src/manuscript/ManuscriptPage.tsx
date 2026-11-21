@@ -66,6 +66,8 @@ export function ManuscriptPage() {
                   : `${ms.chapters.length} Kapitel · ${blockCount} ${blockCount === 1 ? 'Baustein' : 'Bausteine'}`}
                 {!author && <> · Deine Rechte: {ms.rights.length === 1 ? 'nur Lesen' : ms.rights.length + ' von 6'}</>}
               </p>
+              <span className="header-spacer" />
+              {ms.chapters.length > 0 && <Link to={`/books/${bookId}/manuskript/vorschau`} className="header-link with-icon"><Icon name="book" />Vorschau des Werks</Link>}
               {ms.rights.includes('structure') && (adding ? (
                 <form className="inline-form" onSubmit={addChapter}>
                   <input aria-label="Titel des neuen Kapitels" value={title} maxLength={MANUSCRIPT_LIMITS.title} autoFocus onChange={(e) => setTitle(e.target.value)} placeholder="Kapiteltitel" />

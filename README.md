@@ -67,7 +67,7 @@ npm run e2e         # Playwright end-to-end flow (needs bookly_e2e, starts its o
 - Interactive map: zoom, filters, notes overlay, drag to create ranges and connections.
 - Typed connections (time jump, flashback, merge, character switch) with live contradiction hints, which can be acknowledged with „Bewusst so“.
 - Scenes (places) with an optional image (JPEG/PNG/WebP, up to 5 MB, stored in the database) and any number of notes, assigned to sections with a per-section scene description; with AI configured the description can be generated from the scene's image and notes.
-- Manuscript: AI chapter structure from storylines, characters and scenes (accept or reject), chapters and Bausteine that can be edited, moved and soft-deleted (trash with restore), every version kept, locks with a 30-minute timeout, and up to 5 reviewers per book with individual rights.
+- Manuscript: AI chapter structure from storylines, characters and scenes (accept or reject), chapters and Bausteine that can be edited, moved and soft-deleted (trash with restore), every version kept, locks with a 30-minute timeout (per Baustein or whole chapter), instructions per Baustein for the AI draft, a reading preview, and up to 5 reviewers per book with individual rights who can comment and send suggestions for the author to accept.
 - No upper limit on storylines, sections, time points, characters, scenes or notes.
 
 ## Layout

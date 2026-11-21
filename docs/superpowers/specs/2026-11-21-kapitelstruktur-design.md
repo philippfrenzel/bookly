@@ -25,6 +25,17 @@ FR-020 (AI only on request), FR-021 (delete comment), FR-025 (trash with restore
 
 ## Later phases
 
-Phase 2: comments, reviewer suggestions confirmed by the author (FR-023), chapter-wise editing and locking (FR-012/019),
-per-Baustein instructions (FR-018), preview of work and chapter (FR-024). Phase 3: styles per work and team (FR-015..017),
+Phase 2: see below.
+Phase 3: styles per work and team (FR-015..017),
 per-chapter preselection (FR-014).
+
+## Phase 2 (done)
+
+- **Comments**: per Baustein, written with the comment right, deletable by their writer or the author.
+- **Suggestions (FR-023)**: a reviewer with the suggest right proposes title, plan and text (plus a note). Nothing changes until the
+  author accepts; accepting writes the next version (reason `suggestion`, credited to the reviewer). The author can reject, the
+  proposer can withdraw. A suggestion made on an older version shows a hint.
+- **Instructions (FR-018)**: one free-text instruction per Baustein, edited with the edit right, not versioned, sent to the AI draft.
+- **Chapter-wise editing (FR-012/019)**: „Kapitel bearbeiten“ locks every live Baustein of the chapter at once (all or none, 423 when
+  one is taken) and opens all editors; „Kapitel freigeben“ releases the caller's locks.
+- **Preview (FR-024)**: `/books/:id/manuskript/vorschau` (whole work) and `?kapitel=<id>` (one chapter), reading layout only.

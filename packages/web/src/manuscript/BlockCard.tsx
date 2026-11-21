@@ -6,8 +6,11 @@ import { useEffect, useRef, useState } from 'react';
 import { MANUSCRIPT_LIMITS } from '@bookly/shared';
 import type { Id, ManuscriptBlock, ManuscriptChapter, ManuscriptResponse } from '@bookly/shared';
 import { Icon } from '../ui/Icon';
+import { BlockComments } from './BlockComments';
+import { BlockEditor } from './BlockEditor';
+import { BlockSuggestions } from './BlockSuggestions';
 import { BlockVersions } from './BlockVersions';
-import { isLocked, manuscriptError, useBlockDraft, useManuscriptMutation } from './manuscriptApi';
+import { manuscriptError, useManuscriptMutation } from './manuscriptApi';
 
 interface Props {
   bookId: Id;
@@ -15,13 +18,16 @@ interface Props {
   chapter: ManuscriptChapter;
   block: ManuscriptBlock;
   index: number;
+  /** Bumped when the whole chapter was locked for editing; opens the editor if the lock is the caller's (FR-012). */
+  chapterEdit?: number;
 }
 
 /** Shows a block; switches to the editor while the caller holds its lock. */
-export function BlockCard({ bookId, ms, chapter, block, index }: Props) {
+export function BlockCard({ bookId, ms, chapter, block, index, chapterEdit = 0 }: Props) {
   const mutate = useManuscriptMutation(bookId);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState<'edit' | 'suggest' | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
   const can = (r: string) => ms.rights.includes(r as never);
@@ -34,15 +40,23 @@ export function BlockCard({ bookId, ms, chapter, block, index }: Props) {
     setNotice(null);
     mutate.mutate(
       { method: 'POST', path: `/blocks/${block.id}/lock` },
-      { onSuccess: () => setEditing(true), onError: (e) => setNotice(manuscriptError(e)) },
+      { onSuccess: () => setEditing('edit'), onError: (e) => setNotice(manuscriptError(e)) },
     );
   };
   const others = ms.chapters.filter((c) => c.id !== chapter.id);
+  // Open the editor once per chapter-lock request, as soon as the fresh data shows the lock as ours.
+  const openedFor = useRef(0);
+  useEffect(() => {
+    if (chapterEdit > openedFor.current && block.lock?.mine) {
+      openedFor.current = chapterEdit;
+      setEditing('edit');
+    }
+  }, [chapterEdit, block.lock?.mine]);
 
   return (
     <li className={`ms-block${foreignLock ? ' is-locked' : ''}`} aria-label={`Baustein ${block.title}`}>
       {editing ? (
-        <BlockEditor bookId={bookId} block={block} onClose={(msg) => { setEditing(false); setNotice(msg ?? null); }} />
+        <BlockEditor bookId={bookId} block={block} mode={editing} onClose={(msg) => { setEditing(null); setInfo(msg ?? null); }} />
       ) : (
         <>
           <div className="ms-block-head">
@@ -56,11 +70,17 @@ export function BlockCard({ bookId, ms, chapter, block, index }: Props) {
           </div>
           <Sources ms={ms} block={block} />
           {block.synopsis && <p className="ms-synopsis"><span className="scene-label">Inhalt</span> {block.synopsis}</p>}
+          {block.instruction && <p className="ms-synopsis"><span className="scene-label">Anweisung</span> {block.instruction}</p>}
           {block.text ? <div className="ms-text">{block.text}</div> : <p className="muted ms-text-empty">Noch kein Text.</p>}
           <div className="ms-block-actions">
             {can('edit') && (
               <button type="button" className="with-icon" disabled={foreignLock || mutate.isPending} title={foreignLock ? 'Wird gerade bearbeitet.' : undefined} onClick={startEdit}>
                 <Icon name="pencil" />Bearbeiten
+              </button>
+            )}
+            {!can('edit') && can('suggest') && (
+              <button type="button" className="with-icon" onClick={() => { setInfo(null); setEditing('suggest'); }}>
+                <Icon name="pencil" />Vorschlag machen
               </button>
             )}
             {foreignLock && ms.role === 'author' && (
@@ -106,8 +126,11 @@ export function BlockCard({ bookId, ms, chapter, block, index }: Props) {
             />
           )}
           {showVersions && <BlockVersions bookId={bookId} block={block} canRestore={can('edit') && !foreignLock} />}
+          {block.suggestions.length > 0 && <BlockSuggestions bookId={bookId} ms={ms} block={block} foreignLock={foreignLock} />}
+          {(block.comments.length > 0 || can('comment')) && <BlockComments bookId={bookId} ms={ms} block={block} />}
         </>
       )}
+      {info && <p className="ms-info" role="status">{info}</p>}
       {notice && <p className="error" role="alert">{notice}</p>}
     </li>
   );
@@ -148,94 +171,4 @@ export function DeleteConfirm({ what, onCancel, onConfirm }: { what: string; onC
       </div>
     </div>
   );
-}
-
-/**
- * The editor while the caller holds the lock. If the lock goes away meanwhile (author unlock or timeout), the change
- * is saved right away when possible, else the text stays here with a warning (EC-002).
- */
-function BlockEditor({ bookId, block, onClose }: { bookId: Id; block: ManuscriptBlock; onClose: (notice?: string) => void }) {
-  const mutate = useManuscriptMutation(bookId);
-  const draft = useBlockDraft(bookId);
-  const [title, setTitle] = useState(block.title);
-  const [synopsis, setSynopsis] = useState(block.synopsis);
-  const [text, setText] = useState(block.text);
-  const [suggestion, setSuggestion] = useState<string | null>(null);
-  const [warning, setWarning] = useState<string | null>(null);
-  const base = useRef(block.version);
-  const lostHandled = useRef(false);
-  const dirty = title !== block.title || synopsis !== block.synopsis || text !== block.text;
-
-  const save = (after: 'close' | 'lost') => {
-    if (!title.trim()) return setWarning('Der Titel darf nicht leer sein.');
-    mutate.mutate(
-      { method: 'PATCH', path: `/blocks/${block.id}`, body: { baseVersion: base.current, title: title.trim(), synopsis, text } },
-      {
-        onSuccess: () => {
-          if (after === 'lost') return onClose('Deine Sperre wurde aufgehoben. Deine Änderungen wurden gespeichert.');
-          mutate.mutate({ method: 'DELETE', path: `/blocks/${block.id}/lock` });
-          onClose();
-        },
-        onError: (e) => setWarning(isLocked(e)
-          ? 'Jemand anderes bearbeitet diesen Baustein jetzt. Deine Änderungen sind nicht gespeichert: kopiere deinen Text, bevor du schließt.'
-          : manuscriptError(e)),
-      },
-    );
-  };
-
-  // The lock is gone (released by the author or timed out): save if there is something to save (EC-002).
-  useEffect(() => {
-    if (block.lock?.mine || lostHandled.current) return;
-    lostHandled.current = true;
-    if (dirty) save('lost');
-    else setWarning('Deine Sperre wurde aufgehoben. Starte die Bearbeitung neu, um weiterzuschreiben.');
-  }, [block.lock]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const cancel = () => {
-    if (block.lock?.mine) mutate.mutate({ method: 'DELETE', path: `/blocks/${block.id}/lock` });
-    onClose();
-  };
-
-  return (
-    <form className="ms-editor" onSubmit={(e) => { e.preventDefault(); save('close'); }} aria-label={`Baustein ${block.title} bearbeiten`}>
-      <label>
-        Titel
-        <input value={title} maxLength={MANUSCRIPT_LIMITS.title} onChange={(e) => setTitle(e.target.value)} />
-      </label>
-      <label>
-        Inhalt (Plan)
-        <textarea rows={2} value={synopsis} maxLength={MANUSCRIPT_LIMITS.synopsis} onChange={(e) => setSynopsis(e.target.value)} />
-      </label>
-      <label>
-        Text
-        <textarea className="ms-text-input" rows={12} value={text} onChange={(e) => setText(e.target.value)} />
-      </label>
-      {suggestion !== null && (
-        <figure className="scene-sample" aria-label="KI-Entwurf">
-          <figcaption className="scene-label">KI-Entwurf</figcaption>
-          <p className="ms-text">{suggestion}</p>
-          <div className="actions">
-            <button type="button" className="primary" onClick={() => { setText(suggestion); setSuggestion(null); }}>Übernehmen</button>
-            <button type="button" onClick={() => setSuggestion(null)}>Verwerfen</button>
-          </div>
-          <p className="muted">Übernehmen ersetzt den Text im Editor; gespeichert wird erst mit „Speichern“.</p>
-        </figure>
-      )}
-      {warning && <p className="error" role="alert">{warning}</p>}
-      {draft.isError && <p className="error" role="alert">{manuscriptError(draft.error)}</p>}
-      <div className="actions">
-        <button type="submit" className="primary" disabled={mutate.isPending}>Speichern</button>
-        <button type="button" onClick={cancel}>Abbrechen</button>
-        <button type="button" className="with-icon" disabled={draft.isPending} onClick={() => draft.mutate(block.id, { onSuccess: (r) => setSuggestion(r.text) })}>
-          <Icon name="wand" />{draft.isPending ? 'Schreibe …' : 'KI-Entwurf'}
-        </button>
-        {block.lock?.mine && <span className="muted ms-lock-note"><Icon name="lock" /> Für andere gesperrt bis {time(block.lock.expiresAt)}</span>}
-      </div>
-    </form>
-  );
-}
-
-/** „14:05“ in local time. */
-function time(iso: string): string {
-  return new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 }

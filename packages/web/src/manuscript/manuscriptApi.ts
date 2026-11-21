@@ -19,7 +19,7 @@ export function useManuscript(bookId: Id) {
 
 /** One manuscript call: method, path below /manuscript and optional body. */
 export interface ManuscriptCall {
-  method: 'POST' | 'PATCH' | 'DELETE';
+  method: 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   path: string;
   body?: unknown;
 }

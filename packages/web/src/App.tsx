@@ -6,6 +6,7 @@ import { RequireAuth } from './auth/RequireAuth';
 import { BookPage } from './book/BookPage';
 import { BookListPage } from './books/BookListPage';
 import { ManuscriptPage } from './manuscript/ManuscriptPage';
+import { PreviewPage } from './manuscript/PreviewPage';
 
 /** Routes: public auth pages, protected book list and book page. */
 export function AppRoutes() {
@@ -16,6 +17,7 @@ export function AppRoutes() {
       <Route path="/" element={<RequireAuth><BookListPage /></RequireAuth>} />
       <Route path="/books/:bookId" element={<RequireAuth><BookPage /></RequireAuth>} />
       <Route path="/books/:bookId/manuskript" element={<RequireAuth><ManuscriptPage /></RequireAuth>} />
+      <Route path="/books/:bookId/manuskript/vorschau" element={<RequireAuth><PreviewPage /></RequireAuth>} />
     </Routes>
   );
 }

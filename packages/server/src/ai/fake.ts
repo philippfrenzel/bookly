@@ -25,8 +25,8 @@ export function createFakeAiClient(): AiClient {
       }
       if (req.schemaName === 'structure_proposal') return fakeStructure(req.user);
       if (req.schemaName === 'block_draft') {
-        const { baustein } = JSON.parse(req.user) as { baustein: string };
-        return { text: `KI-Entwurf: ${baustein}` };
+        const { baustein, anweisung } = JSON.parse(req.user) as { baustein: string; anweisung?: string };
+        return { text: `KI-Entwurf: ${baustein}${anweisung ? ` (${anweisung})` : ''}` };
       }
       if (req.schemaName === 'text_suggestions') {
         return { suggestions: ['KI-Vorschlag 1', 'KI-Vorschlag 2', 'KI-Vorschlag 3'] };
