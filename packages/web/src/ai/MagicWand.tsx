@@ -35,6 +35,8 @@ export interface MagicWandProps {
   fieldLabel: string;
   /** Wanted length of generated text; sent only when set, so other fields' bodies stay as before. */
   length?: LengthChoice;
+  /** Route the request goes to; default `/api/books/:bookId/ai/text` (manuscript blocks have their own). */
+  endpoint?: string;
 }
 
 interface MenuState {
@@ -69,7 +71,7 @@ const FAILED = 'Vorschlag fehlgeschlagen.';
 const keepFocus = (e: ReactMouseEvent) => e.preventDefault();
 
 /** Wand button with its action menu and the suggestion bar (◀ 1/3 ▶ ↶ ✕) for one field. */
-export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel, length }: MagicWandProps): JSX.Element {
+export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel, length, endpoint }: MagicWandProps): JSX.Element {
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [bar, setBar] = useState<BarState | null>(null);
   const [loading, setLoading] = useState(false);
@@ -234,7 +236,10 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
   const request = async (action: AiTextAction, text: string, selection: Selection, instruction?: string): Promise<string[]> => {
     // The live value replaces a possibly stale stored one of the target field in the context.
     const context: AiTextDraft = { ...(draft?.() ?? {}) };
-    if (target.field !== 'label' && target.field !== 'text') context[target.field] = text;
+    if (target.kind === 'manuscriptBlock') {
+      // A block's plan travels as `description` (the context of its text).
+      if (target.field === 'synopsis') context.description = text;
+    } else if (target.field !== 'label' && target.field !== 'text') context[target.field] = text;
     const body: AiTextBody = {
       target,
       action,
@@ -244,7 +249,7 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
       ...(length ? { length } : {}),
       ...(action === 'instruct' && instruction ? { instruction } : {}),
     };
-    const result = await api<AiTextResult>('POST', `/api/books/${bookId}/ai/text`, body);
+    const result = await api<AiTextResult>('POST', endpoint ?? `/api/books/${bookId}/ai/text`, body);
     const range = targetRange(action, text, selection);
     const limit = fieldLimit(target);
     return result.suggestions.map((s) => fitSuggestion(s, text, range, limit, action)).filter((s) => s !== '');

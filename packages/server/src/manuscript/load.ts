@@ -23,6 +23,7 @@ import {
   bookReviewers,
   books,
   chapters,
+  characters,
   scenes,
   sections,
   storylines,
@@ -123,9 +124,10 @@ export async function loadManuscript(
       title: x.title, synopsis: x.synopsis, text: x.text, note: x.note, createdAt: x.createdAt.toISOString(),
     })),
   });
-  const [[styleRow], [owner]] = await Promise.all([
+  const [[styleRow], [owner], characterRows] = await Promise.all([
     db.select().from(bookStyles).where(eq(bookStyles.bookId, bookId)),
     db.select({ userId: books.userId }).from(books).where(eq(books.id, bookId)),
+    db.select({ id: characters.id, name: characters.name }).from(characters).where(eq(characters.bookId, bookId)).orderBy(asc(characters.name)),
   ]);
   const style = { presetKeys: styleRow?.presetKeys ?? [], teamStyleIds: styleRow?.teamStyleIds ?? [], addition: styleRow?.addition ?? '' };
   const ownerStyles = owner
@@ -170,7 +172,12 @@ export async function loadManuscript(
       createdAt: p.createdAt.toISOString(),
     })),
     reviewers: reviewerRows.map((r) => ({ ...r, rights: normalizeRights(r.rights) })),
-    context: { storylines: lines, sections: sectionRows, scenes: sceneRows },
+    context: {
+      storylines: lines,
+      sections: sectionRows,
+      scenes: sceneRows,
+      characters: characterRows.flatMap((c) => (c.name?.trim() ? [{ id: c.id, name: c.name.trim() }] : [])),
+    },
     style: { ...style, teamStyleIds: style.teamStyleIds.filter((id) => ownerStyles.some((t) => t.id === id)) },
     teamStyles: isAuthor ? ownerStyles : ownerStyles.filter((t) => style.teamStyleIds.includes(t.id)),
     ai: { enabled: aiEnabled },

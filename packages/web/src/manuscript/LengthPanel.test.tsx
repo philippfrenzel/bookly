@@ -18,7 +18,7 @@ function manuscript(over: Partial<ManuscriptResponse> = {}, targetWords: { min: 
     trash: [],
     proposals: [],
     reviewers: [],
-    context: { storylines: [], sections: [], scenes: [] },
+    context: { storylines: [], sections: [], scenes: [], characters: [] },
     style: { presetKeys: [], teamStyleIds: [], addition: '' },
     teamStyles: [],
     ai: { enabled: true },

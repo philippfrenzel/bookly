@@ -87,6 +87,8 @@ export function buildTextContext(book: Book, body: AiTextBody): TextContext {
   switch (target.kind) {
     // Scene blocks are handled by loadSceneBlockContext (sceneBlockContext.ts); the route never sends them here.
     case 'sceneBlock':
+    // Manuscript blocks have their own route (manuscript/aiText.ts), open to reviewers with the edit right.
+    case 'manuscriptBlock':
       throw new NotFoundError();
     case 'storyline': {
       const stored = target.storylineId === null ? undefined : findStoryline(target.storylineId);

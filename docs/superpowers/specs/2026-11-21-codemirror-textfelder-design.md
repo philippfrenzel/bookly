@@ -33,8 +33,8 @@ Entschieden von Pepe:
      Vorschlag angezeigt wird. Tooltips hängen an `<body>`, damit schmale Panels sie nicht abschneiden.
 3. **@Figuren, Lektor-Hinweise, Schreibhilfe beim Tippen** (umgesetzt)
    - `editor/mentions.ts`: „@“ bietet die Figuren des Buchs an (`MentionNamesProvider` auf der Buchseite), eingefügt
-     wird der reine Name; bekannte Namen sind eingefärbt. Orte gibt es im Datenmodell noch nicht, das Manuskript hat
-     (noch) keine Figurenliste, dort gibt es darum keine Erwähnungen.
+     wird der reine Name; bekannte Namen sind eingefärbt. Orte gibt es im Datenmodell noch nicht. Im Manuskript
+     kommen die Namen aus `ManuscriptResponse.context.characters` (auch für Lektoren).
    - Server (`ai/mentions.ts`): Figuren, die im Text namentlich vorkommen und nicht schon im Kontext stehen, gehen als
      `kontext.erwaehnt` (Profil: Beschreibung, Verhalten, Absichten, höchstens 8) an die KI. Ganzwort-Treffer, ohne „@“.
    - `editor/hints.ts`: Wellenlinie unter Füllwörtern (eigentlich, plötzlich, irgendwie, …) und unter Substantiven, die
@@ -44,6 +44,14 @@ Entschieden von Pepe:
      die Antwort grau. Tab übernimmt, Strg/Cmd+→ ein Wort, Esc oder Weitertippen verwirft.
    - Schalter im Zauberstab-Menü (nur bei mehrzeiligen Feldern): „Lektor-Hinweise“ (Standard an) und „Schreibhilfe beim
      Tippen“ (Standard aus, weil jede Pause eine KI-Anfrage kostet). Gemerkt pro Browser (`editor/preferences.ts`).
+
+## Manuskript
+
+Die Bausteine im Manuskript haben „Text“ und „Inhalt (Plan)“ mit Zauberstab, also auch die Leiste an der Markierung,
+die Schreibhilfe und die Schalter. Die Anfragen gehen an `POST /api/books/:bookId/manuscript/blocks/:blockId/ai-text`
+(Ziel `manuscriptBlock`), offen für alle mit dem Recht „bearbeiten“, also auch Lektoren. Kontext: Kapitel, Titel und
+Plan des Bausteins, Anweisung, Stil des Werks, Ende des vorigen und Anfang des nächsten Bausteins, erwähnte Figuren.
+„Fortsetzen“ auf langen Bausteinen schickt nur die letzten 4000 Zeichen. Der Vorschlagsmodus der Lektoren bleibt ohne Zauberstab.
 
 ## Tests
 
