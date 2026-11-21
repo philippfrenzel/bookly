@@ -4,6 +4,7 @@ import {
   check,
   customType,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -258,3 +259,90 @@ export const sceneAssignments = pgTable(
     check('scene_assignments_one_target', sql`(${t.sectionId} IS NULL) <> (${t.storylineId} IS NULL)`),
   ],
 );
+
+/** Reviewers (Lektoren) of a book with their individual rights (FR-005, BR-001); at most 5 per book. */
+export const bookReviewers = pgTable(
+  'book_reviewers',
+  {
+    bookId: uuid('book_id')
+      .notNull()
+      .references(() => books.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    rights: text('rights').array().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.bookId, t.userId] })],
+);
+
+/** Chapters of a book's manuscript; soft deleted via `deletedAt`. */
+export const chapters = pgTable('chapters', {
+  id: id(),
+  bookId: uuid('book_id')
+    .notNull()
+    .references(() => books.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  position: integer('position').notNull(),
+  createdAt: createdAt(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  deleteComment: text('delete_comment'),
+});
+
+/** Bausteine: scene-level text units inside a chapter; the row holds the current content, `block_versions` every version. */
+export const blocks = pgTable('blocks', {
+  id: id(),
+  bookId: uuid('book_id')
+    .notNull()
+    .references(() => books.id, { onDelete: 'cascade' }),
+  chapterId: uuid('chapter_id')
+    .notNull()
+    .references(() => chapters.id, { onDelete: 'cascade' }),
+  position: integer('position').notNull(),
+  title: text('title').notNull(),
+  synopsis: text('synopsis').notNull().default(''),
+  text: text('text').notNull().default(''),
+  version: integer('version').notNull().default(1),
+  sectionId: uuid('section_id').references(() => sections.id, { onDelete: 'set null' }),
+  storylineId: uuid('storyline_id').references(() => storylines.id, { onDelete: 'set null' }),
+  sceneIds: uuid('scene_ids').array().notNull().default(sql`'{}'::uuid[]`),
+  lockedBy: uuid('locked_by').references(() => users.id, { onDelete: 'set null' }),
+  lockedAt: timestamp('locked_at', { withTimezone: true }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: createdAt(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  deleteComment: text('delete_comment'),
+});
+
+/** Every version of every block, never deleted (FR-004). */
+export const blockVersions = pgTable(
+  'block_versions',
+  {
+    id: id(),
+    blockId: uuid('block_id')
+      .notNull()
+      .references(() => blocks.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    title: text('title').notNull(),
+    synopsis: text('synopsis').notNull(),
+    text: text('text').notNull(),
+    reason: text('reason').notNull(),
+    authorId: uuid('author_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('block_versions_unique').on(t.blockId, t.version)],
+);
+
+/** AI structure proposals; `payload` holds the proposed chapters. */
+export const structureProposals = pgTable('structure_proposals', {
+  id: id(),
+  bookId: uuid('book_id')
+    .notNull()
+    .references(() => books.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull(),
+  status: text('status').notNull(),
+  summary: text('summary').notNull().default(''),
+  payload: jsonb('payload').notNull(),
+  createdAt: createdAt(),
+  decidedAt: timestamp('decided_at', { withTimezone: true }),
+});

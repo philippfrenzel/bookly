@@ -1,0 +1,84 @@
+/*
+ * Manuscript page in the warm "Linien mit Herz" style: chapters as quiet sections on the paper page,
+ * Bausteine as white rounded cards, the prose in a calm reading face; a lock shows as a small amber badge.
+ */
+.header-link { color: var(--ink-2); font-weight: 700; text-decoration: none; padding: 0.5rem 0.75rem; border-radius: var(--radius); }
+.header-link:hover { background: var(--wash); }
+
+.ms-main { gap: 1.25rem !important; padding-bottom: 4rem !important; }
+.ms-intro { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: space-between; padding-top: 0.5rem; }
+.ms-intro > p { margin: 0; }
+.ms-empty { background: var(--ground); border-radius: var(--radius-lg); }
+
+.ms-chapter { display: flex; flex-direction: column; gap: 0.625rem; max-width: 52rem; }
+.ms-chapter-head { display: flex; align-items: center; gap: 0.75rem; }
+.ms-chapter-number { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: var(--accent-wash); color: var(--accent); font-weight: 800; flex: none; }
+.ms-chapter-title { font-family: var(--font-display); font-size: 1.25rem; font-weight: 750; text-transform: none; letter-spacing: -0.01em; margin: 0; }
+.ms-chapter-tools { display: flex; gap: 0.125rem; }
+.ms-empty-chapter { margin: 0 0 0 2.875rem; }
+.ms-blocks { list-style: none; margin: 0; padding: 0 0 0 2.875rem; display: flex; flex-direction: column; gap: 0.625rem; }
+.ms-add-link { margin-left: 2.875rem; align-self: flex-start; }
+.ms-add-block { margin-left: 2.875rem; }
+
+.ms-block { background: var(--ground); border-radius: 16px; padding: 0.875rem 1rem 0.625rem; box-shadow: var(--shadow-soft); border: 1px solid var(--rule); display: flex; flex-direction: column; gap: 0.5rem; }
+.ms-block.is-locked { background: #fffaf1; border-color: #f0d9a8; }
+.ms-block-head { display: flex; align-items: center; gap: 0.5rem; }
+.ms-block-head h4 { margin: 0; font-size: 1rem; font-weight: 800; flex: 1; min-width: 0; }
+.ms-block-version { font-size: 0.75rem; color: var(--muted); font-weight: 700; }
+.lock-badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.125rem 0.5rem; border-radius: 999px; background: #ffe3b8; color: #7a4a00; font-size: 0.75rem; font-weight: 800; }
+.lock-badge .icon { width: 13px; height: 13px; }
+.ms-sources { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+.ms-sources .scene-chip { display: inline-flex; align-items: center; gap: 0.375rem; }
+.ms-synopsis { margin: 0; font-size: 0.875rem; color: var(--ink-2); }
+.ms-text { white-space: pre-wrap; font-family: Georgia, 'Iowan Old Style', serif; font-size: 1rem; line-height: 1.65; color: var(--ink); max-height: 22rem; overflow-y: auto; }
+.ms-text-empty { margin: 0; font-size: 0.875rem; }
+.ms-block-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; border-top: 1px solid var(--rule); padding-top: 0.5rem; }
+.ms-block-actions > button:not(.icon-button):not(.link-button) { padding: 0.375rem 0.625rem; font-size: 0.8125rem; }
+.ms-move { font-size: 0.8125rem; padding: 0.3rem 2rem 0.3rem 0.5rem; }
+
+.ms-editor { display: flex; flex-direction: column; gap: 0.625rem; }
+.ms-text-input { font-family: Georgia, 'Iowan Old Style', serif; font-size: 1rem; line-height: 1.6; resize: vertical; }
+.ms-editor .actions, .ms-confirm .actions, .ms-proposal .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.ms-lock-note { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.8125rem; }
+.ms-confirm { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem; border-radius: 12px; background: var(--signal-wash); }
+.ms-confirm .muted { margin: 0; font-size: 0.8125rem; }
+
+.ms-versions { border-top: 1px dashed var(--rule-strong); padding-top: 0.5rem; }
+.ms-version-list { margin: 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.375rem; font-size: 0.8125rem; }
+.ms-version-list .tab-count { margin-left: 0.375rem; }
+.ms-version-body { margin-top: 0.375rem; padding: 0.625rem; background: var(--wash); border-radius: 10px; display: flex; flex-direction: column; gap: 0.375rem; align-items: flex-start; }
+.ms-version-body p { margin: 0; }
+
+.ms-panel { display: flex; flex-direction: column; gap: 0.75rem; align-items: stretch; }
+.ms-panel > p { margin: 0; font-size: 0.875rem; }
+.ms-panel > button { align-self: flex-start; }
+.ms-proposal { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.875rem; border-radius: 14px; background: var(--wash); border-left: 3px solid var(--accent); }
+.ms-proposal h3 { margin: 0; }
+.ms-proposal p { margin: 0; font-size: 0.875rem; }
+.ms-proposal-chapters { margin: 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.625rem; }
+.ms-proposal-chapters > li .tab-count { margin-left: 0.375rem; }
+.ms-proposal-chapters ul { margin: 0.25rem 0 0; padding-left: 1rem; font-size: 0.875rem; }
+.ms-reason { font-style: italic; }
+.ms-change { margin-left: 0.375rem; font-size: 0.6875rem; font-weight: 800; color: var(--accent); background: var(--accent-wash); padding: 0 0.375rem; border-radius: 999px; }
+.ms-change.is-new { color: #7a4a00; background: #ffe3b8; }
+
+.ms-trash li { flex-wrap: nowrap !important; align-items: flex-start !important; justify-content: space-between; padding: 0.625rem 0; border-top: 1px solid var(--rule); }
+.ms-trash-body { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }
+.ms-trash-body .muted { font-size: 0.8125rem; }
+.ms-trash-comment { font-size: 0.8125rem; color: var(--ink-2); font-style: italic; }
+
+.ms-reviewers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.625rem; }
+.ms-reviewer { padding: 0.75rem; border: 1px solid var(--rule); border-radius: 14px; display: flex; flex-direction: column; gap: 0.5rem; }
+.ms-reviewer-head { display: flex; align-items: center; gap: 0.625rem; font-size: 0.875rem; }
+.ms-rights { border: 0; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem 0.75rem; }
+.ms-right { flex-direction: row; align-items: center; gap: 0.375rem; font-weight: 500; }
+.ms-reviewer-form { display: flex; flex-direction: column; gap: 0.625rem; padding: 0.75rem; border-radius: 14px; background: var(--wash); }
+.ms-reviewer-form > button { align-self: flex-start; }
+
+.ms-reviewed { margin-top: 2rem; }
+.ms-reviewed-item { flex-direction: column; align-items: flex-start !important; gap: 0.125rem !important; padding: 0.75rem 1rem; background: var(--ground); border-radius: 14px; box-shadow: var(--shadow-soft); }
+.ms-reviewed-item .muted { font-size: 0.8125rem; }
+
+@media (max-width: 900px) {
+  .ms-blocks, .ms-empty-chapter, .ms-add-link, .ms-add-block { margin-left: 0; padding-left: 0; }
+}

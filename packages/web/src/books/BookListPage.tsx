@@ -6,6 +6,7 @@ import { useBooks, useCreateBook, useDeleteBook, useLogout, useMe, useRenameBook
 import { useSaveFeedback } from '../book/saveFeedback';
 import { Icon } from '../ui/Icon';
 import { BookCard, ContinueCard } from './BookCard';
+import { ReviewedBooks } from '../manuscript/ReviewedBooks';
 
 /** Landing page after sign-in. */
 export function BookListPage() {
@@ -133,6 +134,7 @@ export function BookListPage() {
             </ul>
           </section>
         )}
+        <ReviewedBooks />
       </main>
     </>
   );

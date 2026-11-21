@@ -10,6 +10,9 @@ import { characterRoutes } from './books/characters.js';
 import { acknowledgementRoutes } from './books/acknowledgements.js';
 import { connectionRoutes } from './books/connections.js';
 import { sceneRoutes } from './books/scenes.js';
+import { proposalRoutes } from './manuscript/proposals.js';
+import { reviewerRoutes } from './manuscript/reviewers.js';
+import { manuscriptRoutes } from './manuscript/routes.js';
 import { sectionRoutes } from './books/sections.js';
 import { storylineRoutes } from './books/storylines.js';
 import { timePointRoutes } from './books/timepoints.js';
@@ -57,5 +60,8 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   await app.register(acknowledgementRoutes);
   await app.register(aiRoutes);
   await app.register(sceneRoutes);
+  await app.register(manuscriptRoutes);
+  await app.register(reviewerRoutes);
+  await app.register(proposalRoutes);
   return app;
 }

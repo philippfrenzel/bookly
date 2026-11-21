@@ -1,11 +1,12 @@
 /** Test setup: jest-dom matchers, RTL cleanup, a shared msw server, and a fresh localStorage per test. */
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 
-/** Shared msw server; tests add handlers with `server.use(...)`. */
-export const server = setupServer();
+/** Shared msw server; tests add handlers with `server.use(...)`. By default nobody shares a book for review. */
+export const server = setupServer(http.get('/api/reviews', () => HttpResponse.json([])));
 
 /** In-memory Storage; Node 26 exposes a broken global localStorage that shadows jsdom's. */
 export function memoryStorage(): Storage {

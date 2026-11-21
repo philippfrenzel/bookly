@@ -23,6 +23,18 @@ describe('BookListPage', () => {
     expect(await screen.findByText('Sturmland')).toBeInTheDocument();
   });
 
+  it('lists books shared for review with the rights and links to their manuscript', async () => {
+    server.use(
+      meOk,
+      http.get('/api/books', () => HttpResponse.json([])),
+      http.get('/api/reviews', () => HttpResponse.json([{ id: 'b7', title: 'Fremdes Buch', ownerName: 'Ben', rights: ['read', 'edit'] }])),
+    );
+    renderApp('/');
+    const link = await screen.findByRole('link', { name: 'Fremdes Buch' });
+    expect(link).toHaveAttribute('href', '/books/b7/manuskript');
+    expect(screen.getByText('von Ben · Lesen, Direkt bearbeiten')).toBeInTheDocument();
+  });
+
   it('creates a book via the inline form', async () => {
     const books: BookSummary[] = [];
     server.use(
