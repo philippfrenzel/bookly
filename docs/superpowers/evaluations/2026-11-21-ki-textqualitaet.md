@@ -44,7 +44,7 @@ etwas bewirkt haben.
   Fußknöchel in „bis in ihre Knöchel kroch“ und „an seinen Knöcheln hängen“. Nur zwei sind das Klischee, beide in den
   Entwürfen ohne Stil („die Knöchel traten unter der dünnen Haut hervor“, „dass ihre Knöchel weiß hervortraten“). Das ist
   die niedrigste Klischee-Zahl der vier Läufe. Dabei wurde es belassen, siehe Grenzen.
-- Alle Entwürfe mit Dialog verwenden „…“. Die Werkstatt-Szene hat keinen Dialog. Im Jugendbuch-Entwurf ist ein zitierter
+- Alle Entwürfe mit Dialog verwenden „…“. Die 7 Entwürfe ohne „…“ sind Werkstatt-Entwürfe ohne Dialog. Im Jugendbuch-Entwurf ist ein zitierter
   Briefsatz in »…« gesetzt.
 
 ## Bewertung je Stil (Lauf 4, Endstand)
@@ -61,7 +61,7 @@ Wiederholungen und schematische Formulierungen. ✅ = erfüllt, ◐ = mit Einsch
 | Humorvoll | ✅ | ✅ | ✅ | ✅ | ◐ | Situationskomik und pointierte Rede („sonst holt dich der Geist von Tante Trude!“); der Werkstatt-Schluss fasst noch zusammen |
 | Jugendbuch | ✅ | ◐ | ✅ | ✅ | ✅ | nah an Lio, klare Sprache; bei den erwachsenen Figuren der Fähre-Szene kaum vom Stil „ohne“ zu unterscheiden |
 | Ich-Perspektive | ✅ | ✅ | ✅ | ✅ | ✅ | durchgehend erste Person; ohne vorherigen Text im Präsens |
-| Team-Stil „Hausstil Küste“ | ✅ | ✅ | ✅ | ✅ | ✅ | Präsens, nah an der Figur, Arbeit trägt die Stimmung („Fingernägel, die noch immer nach Wacholder und Buchenholz riechen“) |
+| Team-Stil „Hausstil Küste“ | ✅ | ✅ | ✅ | ✅ | ◐ | Präsens, nah an der Figur, Arbeit trägt die Stimmung („Fingernägel, die noch immer nach Wacholder und Buchenholz riechen“); in der Werkstatt-Szene dasselbe vertraute Bild („wie erstarrte Insekten“) |
 | Knapp + Ergänzung „warm, trockener Humor, Umgangssprache“ | ✅ | ◐ | ✅ | ✅ | ✅ | knapp klar erkennbar; Wärme und Humor der Ergänzung schwächer als in Lauf 1 (dort: „Vergiss nicht, die Rosen zu gießen, bevor der Frost kommt.“) |
 | ohne Stil | ✅ | – | ✅ | ✅ | ◐ | neutral erzählend; beide Knöchel-Klischees des Laufs stehen hier („dass ihre Knöchel weiß hervortraten“) |
 
@@ -151,6 +151,12 @@ Stille“).
   Lauf 1 enthält schon die ersten Regeln dieses Branches.
 - **Strukturvorschläge nicht live geprüft.** Die neue Regel für Titel und Inhalte in `structureRequest` ist nur durch
   Unit-Tests abgesichert.
+- **Nach Lauf 4 geändert, nicht live geprüft.** Zwei klärende Prompt-Formulierungen wurden nach Lauf 4 angepasst und
+  nicht erneut live ausgeführt: In `BASE` (`textPrompt.ts`) heißt es jetzt „der Ton des vorhandenen Textes
+  bleibt erkennbar“, und der Entwurfs-Prompt ohne Stil nennt den Vorrang des vorherigen Textes vor den
+  Abwechslungsregeln (`STYLE_VOICE` wurde entsprechend gekürzt). Die Auszüge stammen von den Prompts des Commits
+  `33b7643`. Die Datei `2026-11-21-ki-textqualitaet-run4.json` ist eine reduzierte Kopie: System-Prompts entfernt,
+  `prompts_commit` und `source` ergänzt.
 - Die Bewertung oben ist Claudes Einschätzung. Die manuelle Abnahme nach NFR-001 steht noch aus.
 
 ## Reproduzieren

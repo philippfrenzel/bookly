@@ -29,5 +29,5 @@ export const STYLE_VOICE = [
   'Setze den "stil" als erkennbare Erzählstimme um, nicht als Schlagwort: über Satzlänge, Rhythmus, Bildsprache, Erzählabstand und die Art der Dialoge, nicht indem du Stilbegriffe nennst.',
   'Besteht der "stil" aus mehreren Einträgen, werden sie kombiniert; die "Ergänzung des Autors" verfeinert sie.',
   'Widerspricht der "stil" der "anweisung" des Autors, hat die "anweisung" Vorrang.',
-  'Der "stil" und der Ton des vorherigen Textes gehen den allgemeinen Abwechslungsregeln vor.',
+  'Auch der "stil" geht den allgemeinen Abwechslungsregeln vor.',
 ].join(' ');

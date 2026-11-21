@@ -199,6 +199,7 @@ const DRAFT_SYSTEM = [
   'Setze wörtliche Rede in deutsche Anführungszeichen („…“).',
   'Halte dich vorrangig an die "anweisung" des Autors, falls vorhanden.',
   NATURAL_PROSE,
+  'Der Ton des vorherigen Textes geht den allgemeinen Abwechslungsregeln vor.',
   'Kein Titel, keine Erklärungen. Antworte als JSON-Objekt mit dem Feld "text".',
 ].join(' ');
 

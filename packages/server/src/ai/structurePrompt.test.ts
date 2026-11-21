@@ -51,7 +51,17 @@ describe('draftRequest', () => {
     expect(req.system).toContain('„…“');
     expect(req.system).not.toContain(STYLE_VOICE);
     expect(req.system).not.toContain('"stil"');
+    expect(req.system).toContain('Ton des vorherigen Textes geht den allgemeinen Abwechslungsregeln vor');
     expect(Object.keys(JSON.parse(req.user))).toEqual(['buch', 'kapitel', 'baustein', 'inhalt', 'quelle', 'figuren', 'szenen', 'vorherigerText']);
+  });
+});
+
+describe('draftRequest payload with instruction and style', () => {
+  test('orders anweisung before stil before vorherigerText', () => {
+    const keys = Object.keys(JSON.parse(draftRequest({ ...draftCtx, instruction: 'Kürzer.', style: 'Knapp' }).user));
+    expect(keys.indexOf('anweisung')).toBeGreaterThan(-1);
+    expect(keys.indexOf('anweisung')).toBeLessThan(keys.indexOf('stil'));
+    expect(keys.indexOf('stil')).toBeLessThan(keys.indexOf('vorherigerText'));
   });
 });
 

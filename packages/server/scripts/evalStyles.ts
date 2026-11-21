@@ -70,6 +70,7 @@ async function pool<T>(items: (() => Promise<T>)[], limit: number): Promise<T[]>
   return out;
 }
 
+/** Runs all style drafts and wand actions against the gateway and writes the raw JSON results to the output folder. */
 async function main(): Promise<void> {
   const outDir = process.argv[2];
   const { OPENROUTER_API_KEY: apiKey, OPENROUTER_MODEL: model } = process.env;

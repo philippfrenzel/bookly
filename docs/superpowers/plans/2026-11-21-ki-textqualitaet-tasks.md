@@ -48,7 +48,7 @@ Nothing else changes.
 
 **Behaviour:** reads `OPENROUTER_API_KEY`/`OPENROUTER_MODEL` from env (`--env-file` of the user's configured .env, never
 echoed); builds `draftRequest` for 2 synthetic Bausteine × (7 presets + 2 custom team/addition styles + no style) and
-`textRequest` (polish + generate) for 1 synthetic field; writes raw JSON outputs to a job temp dir (not committed).
+`textRequest` (polish + generate) for 1 synthetic field; writes raw JSON outputs to a job temp dir; the final run's results are committed as a reduced JSON next to the report.
 Report records model id, date, script, per-style samples (excerpts) and judgments on naturalness, recognisable style,
 context, variation, stock phrases/repetition; labels which text is gateway output and flags limits.
 
