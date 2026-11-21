@@ -1,7 +1,7 @@
 /** Integration tests for check enqueueing on save and the AI check, ack and AI text routes. */
 import { describe, expect, test } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { AiError, type AiClient } from '../ai/client.js';
+import { AiError, type AiClient, type AiRequest } from '../ai/client.js';
 import { createFakeAiClient } from '../ai/fake.js';
 import { createCheckWorker } from '../ai/worker.js';
 import { characterChecks, sectionCharacters, sections } from '../db/schema.js';
@@ -225,6 +225,75 @@ describe('ai text', () => {
       action: 'rephrase', text: 'Text hier', selection: null,
     });
     expect(res.statusCode).toBe(404);
+    await app.close();
+  });
+});
+
+describe('ai text for scene blocks', () => {
+  /** A fake client that records every request. */
+  const spyAi = () => {
+    const fake = createFakeAiClient();
+    const calls: AiRequest[] = [];
+    const ai: AiClient = { model: 'spy', complete: async (r) => { calls.push(r); return fake.complete(r); } };
+    return { ai, calls };
+  };
+
+  /** A storyline with a section, a scene assigned to it and blocks ['Davor', '', 'Danach']. */
+  async function sceneSetup(ai: AiClient) {
+    const s = await setup(ai);
+    const storylineId = await s.createStoryline();
+    const sec = await s.req('POST', `/storylines/${storylineId}/sections`, {
+      title: 'Ankunft', characterIds: [s.charId], range: { startId: s.tps[0], endId: s.tps[1] },
+    });
+    const sectionId: string = sec.json().book.storylines[0].sections[0].id;
+    const sceneId: string = (await s.req('POST', '/scenes', { name: 'Bergsee' })).json().scenes[0].id;
+    const created = await s.req('POST', '/scene-assignments', { sceneId, sectionId, description: '' });
+    const a = created.json().sceneAssignments[0] as { id: string; revision: number };
+    const put = await s.req('PUT', `/scene-assignments/${a.id}/blocks`, {
+      revision: a.revision, blocks: [{ text: 'Davor' }, { text: '' }, { text: 'Danach' }],
+    });
+    const blockIds = (put.json().sceneAssignments[0].blocks as { id: string }[]).map((b) => b.id);
+    const target = (blockId = blockIds[1]!, assignmentId = a.id) => ({ kind: 'sceneBlock', assignmentId, blockId, field: 'text' });
+    return { ...s, assignmentId: a.id, blockIds, target };
+  }
+
+  test('generate on an empty block returns three suggestions with scoped context', async () => {
+    const { ai, calls } = spyAi();
+    const { app, req, target } = await sceneSetup(ai);
+    const res = await req('POST', '/ai/text', { target: target(), action: 'generate', text: '', selection: null, length: 'short' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ suggestions: ['KI-Vorschlag 1', 'KI-Vorschlag 2', 'KI-Vorschlag 3'] });
+    expect(calls).toHaveLength(1);
+    const kontext = JSON.parse(calls[0]!.user).kontext;
+    expect(kontext).toMatchObject({ textDavor: 'Davor', textDanach: 'Danach', figuren: [{ name: 'Anna' }] });
+    expect(calls[0]!.system).toContain('Bearbeite nur diesen Block');
+    expect(calls[0]!.system).toContain('Umfang: Etwa 150 bis 300 Wörter.');
+    await app.close();
+  });
+
+  test('foreign or mismatched ids return 404 without calling the AI', async () => {
+    const { ai, calls } = spyAi();
+    const { app, req, cookie, target, blockIds } = await sceneSetup(ai);
+    const other: string = (await app.inject({ method: 'POST', url: '/api/books', headers: { cookie }, payload: { title: 'X' } })).json().book.id;
+    const unknown = '00000000-0000-4000-8000-000000000099';
+    for (const [t, book] of [
+      [target(), other],
+      [target(unknown), undefined],
+      [target(blockIds[0], unknown), undefined],
+    ] as const) {
+      const res = await req('POST', '/ai/text', { target: t, action: 'rephrase', text: 'Text hier', selection: null }, book);
+      expect(res.statusCode).toBe(404);
+    }
+    expect(calls).toHaveLength(0);
+    await app.close();
+  });
+
+  test('ai failure returns 502 ai_failed', async () => {
+    const ai: AiClient = { model: 'm', complete: async () => { throw new AiError('AI request timed out'); } };
+    const { app, req, target } = await sceneSetup(ai);
+    const res = await req('POST', '/ai/text', { target: target(), action: 'generate', text: '', selection: null });
+    expect(res.statusCode).toBe(502);
+    expect(res.json()).toEqual({ error: 'ai_failed' });
     await app.close();
   });
 });

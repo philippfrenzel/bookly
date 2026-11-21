@@ -85,7 +85,7 @@ export function buildTextContext(book: Book, body: AiTextBody): TextContext {
   const findCharacter = (id: string) => need(book.characters.find((c) => c.id === id));
 
   switch (target.kind) {
-    // Scene blocks get their context from a dedicated loader.
+    // Scene blocks are handled by loadSceneBlockContext (sceneBlockContext.ts); the route never sends them here.
     case 'sceneBlock':
       throw new NotFoundError();
     case 'storyline': {

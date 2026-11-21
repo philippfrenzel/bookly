@@ -4,11 +4,11 @@
  */
 import { and, eq, isNull } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply } from 'fastify';
-import { ProposalRequestBody, UUID_RE } from '@bookly/shared';
+import { BlockDraftBody, ProposalRequestBody, UUID_RE } from '@bookly/shared';
 import type { Id, ProposalChapter } from '@bookly/shared';
 import { requireUser } from '../auth/session.js';
 import { styleText } from '../ai/stylePrompt.js';
-import { draftRequest, parseDraft, parseStructure, structureRequest } from '../ai/structurePrompt.js';
+import { draftRequest, parseDraft, parseStructure, SCENE_TEXT_MAX, structureRequest } from '../ai/structurePrompt.js';
 import { loadBook, type Tx } from '../db/loadBook.js';
 import { loadScenes } from '../db/loadScenes.js';
 import { blocks, chapters, structureProposals } from '../db/schema.js';
@@ -133,9 +133,11 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
-  /** A prose draft for one block from its plan, source, figures and scenes; nothing is saved. */
+  /** A prose draft for one block from its plan, source, figures and scenes; nothing is saved. Body `{ length? }` is optional. */
   app.post(`${base}/blocks/:blockId/draft`, aiGuarded, async (request, reply) => {
     needRight(request, 'edit');
+    const parsed = BlockDraftBody.safeParse(request.body ?? {});
+    if (!parsed.success) return reply.code(400).send({ error: 'invalid_body', details: parsed.error.flatten() });
     const { bookId, blockId } = request.params as { bookId: string; blockId: string };
     const row = await blockOf(app.db, bookId, blockId);
     if (row.deletedAt) throw new HttpError(404, 'not_found');
@@ -160,11 +162,13 @@ export async function proposalRoutes(app: FastifyInstance): Promise<void> {
         characters: book.characters.filter((c) => charIds.includes(c.id)).map((c) => ({ name: c.name ?? 'Unbenannt', description: c.description ?? '' })),
         scenes: sceneData.scenes.filter((s) => sceneIds.has(s.id)).map((s) => ({
           name: s.name,
-          description: sceneData.sceneAssignments.find((a) => a.sceneId === s.id && (a.sectionId === section?.id || a.storylineId === line?.id))?.description ?? '',
+          description: sceneData.sceneAssignments.find((a) => a.sceneId === s.id && (a.sectionId === section?.id || a.storylineId === line?.id))?.description.slice(0, SCENE_TEXT_MAX) ?? '',
         })),
         instruction: row.instruction,
         style: styleText(ms.style, ms.teamStyles),
         previousText: prev?.text.slice(-1500) ?? '',
+        targetWords: book.targetWords ?? null,
+        length: parsed.data.length,
       }));
       return { text: parseDraft(raw) };
     } catch (err) {

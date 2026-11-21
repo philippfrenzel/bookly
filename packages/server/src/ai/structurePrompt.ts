@@ -2,9 +2,10 @@
  * Prompt building and answer parsing for the AI chapter structure proposal (FR-001, FR-003, FR-020) and the
  * AI prose draft of one Baustein.
  */
-import type { Book, Id, ManuscriptChapter, ProposalChapter, SceneAssignment } from '@bookly/shared';
+import type { Book, Id, LengthChoice, ManuscriptChapter, ProposalChapter, SceneAssignment, WordRange } from '@bookly/shared';
 import { MANUSCRIPT_LIMITS } from '@bookly/shared';
 import { AiError, type AiRequest } from './client.js';
+import { lengthGuidance } from './lengthGuidance.js';
 
 /** Scene data the structure prompt may use. */
 export interface SceneInfo {
@@ -25,6 +26,9 @@ const STRUCTURE_SYSTEM = [
 ].join(' ');
 
 const nullableId = { type: ['string', 'null'] };
+
+/** Scene texts are joined from blocks and can be long; prompts only see their beginning. */
+export const SCENE_TEXT_MAX = 2000;
 
 const STRUCTURE_SCHEMA = {
   type: 'object',
@@ -81,7 +85,11 @@ export function structureRequest(book: Book, sceneInfo: SceneInfo, current: Manu
   const scenesOf = (target: { sectionId?: Id; storylineId?: Id }) =>
     sceneInfo.assignments
       .filter((a) => (target.sectionId ? a.sectionId === target.sectionId : a.storylineId === target.storylineId))
-      .map((a) => ({ id: a.sceneId, name: sceneInfo.scenes.find((s) => s.id === a.sceneId)?.name ?? '', beschreibung: a.description }));
+      .map((a) => ({
+        id: a.sceneId,
+        name: sceneInfo.scenes.find((s) => s.id === a.sceneId)?.name ?? '',
+        beschreibung: a.description.slice(0, SCENE_TEXT_MAX),
+      }));
   const user = JSON.stringify({
     buch: book.title,
     zeitpunkte: book.timePoints.map((t) => t.name),
@@ -110,6 +118,7 @@ export function structureRequest(book: Book, sceneInfo: SceneInfo, current: Manu
       titel: c.title,
       bausteine: c.blocks.map((b) => ({ blockId: b.id, titel: b.title, inhalt: b.synopsis.slice(0, 400) })),
     })),
+    ...(book.targetWords && { zielumfang: `Das ganze Buch soll insgesamt etwa ${book.targetWords.min}–${book.targetWords.max} Wörter umfassen.` }),
     ...(wish && { wunsch: wish }),
     ...(style && { stil: style }),
     ...(focusChapterId && {
@@ -188,7 +197,14 @@ export interface DraftContext {
   style?: string;
   /** End of the previous block's text, for continuity. */
   previousText: string;
+  /** Target word range of the whole book, if set. */
+  targetWords?: WordRange | null;
+  /** Length choice of the author; absent means `book`. */
+  length?: LengthChoice;
 }
+
+/** The fixed length sentence of DRAFT_SYSTEM, replaced by the length guidance when a range or choice applies. */
+const DRAFT_LENGTH = 'Etwa 300 bis 600 Wörter.';
 
 const DRAFT_SYSTEM = [
   'Du schreibst für eine Autorin oder einen Autor einen ersten Entwurf einer Romanpassage auf Deutsch.',
@@ -201,7 +217,7 @@ const DRAFT_SYSTEM = [
 /** Builds the draft request. */
 export function draftRequest(ctx: DraftContext): AiRequest {
   return {
-    system: DRAFT_SYSTEM,
+    system: DRAFT_SYSTEM.replace(DRAFT_LENGTH, () => lengthGuidance(ctx.targetWords, ctx.length, DRAFT_LENGTH)),
     user: JSON.stringify({
       buch: ctx.bookTitle,
       kapitel: ctx.chapterTitle,
