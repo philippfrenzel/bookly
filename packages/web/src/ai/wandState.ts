@@ -35,6 +35,7 @@ export function menuItems(input: {
       { action: 'rephrase', label: 'Umformulieren', disabled: tooShort },
       { action: 'continue', label: 'Fortsetzen', disabled: tooShort || noRoom },
       { action: 'polish', label: 'Stil verbessern', disabled: tooShort },
+      { action: 'instruct', label: 'Eigene Anweisung …', disabled: tooShort },
     ],
     hint: tooShort ? 'Markierung zu kurz.' : null,
   };

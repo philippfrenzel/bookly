@@ -1,4 +1,4 @@
-/** Builds the AI text request (rephrase, continue, polish, generate) and parses/normalizes the model reply. */
+/** Builds the AI text request (rephrase, continue, polish, generate, instruct) and parses/normalizes the model reply. */
 import { fieldLimit, fitSuggestion, targetRange } from '@bookly/shared';
 import type { AiTextAction, AiTextBody } from '@bookly/shared';
 import { AiError, type AiRequest } from './client.js';
@@ -31,6 +31,8 @@ const ACTION_LINES: Record<AiTextAction, string> = {
     'Aufgabe: Fortsetzung. Schreibe nur den neuen Text, der an der Einfügestelle (Ende des Textes bzw. der Markierung) anschließt, 1–3 Sätze.',
   generate:
     'Aufgabe: Schreibe den Text des Feldes aus dem Kontext, 1–3 Sätze; bei den Feldern Titel, Name und Beschriftung höchstens etwa 8 Wörter.',
+  instruct:
+    'Aufgabe: Überarbeite die Zielpassage so, wie es die Anweisung der Autorin (Feld anweisung) verlangt. Was die Anweisung nicht betrifft, bleibt erhalten; die Länge darf sich ändern, wenn die Anweisung es verlangt.',
 };
 
 /** Builds the structured-output request for one text action. */
@@ -38,7 +40,14 @@ export function textRequest(ctx: TextContext, body: AiTextBody): AiRequest {
   const markierung = body.selection ? body.text.slice(body.selection.start, body.selection.end) : null;
   return {
     system: `${BASE}\n${body.selection ? OUTPUT_SELECTION : OUTPUT_WHOLE}\n${ACTION_LINES[body.action]}`,
-    user: JSON.stringify({ feld: ctx.fieldLabel, aktion: body.action, text: body.text, markierung, kontext: ctx.context }),
+    user: JSON.stringify({
+      feld: ctx.fieldLabel,
+      aktion: body.action,
+      ...(body.instruction ? { anweisung: body.instruction } : {}),
+      text: body.text,
+      markierung,
+      kontext: ctx.context,
+    }),
     schemaName: TEXT_SCHEMA_NAME,
     timeoutMs: 20_000,
     schema: {

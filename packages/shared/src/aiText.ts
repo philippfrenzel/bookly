@@ -10,9 +10,12 @@ export const MIN_SELECTION = 3;
 /** Minimum free characters required to offer "continue". */
 export const MIN_CONTINUE_ROOM = 20;
 
-/** What the wand should do with the field text. */
-export type AiTextAction = 'rephrase' | 'continue' | 'polish' | 'generate';
-const AiTextActionSchema = z.enum(['rephrase', 'continue', 'polish', 'generate']);
+/** Maximum length of a free instruction to the AI ("instruct"). */
+export const MAX_INSTRUCTION = 300;
+
+/** What the wand should do with the field text; "instruct" follows the author's own instruction. */
+export type AiTextAction = 'rephrase' | 'continue' | 'polish' | 'generate' | 'instruct';
+const AiTextActionSchema = z.enum(['rephrase', 'continue', 'polish', 'generate', 'instruct']);
 
 /** Identifies the text field the wand works on. */
 export const AiTextTarget = z.discriminatedUnion('kind', [
@@ -67,6 +70,8 @@ export const AiTextBody = z
     draft: AiTextDraft.default({}),
     /** Wanted length of a generated scene block. */
     length: LengthChoiceSchema.optional(),
+    /** The author's own instruction; required for "instruct", not allowed otherwise. */
+    instruction: z.string().max(MAX_INSTRUCTION).optional(),
   })
   .superRefine((b, ctx) => {
     const fail = (path: string, message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
@@ -75,6 +80,9 @@ export const AiTextBody = z
       const { start, end } = b.selection;
       if (!(start >= 0 && start < end && end <= b.text.length)) fail('selection', 'invalid selection');
       else if (b.text.slice(start, end).trim().length < MIN_SELECTION) fail('selection', 'selection too short');
+    }
+    if (b.action === 'instruct' ? !b.instruction?.trim() : b.instruction !== undefined) {
+      fail('instruction', b.action === 'instruct' ? 'instruction required' : 'instruction only with instruct');
     }
     if (b.action === 'generate') {
       if (b.text.trim() !== '' || b.selection !== null) fail('action', 'generate needs an empty field');

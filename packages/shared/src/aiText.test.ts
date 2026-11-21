@@ -13,6 +13,15 @@ const body = (over: Record<string, unknown>) => ({
 });
 
 describe('AiTextBody', () => {
+  it('requires an instruction for instruct and refuses one for other actions', () => {
+    expect(AiTextBody.safeParse(body({ action: 'instruct', instruction: 'spannender' })).success).toBe(true);
+    expect(AiTextBody.safeParse(body({ action: 'instruct' })).success).toBe(false);
+    expect(AiTextBody.safeParse(body({ action: 'instruct', instruction: '   ' })).success).toBe(false);
+    expect(AiTextBody.safeParse(body({ action: 'instruct', instruction: 'x'.repeat(301) })).success).toBe(false);
+    expect(AiTextBody.safeParse(body({ action: 'rephrase', instruction: 'spannender' })).success).toBe(false);
+  });
+
+
   it('rejects invalid selections', () => {
     expect(AiTextBody.safeParse(body({ selection: { start: 2, end: 1 } })).success).toBe(false);
     expect(AiTextBody.safeParse(body({ selection: { start: 2, end: 99 } })).success).toBe(false);

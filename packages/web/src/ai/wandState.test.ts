@@ -26,7 +26,7 @@ describe('menuItems', () => {
 
   it('disables everything for a too-short selection', () => {
     const { items, hint } = menuItems({ text: 'Mira ging weg', selection: { start: 0, end: 2 }, target: title, contextHasText: true });
-    expect(items.map((i) => i.label)).toEqual(['Umformulieren', 'Fortsetzen', 'Stil verbessern']);
+    expect(items.map((i) => i.label)).toEqual(['Umformulieren', 'Fortsetzen', 'Stil verbessern', 'Eigene Anweisung …']);
     expect(items.every((i) => i.disabled)).toBe(true);
     expect(hint).toBe('Markierung zu kurz.');
   });

@@ -86,6 +86,12 @@ describe('createFakeAiClient', () => {
     await expect(fake.complete({ ...req, user: 'FAKE-WIDERSPRUCH' })).resolves.toEqual({ warnings: [] });
   });
 
+  test('text suggestions name the free instruction', async () => {
+    await expect(fake.complete({ ...req, user: JSON.stringify({ anweisung: 'kürzer' }), schemaName: 'text_suggestions' })).resolves.toEqual({
+      suggestions: ['KI-Vorschlag 1 (kürzer)', 'KI-Vorschlag 2 (kürzer)', 'KI-Vorschlag 3 (kürzer)'],
+    });
+  });
+
   test('text suggestions schema', async () => {
     await expect(fake.complete({ ...req, schemaName: 'text_suggestions' })).resolves.toEqual({
       suggestions: ['KI-Vorschlag 1', 'KI-Vorschlag 2', 'KI-Vorschlag 3'],

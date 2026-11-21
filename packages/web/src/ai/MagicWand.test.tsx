@@ -168,10 +168,42 @@ describe('MagicWand', () => {
     await userEvent.keyboard('{ArrowDown}');
     expect(screen.getByRole('menuitem', { name: 'Fortsetzen' })).toHaveFocus();
     await userEvent.keyboard('{ArrowUp}{ArrowUp}');
+    expect(screen.getByRole('menuitem', { name: 'Eigene Anweisung …' })).toHaveFocus();
+    await userEvent.keyboard('{ArrowUp}');
     expect(screen.getByRole('menuitem', { name: 'Stil verbessern' })).toHaveFocus();
     await userEvent.keyboard('{Enter}');
     await screen.findByText('1/3');
     expect(bodies[0]).toMatchObject({ action: 'polish' });
+  });
+
+  it('sends a free instruction from „Eigene Anweisung …“ for the selection', async () => {
+    render(<Harness value="Mira geht nach Hause." />);
+    field().setSelectionRange(5, 9);
+    await userEvent.click(wand());
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Eigene Anweisung …' }));
+    const input = screen.getByRole('textbox', { name: 'Anweisung an die KI' });
+    expect(input).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Los' })).toBeDisabled();
+    await userEvent.type(input, 'spannender{Enter}');
+    await screen.findByText('1/3');
+    expect(bodies).toEqual([
+      { target, action: 'instruct', instruction: 'spannender', text: 'Mira geht nach Hause.', selection: { start: 5, end: 9 }, draft: { title: 'Titel', description: 'Mira geht nach Hause.' } },
+    ]);
+    expect(field().value).toBe('Mira A1 nach Hause.');
+  });
+
+  it('sends an example instruction with one click and closes the form on Escape', async () => {
+    render(<Harness value="Mira geht." />);
+    await userEvent.click(wand());
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Eigene Anweisung …' }));
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('textbox', { name: 'Anweisung an die KI' })).not.toBeInTheDocument();
+    expect(bodies).toEqual([]);
+    await userEvent.click(wand());
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Eigene Anweisung …' }));
+    await userEvent.click(screen.getByRole('button', { name: 'kürzer' }));
+    await screen.findByText('1/3');
+    expect(bodies[0]).toMatchObject({ action: 'instruct', instruction: 'kürzer', selection: null });
   });
 
   it('typing keeps the suggestion and closes the bar', async () => {

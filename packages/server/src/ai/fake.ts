@@ -29,7 +29,13 @@ export function createFakeAiClient(): AiClient {
         return { text: `KI-Entwurf: ${baustein}${anweisung ? ` (${anweisung})` : ''}${stil ? ` [Stil: ${stil.split('\n').map((l) => l.split(':')[0]).join(', ')}]` : ''}` };
       }
       if (req.schemaName === 'text_suggestions') {
-        return { suggestions: ['KI-Vorschlag 1', 'KI-Vorschlag 2', 'KI-Vorschlag 3'] };
+        let anweisung: string | undefined;
+        try {
+          anweisung = (JSON.parse(req.user) as { anweisung?: string }).anweisung;
+        } catch {
+          // A plain-text user message has no instruction.
+        }
+        return { suggestions: [1, 2, 3].map((n) => `KI-Vorschlag ${n}${anweisung ? ` (${anweisung})` : ''}`) };
       }
       const characterId = req.user.includes('FAKE-WIDERSPRUCH') ? firstCharacterId(req.user) : null;
       if (!characterId) return { warnings: [] };

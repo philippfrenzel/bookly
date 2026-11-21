@@ -150,4 +150,63 @@ describe('MagicWand on a ProseField', () => {
     expect(screen.queryByText('1/2')).not.toBeInTheDocument();
     expect(document.querySelector('.cm-ai-ins')).toBeNull();
   });
+
+  describe('toolbar over selected text', () => {
+    let bodies: unknown[];
+    const capture = () => {
+      bodies = [];
+      server.use(
+        http.post('/api/books/b1/ai/text', async ({ request }) => {
+          bodies.push(await request.json());
+          return HttpResponse.json({ suggestions: ['B1', 'B2'] });
+        }),
+      );
+    };
+    const toolbar = () => screen.queryByRole('toolbar', { name: 'KI für die Markierung' });
+    const select = (from: number, to: number) => act(() => viewOf('Feld').dispatch({ selection: { anchor: from, head: to } }));
+
+    it('appears for a selection and rephrases only the selection', async () => {
+      capture();
+      render(<Harness />);
+      expect(toolbar()).toBeNull();
+      select(0, 4);
+      expect(toolbar()).not.toBeNull();
+      await userEvent.click(screen.getByRole('button', { name: 'Umformulieren' }));
+      await screen.findByText('1/2');
+      expect(bodies[0]).toMatchObject({ action: 'rephrase', selection: { start: 0, end: 4 } });
+      expect(document.querySelector('del.cm-ai-del')).toHaveTextContent('Mira');
+      // While a suggestion is shown the toolbar steps aside.
+      expect(toolbar()).toBeNull();
+    });
+
+    it('takes a free instruction for the selection', async () => {
+      capture();
+      render(<Harness />);
+      select(5, 9);
+      await userEvent.click(screen.getByRole('button', { name: 'Anweisung …' }));
+      const input = screen.getByRole('textbox', { name: 'Anweisung an die KI' });
+      await userEvent.type(input, 'aus Miras Sicht{Enter}');
+      await screen.findByText('1/2');
+      expect(bodies[0]).toMatchObject({ action: 'instruct', instruction: 'aus Miras Sicht', selection: { start: 5, end: 9 } });
+    });
+
+    it('opens the instruction for the paragraph at the caret with Ctrl+K', async () => {
+      capture();
+      render(<Harness />);
+      const view = viewOf('Feld');
+      act(() => {
+        view.focus();
+        view.dispatch({ selection: { anchor: 3 } });
+      });
+      await userEvent.keyboard('{Control>}k{/Control}');
+      expect(view.state.selection.main).toMatchObject({ from: 0, to: 10 });
+      expect(screen.getByRole('textbox', { name: 'Anweisung an die KI' })).toBeInTheDocument();
+    });
+
+    it('is not offered on a field without a wand', () => {
+      render(<ProseField ariaLabel="Ohne" defaultValue="Mira geht." />);
+      act(() => viewOf('Ohne').dispatch({ selection: { anchor: 0, head: 4 } }));
+      expect(toolbar()).toBeNull();
+    });
+  });
 });
