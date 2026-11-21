@@ -11,6 +11,7 @@ import '@fontsource/hanken-grotesk/800.css';
 import '@fontsource-variable/bricolage-grotesque';
 import './tailwind.css';
 import './styles.css';
+import './manuscript/manuscript.css';
 
 const queryClient = createQueryClient();
 

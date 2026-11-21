@@ -36,6 +36,13 @@
       "when": 1795258038533,
       "tag": "0004_scene_storyline_target",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795260531291,
+      "tag": "0005_manuscript",
+      "breakpoints": true
     }
   ]
 }

@@ -87,6 +87,12 @@ export function BookPage() {
         </nav>
         {book && <h1>{book.title}</h1>}
         {book && (
+          <Link to={`/books/${book.id}/manuskript`} className="header-link with-icon">
+            <Icon name="book" />
+            Manuskript
+          </Link>
+        )}
+        {book && (
           <button
             type="button"
             className="primary header-action"
