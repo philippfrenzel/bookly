@@ -26,21 +26,31 @@ interface FieldsProps {
   live: boolean;
   resetKey: number;
   onCommit: (patch: Partial<SectionDraft>) => void;
+  aiEnabled: boolean;
+  storylineId: Id;
+  /** Null for the add form (section not stored yet). */
+  sectionId: Id | null;
 }
 
 /** The section input fields; commit semantics depend on `live`. */
-function SectionFields({ book, name, values, live, resetKey, onCommit }: FieldsProps) {
+function SectionFields({ book, name, values, live, resetKey, onCommit, aiEnabled, storylineId, sectionId }: FieldsProps) {
   const text = { live, resetKey };
+  const aiFor = (field: 'title' | 'description' | 'note') => ({
+    bookId: book.id,
+    target: { kind: 'section' as const, storylineId, sectionId, field },
+    draft: () => ({ title: values.title, description: values.description, note: values.note, characterIds: values.characterIds }),
+    enabled: aiEnabled,
+  });
   return (
     <>
       <div className="field">
         <span>Titel</span>
-        <TextInput {...text} ariaLabel={`Titel ${name}`} value={values.title} maxLength={200} onCommit={(title) => onCommit({ title })} />
+        <TextInput {...text} ariaLabel={`Titel ${name}`} ai={aiFor('title')} value={values.title} maxLength={200} onCommit={(title) => onCommit({ title })} />
       </div>
       <div className="field">
         <span>Kurzbeschreibung</span>
         <TextInput
-          {...text} multiline ariaLabel={`Kurzbeschreibung ${name}`} value={values.description} maxLength={2000}
+          {...text} multiline ariaLabel={`Kurzbeschreibung ${name}`} ai={aiFor('description')} value={values.description} maxLength={2000}
           onCommit={(description) => onCommit({ description })}
         />
       </div>
@@ -48,7 +58,7 @@ function SectionFields({ book, name, values, live, resetKey, onCommit }: FieldsP
       <CharacterChecks characters={book.characters} value={values.characterIds} onChange={(characterIds) => onCommit({ characterIds })} />
       <div className="field">
         <span>Notiz</span>
-        <TextInput {...text} multiline ariaLabel={`Notiz ${name}`} value={values.note} maxLength={10000} onCommit={(note) => onCommit({ note })} />
+        <TextInput {...text} multiline ariaLabel={`Notiz ${name}`} ai={aiFor('note')} value={values.note} maxLength={10000} onCommit={(note) => onCommit({ note })} />
       </div>
     </>
   );
@@ -68,7 +78,7 @@ function toBody(d: Partial<SectionDraft>) {
 }
 
 /** Section management for one main strand. */
-export function SectionList({ book, storyline }: { book: Book; storyline: Storyline }) {
+export function SectionList({ book, storyline, aiEnabled }: { book: Book; storyline: Storyline; aiEnabled: boolean }) {
   const fb = useSaveFeedback();
   const [editingId, setEditingId] = useState<Id | null>(null);
   // Bumped after a successful add so the add form starts empty again; a failed add keeps the input.
@@ -131,6 +141,7 @@ export function SectionList({ book, storyline }: { book: Book; storyline: Storyl
               <div className="storyline-form">
                 <SectionFields
                   book={book} name={s.title} values={draftOf(s)} live={false} resetKey={fb.resetKey}
+                  aiEnabled={aiEnabled} storylineId={storyline.id} sectionId={s.id}
                   onCommit={(patch) => saveField(s, patch)}
                 />
                 <div className="actions">
@@ -152,6 +163,8 @@ export function SectionList({ book, storyline }: { book: Book; storyline: Storyl
       <AddSection
         key={addKey}
         book={book}
+        aiEnabled={aiEnabled}
+        storylineId={storyline.id}
         initial={{ title: '', description: '', range: storyline.range, characterIds: [], note: '' }}
         resetKey={fb.resetKey}
         onSubmit={(draft) => {
@@ -164,13 +177,14 @@ export function SectionList({ book, storyline }: { book: Book; storyline: Storyl
 
 /** The add-section form: local draft, one button. Remounted by the parent after a successful add. */
 function AddSection({
-  book, initial, resetKey, onSubmit,
-}: { book: Book; initial: SectionDraft; resetKey: number; onSubmit: (draft: SectionDraft) => void }) {
+  book, initial, resetKey, onSubmit, aiEnabled, storylineId,
+}: { book: Book; initial: SectionDraft; resetKey: number; onSubmit: (draft: SectionDraft) => void; aiEnabled: boolean; storylineId: Id }) {
   const [draft, setDraft] = useState(initial);
   return (
     <div className="storyline-form">
       <SectionFields
         book={book} name="neuer Abschnitt" values={draft} live resetKey={resetKey}
+        aiEnabled={aiEnabled} storylineId={storylineId} sectionId={null}
         onCommit={(patch) => setDraft((d) => ({ ...d, ...patch }))}
       />
       <div className="actions">

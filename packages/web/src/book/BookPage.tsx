@@ -106,7 +106,7 @@ export function BookPage() {
               { id: 'storyline', label: 'Storyline', content: <StorylinePanel book={book} checks={query.data?.characterChecks ?? []} aiEnabled={query.data?.ai.enabled ?? false} target={target} onTarget={open} onConnect={(fromId, toId) => setConnection({ mode: 'create', fromId, toId })} /> },
             ]}
           />
-          {connection && <ConnectionDialog book={book} target={connection} onClose={() => setConnection(null)} />}
+          {connection && <ConnectionDialog book={book} target={connection} aiEnabled={query.data?.ai.enabled ?? false} onClose={() => setConnection(null)} />}
         </div>
       )}
     </div>

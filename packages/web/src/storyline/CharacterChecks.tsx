@@ -11,12 +11,10 @@ interface Props {
   storyline?: Storyline;
   bookId?: Id;
   aiEnabled?: boolean;
-  /** See {@link AdditionEditor}. */
-  suggestTick?: number;
 }
 
 /** One checkbox per character; toggling adds or removes the id, unchecking asks first when an addition has text. */
-export function CharacterChecks({ characters, value, onChange, storyline, bookId, aiEnabled = false, suggestTick = 0 }: Props) {
+export function CharacterChecks({ characters, value, onChange, storyline, bookId, aiEnabled = false }: Props) {
   const [open, setOpen] = useState<Id[]>([]);
   /** Getters for the live (possibly unsaved) text of open addition editors. */
   const live = useRef<Record<Id, (() => { behavior: string; intentions: string }) | null>>({});
@@ -62,7 +60,6 @@ export function CharacterChecks({ characters, value, onChange, storyline, bookId
                 character={c}
                 addition={additionOf(c.id)}
                 aiEnabled={aiEnabled}
-                suggestTick={suggestTick}
                 registerLive={registerFor(c.id)}
               />
             )}

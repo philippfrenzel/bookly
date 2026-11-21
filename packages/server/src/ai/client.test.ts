@@ -71,10 +71,9 @@ describe('createFakeAiClient', () => {
     await expect(fake.complete({ ...req, user: 'FAKE-WIDERSPRUCH' })).resolves.toEqual({ warnings: [] });
   });
 
-  test('suggestion schema', async () => {
-    await expect(fake.complete({ ...req, schemaName: 'character_suggestion' })).resolves.toEqual({
-      behavior: 'Vorschlag Verhalten',
-      intentions: 'Vorschlag Absichten',
+  test('text suggestions schema', async () => {
+    await expect(fake.complete({ ...req, schemaName: 'text_suggestions' })).resolves.toEqual({
+      suggestions: ['KI-Vorschlag 1', 'KI-Vorschlag 2', 'KI-Vorschlag 3'],
     });
   });
 });

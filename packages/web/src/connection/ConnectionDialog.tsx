@@ -7,6 +7,7 @@ import {
 import type { ApiError } from '../api/client';
 import { IssueList } from '../book/IssueList';
 import { useBookMutation } from '../api/hooks';
+import { MagicWand } from '../ai/MagicWand';
 import { HintList } from './HintList';
 
 /** What the dialog shows: a new connection between two storylines, or an existing one. */
@@ -23,6 +24,7 @@ export const CONNECTION_TYPES: { type: ConnectionType; label: string }[] = [
 interface Props {
   book: Book;
   target: ConnectionTarget;
+  aiEnabled: boolean;
   onClose: () => void;
 }
 
@@ -33,14 +35,14 @@ function initialConnection(book: Book, target: ConnectionTarget): Connection | n
 }
 
 /** Dialog shell; renders nothing when an edited connection no longer exists. */
-export function ConnectionDialog({ book, target, onClose }: Props) {
+export function ConnectionDialog({ book, target, aiEnabled, onClose }: Props) {
   const initial = initialConnection(book, target);
   if (!initial) return null;
-  return <DialogBody key={initial.id} book={book} initial={initial} isNew={target.mode === 'create'} onClose={onClose} />;
+  return <DialogBody key={initial.id} book={book} initial={initial} isNew={target.mode === 'create'} aiEnabled={aiEnabled} onClose={onClose} />;
 }
 
 /** Form state, live hints and the save/delete/acknowledge mutations. */
-function DialogBody({ book, initial, isNew, onClose }: { book: Book; initial: Connection; isNew: boolean; onClose: () => void }) {
+function DialogBody({ book, initial, isNew, aiEnabled, onClose }: { book: Book; initial: Connection; isNew: boolean; aiEnabled: boolean; onClose: () => void }) {
   const [type, setType] = useState(initial.type);
   const [characterId, setCharacterId] = useState<Id | null>(initial.characterId);
   const [label, setLabel] = useState(initial.label ?? '');
@@ -66,6 +68,7 @@ function DialogBody({ book, initial, isNew, onClose }: { book: Book; initial: Co
     if (e.status === 422 && body?.issues) setError({ issues: body.issues });
     else setError({ message: 'Speichern fehlgeschlagen. Bitte erneut versuchen.' });
   };
+  const labelRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   useEffect(() => dialogRef.current?.focus(), []);
 
@@ -130,10 +133,22 @@ function DialogBody({ book, initial, isNew, onClose }: { book: Book; initial: Co
             </select>
           </label>
         )}
-        <label>
-          Beschriftung
-          <input value={label} maxLength={200} onChange={(e) => setLabel(e.target.value)} />
-        </label>
+        <div className="field">
+          <span>Beschriftung</span>
+          <div className="wand-field">
+            <input ref={labelRef} aria-label="Beschriftung" value={label} maxLength={200} onChange={(e) => setLabel(e.target.value)} />
+            <MagicWand
+              getField={() => labelRef.current}
+              bookId={book.id}
+              target={{
+                kind: 'connection', fromId: initial.fromId, toId: initial.toId, type,
+                characterId: type === 'character_switch' ? characterId : null, field: 'label',
+              }}
+              enabled={aiEnabled}
+              fieldLabel="Beschriftung"
+            />
+          </div>
+        </div>
         <HintList
           hints={hints}
           onAcknowledge={isNew || !unchanged ? undefined : (h) => ack.mutate(h, { onError })}

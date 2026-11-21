@@ -86,8 +86,6 @@ interface FormProps {
 /** The form itself; remounted (by key) whenever the target changes. Create: local draft + „Anlegen“. Edit: direct saves. */
 function StorylineForm({ book, initial, storyline, onTarget, onConnect, check, aiEnabled }: FormProps) {
   const [draft, setDraft] = useState(initial);
-  // Bumped after a saved title/description/note change; open addition editors then ask for a new suggestion.
-  const [suggestTick, setSuggestTick] = useState(0);
   const fb = useSaveFeedback();
   const base = `/api/books/${book.id}/storylines`;
   const editing = storyline !== null;
@@ -125,11 +123,7 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect, check, a
       return;
     }
     fb.clear();
-    const textChange = patch.title !== undefined || patch.description !== undefined || patch.note !== undefined;
-    update.mutate(bodyOf(patch), {
-      onError: fb.onError,
-      onSuccess: () => { if (textChange) setSuggestTick((t) => t + 1); },
-    });
+    update.mutate(bodyOf(patch), { onError: fb.onError });
   };
 
   /** Create mode edits the draft; edit mode saves directly. */
@@ -190,17 +184,27 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect, check, a
   };
 
   const text = { live: !editing, resetKey: fb.resetKey };
+  /** Wand configuration for one text field; the draft is read when the wand asks. */
+  const aiFor = (field: 'title' | 'description' | 'note') => ({
+    bookId: book.id,
+    target: { kind: 'storyline' as const, storylineId: storyline?.id ?? null, field },
+    draft: () => ({ title: v.title, description: v.description, note: v.note, characterIds: v.characterIds }),
+    enabled: aiEnabled,
+  });
   return (
     <section aria-label="Storyline bearbeiten">
       <div className="storyline-form">
-        <label>
-          Titel
-          <TextInput {...text} value={v.title} maxLength={200} onCommit={(title) => commit({ title })} />
-        </label>
-        <label>
-          Kurzbeschreibung
-          <TextInput {...text} multiline value={v.description} maxLength={2000} onCommit={(description) => commit({ description })} />
-        </label>
+        <div className="field">
+          <span>Titel</span>
+          <TextInput {...text} ariaLabel="Titel" ai={aiFor('title')} value={v.title} maxLength={200} onCommit={(title) => commit({ title })} />
+        </div>
+        <div className="field">
+          <span>Kurzbeschreibung</span>
+          <TextInput
+            {...text} multiline ariaLabel="Kurzbeschreibung" ai={aiFor('description')} value={v.description} maxLength={2000}
+            onCommit={(description) => commit({ description })}
+          />
+        </div>
         <fieldset>
           <legend>Art</legend>
           <div className="inline">
@@ -256,13 +260,16 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect, check, a
           {storyline && <CheckStatus bookId={book.id} storylineId={storyline.id} check={check} aiEnabled={aiEnabled} />}
           <CharacterChecks
             characters={book.characters} value={v.characterIds} onChange={(characterIds) => commit({ characterIds })}
-            storyline={storyline ?? undefined} bookId={book.id} aiEnabled={aiEnabled} suggestTick={suggestTick}
+            storyline={storyline ?? undefined} bookId={book.id} aiEnabled={aiEnabled}
           />
         </fieldset>
-        <label>
-          Notiz
-          <TextInput {...text} multiline value={v.note} maxLength={10000} onCommit={(note) => commit({ note })} />
-        </label>
+        <div className="field">
+          <span>Notiz</span>
+          <TextInput
+            {...text} multiline ariaLabel="Notiz" ai={aiFor('note')} value={v.note} maxLength={10000}
+            onCommit={(note) => commit({ note })}
+          />
+        </div>
         {fb.feedback}
         <div className="actions">
           {editing ? (
@@ -273,7 +280,7 @@ function StorylineForm({ book, initial, storyline, onTarget, onConnect, check, a
         </div>
       </div>
       {storyline && onConnect && <ConnectPicker book={book} fromId={storyline.id} onConnect={onConnect} />}
-      {storyline && storyline.kind === 'main' && <SectionList book={book} storyline={storyline} />}
+      {storyline && storyline.kind === 'main' && <SectionList book={book} storyline={storyline} aiEnabled={aiEnabled} />}
     </section>
   );
 }

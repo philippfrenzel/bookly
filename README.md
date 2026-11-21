@@ -1,6 +1,6 @@
 # bookly
 
-A web app for authors to map the storylines of a book on a story timeline. Main strands, side strands, sections, characters and typed connections live on one map; contradictions (for example a time jump that does not move forward) are surfaced as hints that never block saving. Characters have profiles (description, behavior, intentions) with optional per-storyline additions; with AI configured (see below) the app suggests profile text and warns about contradictions between a character's profile and a storyline. Warnings never block saving and can be acknowledged.
+A web app for authors to map the storylines of a book on a story timeline. Main strands, side strands, sections, characters and typed connections live on one map; contradictions (for example a time jump that does not move forward) are surfaced as hints that never block saving. Characters have profiles (description, behavior, intentions) with optional per-storyline additions; with AI configured (see below) every text field gets an AI magic wand (rephrase, continue, polish style or suggest text from the context, with three suggestions to choose from), and the app warns about contradictions between a character's profile and a storyline. Warnings never block saving and can be acknowledged.
 
 The UI is German; code and docs are English.
 
@@ -53,7 +53,7 @@ npm run e2e         # Playwright end-to-end flow (needs bookly_e2e, starts its o
 | `DATABASE_URL` | `postgres://localhost:5432/bookly_dev` | Database of the API server |
 | `TEST_DATABASE_URL` | `postgres://localhost:5432/bookly_test` | Database used by the server tests |
 | `PORT` | `3000` | API server port |
-| `OPENROUTER_API_KEY` | _(unset, AI off)_ | OpenRouter API key enabling AI character warnings |
+| `OPENROUTER_API_KEY` | _(unset, AI off)_ | OpenRouter API key enabling the AI magic wand and AI character warnings |
 | `OPENROUTER_MODEL` | _(none)_ | OpenRouter model id; required when `OPENROUTER_API_KEY` is set |
 | `AI_FAKE` | _(unset)_ | Set to `1` to use a deterministic fake AI client (used by e2e) |
 | `API_TARGET` | `http://localhost:3000` | API URL the web dev server proxies `/api` to |

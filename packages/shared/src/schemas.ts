@@ -116,16 +116,3 @@ export type AdditionBody = z.infer<typeof AdditionBody>;
 
 export const CharacterWarningAckBody = z.object({ storylineId: Id, characterId: Id, criterion: CharacterCriterionSchema });
 export type CharacterWarningAckBody = z.infer<typeof CharacterWarningAckBody>;
-
-/** Draft profile values sent to the suggestion endpoint. */
-export const SuggestionBody = z.object({
-  name: profileText(200),
-  description: profileText(2000),
-  behavior: profileText(2000),
-  intentions: profileText(2000),
-});
-export type SuggestionBody = z.infer<typeof SuggestionBody>;
-
-/** AI suggestion for behavior and intentions. */
-export const SuggestionResult = z.object({ behavior: z.string(), intentions: z.string() });
-export type Suggestion = z.infer<typeof SuggestionResult>;
