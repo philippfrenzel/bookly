@@ -1,6 +1,6 @@
 /** Tests for the request body schemas. */
 import { describe, expect, it } from 'vitest';
-import { AdditionBody, CharacterBody, RegisterBody, StorylineCreateBody, StorylinePatchBody } from './schemas.js';
+import { BookPatchBody, AdditionBody, CharacterBody, RegisterBody, StorylineCreateBody, StorylinePatchBody } from './schemas.js';
 
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
@@ -36,4 +36,13 @@ describe('CharacterBody', () => {
 
 describe('AdditionBody', () => {
   it('accepts partial input', () => expect(AdditionBody.parse({ behavior: 'x' })).toEqual({ behavior: 'x' }));
+});
+
+describe('BookPatchBody', () => {
+  it('accepts a title or a target range (or null) and rejects nothing', () => {
+    expect(BookPatchBody.safeParse({ title: 'Neu' }).success).toBe(true);
+    expect(BookPatchBody.safeParse({ targetWords: null }).success).toBe(true);
+    expect(BookPatchBody.safeParse({ targetWords: { min: 1, max: 2 } }).success).toBe(true);
+    expect(BookPatchBody.safeParse({}).success).toBe(false);
+  });
 });

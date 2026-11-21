@@ -2,7 +2,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
 import { draftHasText, fieldLimit, fitSuggestion, targetRange } from '@bookly/shared';
-import type { AiTextAction, AiTextBody, AiTextDraft, AiTextResult, AiTextTarget, Id } from '@bookly/shared';
+import type { AiTextAction, AiTextBody, AiTextDraft, AiTextResult, AiTextTarget, Id, LengthChoice } from '@bookly/shared';
 import { api } from '../api/client';
 import { Icon } from '../ui/Icon';
 import { replaceRange } from './replaceRange';
@@ -23,6 +23,8 @@ export interface MagicWandProps {
   enabled: boolean;
   /** Used in aria-labels. */
   fieldLabel: string;
+  /** Wanted length of generated text; sent only when set, so other fields' bodies stay as before. */
+  length?: LengthChoice;
 }
 
 interface MenuState {
@@ -47,7 +49,7 @@ const FAILED = 'Vorschlag fehlgeschlagen.';
 const keepFocus = (e: ReactMouseEvent) => e.preventDefault();
 
 /** Wand button with its action menu and the suggestion bar (◀ 1/3 ▶ ↶ ✕) for one field. */
-export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel }: MagicWandProps): JSX.Element {
+export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel, length }: MagicWandProps): JSX.Element {
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [bar, setBar] = useState<BarState | null>(null);
   const [loading, setLoading] = useState(false);
@@ -187,8 +189,8 @@ export function MagicWand({ getField, bookId, target, draft, enabled, fieldLabel
     el.focus();
     // The live value replaces a possibly stale stored one of the target field in the context.
     const context: AiTextDraft = { ...(draft?.() ?? {}) };
-    if (target.field !== 'label') context[target.field] = text;
-    const body: AiTextBody = { target, action, text, selection, draft: context };
+    if (target.field !== 'label' && target.field !== 'text') context[target.field] = text;
+    const body: AiTextBody = { target, action, text, selection, draft: context, ...(length ? { length } : {}) };
     let result: AiTextResult;
     try {
       result = await api<AiTextResult>('POST', `/api/books/${bookId}/ai/text`, body);

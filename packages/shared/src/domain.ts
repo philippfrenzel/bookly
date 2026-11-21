@@ -1,6 +1,7 @@
 /** Domain types and visual constants shared by server and web. */
 import type { CharacterCriterion } from './criteria.js';
 import type { Hint } from './hints.js';
+import type { WordRange } from './length.js';
 import type { Scene, SceneAssignment } from './scenes.js';
 
 export type Id = string; // uuid
@@ -74,6 +75,8 @@ export interface Book {
   storylines: Storyline[];
   connections: Connection[];
   acknowledgements: Acknowledgement[];
+  /** Target length of the book in words, if the author set one. */
+  targetWords?: WordRange | null;
 }
 
 /** Authenticated user as returned by /api/auth/*. */

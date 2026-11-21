@@ -3,9 +3,11 @@ import { and, eq } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { AiTextBody, CharacterWarningAckBody } from '@bookly/shared';
 import type { AiTextResult, BookResponse, Id } from '@bookly/shared';
+import type { AiRequest } from '../ai/client.js';
 import { requireUser } from '../auth/session.js';
 import { buildCheckInput } from '../ai/checkPrompt.js';
 import { enqueueForced } from '../ai/queue.js';
+import { loadSceneBlockContext, sceneBlockRequest } from '../ai/sceneBlockContext.js';
 import { buildTextContext } from '../ai/textContext.js';
 import { parseTextSuggestions, textRequest } from '../ai/textPrompt.js';
 import { bookResponse } from '../db/bookResponse.js';
@@ -81,10 +83,19 @@ export async function aiRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) return reply.code(400).send({ error: 'invalid_body', details: parsed.error.flatten() });
     const { bookId } = request.params as { bookId: string };
     const body = parsed.data;
-    const ctx = buildTextContext(await loadBook(app.db, bookId), body);
-    if (body.action === 'generate' && !ctx.hasText) return reply.code(400).send({ error: 'empty_context' });
+    const { target } = body;
+    let aiRequest: AiRequest;
+    if (target.kind === 'sceneBlock') {
+      // Scene blocks are scoped to their assignment; generating is allowed on an empty block.
+      const ctx = await loadSceneBlockContext(app.db, bookId, target.assignmentId, target.blockId);
+      aiRequest = sceneBlockRequest(ctx, body);
+    } else {
+      const ctx = buildTextContext(await loadBook(app.db, bookId), body);
+      if (body.action === 'generate' && !ctx.hasText) return reply.code(400).send({ error: 'empty_context' });
+      aiRequest = textRequest(ctx, body);
+    }
     try {
-      return { suggestions: parseTextSuggestions(await app.ai!.complete(textRequest(ctx, body)), body) };
+      return { suggestions: parseTextSuggestions(await app.ai!.complete(aiRequest), body) };
     } catch (err) {
       request.log.warn({ err }, 'ai text suggestion failed');
       return reply.code(502).send({ error: 'ai_failed' });

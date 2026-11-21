@@ -40,6 +40,9 @@ export const books = pgTable('books', {
   createdAt: createdAt(),
   /** Bumped by every mutation of the book; drives "zuletzt bearbeitet" on the book list. */
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  /** Target length of the whole book in words; both set or both null. */
+  targetWordsMin: integer('target_words_min'),
+  targetWordsMax: integer('target_words_max'),
 });
 
 export const timePoints = pgTable('time_points', {
@@ -250,14 +253,32 @@ export const sceneAssignments = pgTable(
     /** Target is either a section (of a main strand) or a whole storyline (e.g. a side strand); exactly one is set. */
     sectionId: uuid('section_id').references(() => sections.id, { onDelete: 'cascade' }),
     storylineId: uuid('storyline_id').references(() => storylines.id, { onDelete: 'cascade' }),
+    /** Derived: the block texts joined with BLOCK_SEPARATOR (kept for readers of the whole text). */
     description: text('description').notNull().default(''),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Bumped by every block write; a save based on an older revision is rejected as stale. */
+    revision: integer('revision').notNull().default(0),
   },
   (t) => [
     uniqueIndex('scene_assignments_unique').on(t.sceneId, t.sectionId),
     uniqueIndex('scene_assignments_storyline_unique').on(t.sceneId, t.storylineId),
     check('scene_assignments_one_target', sql`(${t.sectionId} IS NULL) <> (${t.storylineId} IS NULL)`),
   ],
+);
+
+/** Ordered text blocks of a scene assignment; `position` is 0-based and unique per assignment. */
+export const sceneAssignmentBlocks = pgTable(
+  'scene_assignment_blocks',
+  {
+    id: id(),
+    assignmentId: uuid('assignment_id')
+      .notNull()
+      .references(() => sceneAssignments.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    text: text('text').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('scene_assignment_blocks_position').on(t.assignmentId, t.position)],
 );
 
 /** Reviewers (Lektoren) of a book with their individual rights (FR-005, BR-001); at most 5 per book. */

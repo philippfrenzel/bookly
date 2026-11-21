@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AiTextBody, draftHasText, fitSuggestion, targetRange } from './aiText.js';
+import { AiTextBody, draftHasText, fieldLimit, fitSuggestion, targetRange } from './aiText.js';
 
 const uuid = '11111111-1111-4111-8111-111111111111';
 const storylineDesc = { kind: 'storyline', storylineId: null, field: 'description' } as const;
@@ -81,5 +81,20 @@ describe('draftHasText', () => {
     expect(draftHasText({ kind: 'section', storylineId: uuid, sectionId: null, field: 'note' }, {})).toBe(true);
     expect(draftHasText({ kind: 'addition', storylineId: uuid, characterId: uuid, field: 'behavior' }, {})).toBe(true);
     expect(draftHasText({ kind: 'connection', fromId: uuid, toId: uuid, type: 'merge', characterId: null, field: 'label' }, {})).toBe(true);
+  });
+});
+
+describe('sceneBlock target', () => {
+  const target = { kind: 'sceneBlock', assignmentId: uuid, blockId: uuid, field: 'text' } as const;
+
+  it('accepts generate on empty text, with and without length', () => {
+    expect(AiTextBody.safeParse(body({ target, action: 'generate', text: '' })).success).toBe(true);
+    expect(AiTextBody.safeParse(body({ target, action: 'generate', text: '', length: 'long' })).success).toBe(true);
+    expect(AiTextBody.safeParse(body({ target, action: 'generate', text: '', length: 'huge' })).success).toBe(false);
+  });
+
+  it('allows 10000 characters and counts as having context', () => {
+    expect(fieldLimit(target)).toEqual({ max: 10000, singleLine: false });
+    expect(draftHasText(target, {})).toBe(true);
   });
 });

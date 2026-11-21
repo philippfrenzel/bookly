@@ -5,7 +5,8 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { MANUSCRIPT_LIMITS } from '@bookly/shared';
-import type { Id, ManuscriptBlock } from '@bookly/shared';
+import type { Id, LengthChoice, ManuscriptBlock } from '@bookly/shared';
+import { LengthSelect } from '../ai/LengthSelect';
 import { Icon } from '../ui/Icon';
 import { isLocked, manuscriptError, useBlockDraft, useManuscriptMutation } from './manuscriptApi';
 
@@ -26,6 +27,7 @@ export function BlockEditor({ bookId, block, mode, onClose }: Props) {
   const [instruction, setInstruction] = useState(block.instruction);
   const [note, setNote] = useState('');
   const [aiText, setAiText] = useState<string | null>(null);
+  const [length, setLength] = useState<LengthChoice>('book');
   const [warning, setWarning] = useState<string | null>(null);
   const base = useRef(block.version);
   const lostHandled = useRef(false);
@@ -120,8 +122,9 @@ export function BlockEditor({ bookId, block, mode, onClose }: Props) {
       <div className="actions">
         <button type="submit" className="primary" disabled={mutate.isPending}>{mode === 'edit' ? 'Speichern' : 'Vorschlag senden'}</button>
         <button type="button" onClick={cancel}>Abbrechen</button>
+        {mode === 'edit' && <LengthSelect value={length} onChange={setLength} />}
         {mode === 'edit' && (
-          <button type="button" className="with-icon" disabled={draft.isPending} onClick={() => draft.mutate(block.id, { onSuccess: (r) => setAiText(r.text) })}>
+          <button type="button" className="with-icon" disabled={draft.isPending} onClick={() => draft.mutate({ blockId: block.id, length }, { onSuccess: (r) => setAiText(r.text) })}>
             <Icon name="wand" />{draft.isPending ? 'Schreibe …' : 'KI-Entwurf'}
           </button>
         )}

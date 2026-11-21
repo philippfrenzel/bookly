@@ -1,6 +1,6 @@
 /** Loads a complete book aggregate from the database. */
 import { asc, eq, inArray, sql } from 'drizzle-orm';
-import type { Book, ConnectionType, HintRule, Id, StorylineKind, StorylineStatus } from '@bookly/shared';
+import type { Book, ConnectionType, HintRule, Id, StorylineKind, StorylineStatus, WordRange } from '@bookly/shared';
 import { NotFoundError } from '../errors.js';
 import type { Db } from './client.js';
 import {
@@ -28,6 +28,11 @@ function groupBy<T, K>(rows: T[], key: (r: T) => K): Map<K, T[]> {
     else m.set(k, [r]);
   }
   return m;
+}
+
+/** The stored target word range of a book row; null unless both bounds are set. */
+export function targetWordsOf(row: { targetWordsMin: number | null; targetWordsMax: number | null }): WordRange | null {
+  return row.targetWordsMin !== null && row.targetWordsMax !== null ? { min: row.targetWordsMin, max: row.targetWordsMax } : null;
 }
 
 /** Loads the full aggregate; time points sorted by position, sections by order. Throws NotFoundError if the book is missing. */
@@ -71,6 +76,7 @@ export async function loadBook(db: Db | Tx, bookId: Id): Promise<Book> {
   return {
     id: book.id,
     title: book.title,
+    targetWords: targetWordsOf(book),
     timePoints: tps.map((t) => ({ id: t.id, name: t.name, position: t.position })),
     characters: chars.map((c) => ({
       id: c.id,

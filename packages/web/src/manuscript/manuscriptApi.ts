@@ -1,6 +1,6 @@
 /** API hooks for the manuscript page and the German messages for its error answers. */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { BlockVersion, Id, ManuscriptResponse, ReviewedBook } from '@bookly/shared';
+import type { BlockVersion, Id, LengthChoice, ManuscriptResponse, ReviewedBook } from '@bookly/shared';
 import { ApiError, api } from '../api/client';
 
 /** How often the page refreshes so locks of others and a lost own lock show up. */
@@ -45,8 +45,8 @@ export function useBlockVersions(bookId: Id, blockId: Id, enabled: boolean, vers
 
 /** AI prose draft for a block; nothing is saved. */
 export function useBlockDraft(bookId: Id) {
-  return useMutation<{ text: string }, ApiError, Id>({
-    mutationFn: (blockId) => api<{ text: string }>('POST', `/api/books/${bookId}/manuscript/blocks/${blockId}/draft`),
+  return useMutation<{ text: string }, ApiError, { blockId: Id; length: LengthChoice }>({
+    mutationFn: ({ blockId, length }) => api<{ text: string }>('POST', `/api/books/${bookId}/manuscript/blocks/${blockId}/draft`, { length }),
   });
 }
 

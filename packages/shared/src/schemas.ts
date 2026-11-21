@@ -1,6 +1,7 @@
 /** Zod request-body schemas shared by the server (parsing) and the web client (types). */
 import { z } from 'zod';
 import { CHARACTER_CRITERIA, type CharacterCriterion } from './criteria.js';
+import { WordRangeSchema } from './length.js';
 
 /** Matches a canonical uuid string. */
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -39,6 +40,12 @@ export type LoginBody = z.infer<typeof LoginBody>;
 
 export const BookBody = z.object({ title });
 export type BookBody = z.infer<typeof BookBody>;
+
+/** Change a book's title, its target word range (null clears it), or both. */
+export const BookPatchBody = z
+  .object({ title: title.optional(), targetWords: WordRangeSchema.nullable().optional() })
+  .refine((b) => b.title !== undefined || b.targetWords !== undefined, { message: 'nothing to change' });
+export type BookPatchBody = z.infer<typeof BookPatchBody>;
 
 export const TimePointCreateBody = z.object({ name: title, afterId: Id.nullable() });
 export type TimePointCreateBody = z.infer<typeof TimePointCreateBody>;

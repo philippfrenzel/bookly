@@ -5,14 +5,15 @@ import { MemoryRouter } from 'react-router-dom';
 import { createQueryClient } from '../api/queryClient';
 import { AppRoutes } from '../App';
 
-/** Renders the application at the given route with isolated query state. */
+/** Renders the application at the given route with isolated query state; also returns that query client. */
 export function renderApp(route = '/') {
   const queryClient = createQueryClient(false);
-  return render(
+  const result = render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[route]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AppRoutes />
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return { ...result, queryClient };
 }

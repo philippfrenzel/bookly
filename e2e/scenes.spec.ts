@@ -83,7 +83,7 @@ test('scene management and assignment flow', async ({ page }) => {
   await expect(text).toHaveValue('KI-Szenenbeschreibung (1 Notizen, mit Bild)');
   await text.fill('Nebel über dem Bergsee.');
   await scenes.getByRole('button', { name: 'Zuordnen' }).click();
-  await expect(scenes.getByLabel('Beschreibung Szene Bergsee')).toHaveValue('Nebel über dem Bergsee.');
+  await expect(scenes.getByLabel('Block 1 Szene Bergsee', { exact: true })).toHaveValue('Nebel über dem Bergsee.');
   await panel.getByRole('button', { name: 'Fertig' }).click();
 
   // Second assignment starts with the last stored description (FR-005).
@@ -91,7 +91,7 @@ test('scene management and assignment flow', async ({ page }) => {
   await scenes.getByLabel('Szene zuordnen').selectOption({ label: 'Bergsee' });
   await expect(scenes.getByLabel('Beschreibung der neuen Zuordnung')).toHaveValue('Nebel über dem Bergsee.');
   await scenes.getByRole('button', { name: 'Zuordnen' }).click();
-  await expect(scenes.getByLabel('Beschreibung Szene Bergsee')).toBeVisible();
+  await expect(scenes.getByLabel('Block 1 Szene Bergsee', { exact: true })).toBeVisible();
 
   await panel.getByRole('button', { name: 'Fertig' }).click();
 
@@ -106,24 +106,24 @@ test('scene management and assignment flow', async ({ page }) => {
   await expect(usage.getByRole('button', { name: 'Abschnitt „Ankunft“ öffnen' })).toBeVisible();
   await usage.getByRole('button', { name: 'Abschnitt „Abschied“ öffnen' }).click();
   await expect(panel.getByRole('tab', { name: 'Zeitpunkte' })).toHaveAttribute('aria-selected', 'true');
-  await expect(panel.getByRole('group', { name: 'Szenen' }).getByLabel('Beschreibung Szene Bergsee')).toBeVisible();
+  await expect(panel.getByRole('group', { name: 'Szenen' }).getByLabel('Block 1 Szene Bergsee', { exact: true })).toBeVisible();
 
   // Existing assignment: change it, then take the earlier description back from the list (FR-005).
   const sceneBlock = panel.getByRole('group', { name: 'Szenen' });
-  const own = sceneBlock.getByLabel('Beschreibung Szene Bergsee');
+  const own = sceneBlock.getByLabel('Block 1 Szene Bergsee', { exact: true });
   await own.fill('Sonne über dem See.');
   await own.blur();
   await sceneBlock.getByLabel('Frühere Beschreibung für Szene Bergsee einsetzen').selectOption({ label: 'Nebel über dem Bergsee.' });
-  await expect(own).toHaveValue('Nebel über dem Bergsee.');
+  await expect(sceneBlock.getByLabel('Beschreibung Szene Bergsee', { exact: true })).toHaveValue('Nebel über dem Bergsee.');
   await sceneBlock.getByRole('button', { name: 'Übernehmen' }).click();
   await expect(sceneBlock.getByRole('button', { name: 'Übernehmen' })).toHaveCount(0);
 
   // Move the assignment to another section (AC-003); its description goes along.
   await sceneBlock.getByLabel('Szene Bergsee verschieben').selectOption({ label: 'Rückkehr' });
-  await expect(sceneBlock.getByLabel('Beschreibung Szene Bergsee')).toHaveCount(0);
+  await expect(sceneBlock.getByLabel('Block 1 Szene Bergsee', { exact: true })).toHaveCount(0);
   await panel.getByRole('button', { name: 'Fertig' }).click();
   await panel.getByRole('button', { name: 'Abschnitt „Rückkehr“ bearbeiten' }).click();
-  await expect(panel.getByRole('group', { name: 'Szenen' }).getByLabel('Beschreibung Szene Bergsee')).toHaveValue('Nebel über dem Bergsee.');
+  await expect(panel.getByRole('group', { name: 'Szenen' }).getByLabel('Block 1 Szene Bergsee', { exact: true })).toHaveValue('Nebel über dem Bergsee.');
   await panel.getByRole('button', { name: 'Fertig' }).click();
 
   // A side strand has no sections: assign the scene from its card, then find it in the strand's „Szenen“ tab.
@@ -139,5 +139,5 @@ test('scene management and assignment flow', async ({ page }) => {
   await page.getByLabel('Szene Bergsee zuordnen').selectOption({ label: 'Erinnerung' });
   await page.getByRole('button', { name: 'Storyline „Erinnerung“ öffnen' }).click();
   await expect(panel.getByRole('tab', { name: 'Szenen' })).toHaveAttribute('aria-selected', 'true');
-  await expect(panel.getByRole('group', { name: 'Szenen' }).getByLabel('Beschreibung Szene Bergsee')).toHaveValue('Nebel über dem Bergsee.');
+  await expect(panel.getByRole('group', { name: 'Szenen' }).getByLabel('Block 1 Szene Bergsee', { exact: true })).toHaveValue('Nebel über dem Bergsee.');
 });

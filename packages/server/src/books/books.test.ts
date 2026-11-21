@@ -186,3 +186,41 @@ describe('books', () => {
     await app.close();
   });
 });
+
+describe('book target word range', () => {
+  test('PATCH sets, keeps and clears targetWords; invalid is 400, other user is 404', async () => {
+    const app = await testApp();
+    const { cookie } = await registeredAgent(app);
+    const id = await createBook(app, cookie);
+    const patch = (payload: object, c = cookie) => app.inject({ method: 'PATCH', url: `/api/books/${id}`, headers: { cookie: c }, payload });
+    const get = async () => (await app.inject({ method: 'GET', url: `/api/books/${id}`, headers: { cookie } })).json().book;
+    expect((await get()).targetWords).toBeNull();
+    const set = await patch({ targetWords: { min: 60000, max: 90000 } });
+    expect(set.statusCode).toBe(200);
+    expect(set.json().book).toMatchObject({ title: 'Roman', targetWords: { min: 60000, max: 90000 } });
+    expect((await patch({ title: 'Neu' })).json().book).toMatchObject({ title: 'Neu', targetWords: { min: 60000, max: 90000 } });
+    expect((await get()).targetWords).toEqual({ min: 60000, max: 90000 });
+    // The manuscript carries the stored range too.
+    const ms = await app.inject({ method: 'GET', url: `/api/books/${id}/manuscript`, headers: { cookie } });
+    expect(ms.json().book.targetWords).toEqual({ min: 60000, max: 90000 });
+    expect((await patch({ targetWords: null })).json().book).toMatchObject({ title: 'Neu', targetWords: null });
+    expect((await get()).targetWords).toBeNull();
+    for (const bad of [{}, { targetWords: { min: 0, max: 10 } }, { targetWords: { min: 100, max: 10 } }, { targetWords: { min: 1, max: 2_000_001 } }, { targetWords: { min: 1.5, max: 10 } }]) {
+      expect((await patch(bad)).statusCode).toBe(400);
+    }
+    const other = await registeredAgent(app);
+    expect((await patch({ targetWords: { min: 1, max: 2 } }, other.cookie)).statusCode).toBe(404);
+    expect((await get()).targetWords).toBeNull();
+    await app.close();
+  });
+
+  test('manuscript GET returns a null range by default', async () => {
+    const app = await testApp();
+    const { cookie } = await registeredAgent(app);
+    const id = await createBook(app, cookie);
+    const ms = await app.inject({ method: 'GET', url: `/api/books/${id}/manuscript`, headers: { cookie } });
+    expect(ms.statusCode).toBe(200);
+    expect(ms.json().book.targetWords).toBeNull();
+    await app.close();
+  });
+});

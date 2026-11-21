@@ -105,3 +105,5 @@ Im Bearbeiten-Formular eines gespeicherten Abschnitts erscheint der Block „Sze
 | AC-004 / AC-008 | 4.3, Test: Bild und Notizen erreichen den KI-Client, Log-Zeile |
 | AC-005 | 4.2, Test `previousDescriptions` und Komponententest Auswahl |
 | AC-006 | 4.2, Komponententest „Beschreibung erzeugen“ |
+
+Siehe auch: [Szenen schreiben](2026-11-21-szenen-schreiben-design.md) (Blöcke je Zuordnung, KI je Block, Buchumfang).

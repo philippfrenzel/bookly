@@ -18,7 +18,7 @@ function block(over: Partial<ManuscriptBlock> = {}): ManuscriptBlock {
 
 function manuscript(over: Partial<ManuscriptResponse> = {}): ManuscriptResponse {
   return {
-    book: { id: 'b1', title: 'Sturmland' },
+    book: { id: 'b1', title: 'Sturmland', targetWords: null },
     role: 'author',
     rights: [...REVIEWER_RIGHTS],
     chapters: [{ id: 'c1', position: 0, title: 'Aufbruch', blocks: [block()] }],
@@ -124,7 +124,7 @@ describe('ManuscriptPage', () => {
     expect(screen.queryByRole('button', { name: 'Bearbeiten' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Baustein löschen' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Kapitel hinzufügen' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Stil', 'Papierkorb']);
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Stil', 'Umfang', 'Papierkorb']);
   });
 
   it('the author invites a reviewer with chosen rights', async () => {
@@ -276,5 +276,28 @@ describe('ManuscriptPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Kapitel neu ordnen' }));
     expect(await screen.findByText('Vorschlag für „Aufbruch“')).toBeInTheDocument();
     expect(bodies).toEqual([{ chapterId: 'c1' }]);
+  });
+
+  it('sends the chosen length with the AI draft request', async () => {
+    const bodies: unknown[] = [];
+    const locked = manuscript({ chapters: [{ id: 'c1', position: 0, title: 'Aufbruch', blocks: [block({ lock: { mine: true, expiresAt: '2026-11-21T10:30:00Z' } })] }] });
+    server.use(
+      meOk,
+      msOk(manuscript()),
+      http.post('/api/books/b1/manuscript/blocks/k1/lock', () => HttpResponse.json(locked)),
+      http.post('/api/books/b1/manuscript/blocks/k1/draft', async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({ text: 'Ein Entwurf.' });
+      }),
+    );
+    renderApp('/books/b1/manuskript');
+    await userEvent.click(await screen.findByRole('button', { name: 'Bearbeiten' }));
+    const editor = await screen.findByRole('form', { name: 'Baustein Ankunft bearbeiten' });
+    const select = within(editor).getByRole('combobox', { name: 'Länge' });
+    expect(select).toHaveValue('book');
+    await userEvent.selectOptions(select, 'ausführlich');
+    await userEvent.click(within(editor).getByRole('button', { name: 'KI-Entwurf' }));
+    expect(await screen.findByText('Ein Entwurf.')).toBeInTheDocument();
+    expect(bodies).toEqual([{ length: 'long' }]);
   });
 });

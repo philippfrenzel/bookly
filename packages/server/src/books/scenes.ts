@@ -2,6 +2,7 @@
 import { and, asc, eq, max } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import {
+  SCENE_BLOCK_LIMITS,
   SCENE_IMAGE_MAX_BYTES,
   SCENE_IMAGE_TYPES,
   SceneAssignmentCreateBody,
@@ -16,11 +17,12 @@ import { requireUser } from '../auth/session.js';
 import { parseSceneDescription, sceneDescriptionRequest, selectNotes } from '../ai/scenePrompt.js';
 import type { Db } from '../db/client.js';
 import type { Tx } from '../db/loadBook.js';
-import { books, sceneAssignments, sceneImages, sceneNotes, scenes, sections, storylines } from '../db/schema.js';
+import { books, sceneAssignmentBlocks, sceneAssignments, sceneImages, sceneNotes, scenes, sections, storylines } from '../db/schema.js';
 import { NotFoundError } from '../errors.js';
 import { requireAi } from './aiRoutes.js';
 import { assertInBook } from './childId.js';
 import { bookGuard } from './guard.js';
+import { assertAssignmentInBook, assertRevision, descriptionBlocks, StaleRevision, writeBlocks } from './sceneBlocks.js';
 import { assertSectionInBook } from './sections.js';
 
 /** Thrown inside a mutation when the scene is already assigned to the section. */
@@ -44,23 +46,13 @@ async function assertNoteInScene(db: Db, noteId: string, sceneId: Id): Promise<v
   if (!row) throw new NotFoundError();
 }
 
-/** Throws NotFoundError unless `assignmentId` is an assignment of a scene in `bookId`. */
-async function assertAssignmentInBook(db: Db, assignmentId: string, bookId: Id): Promise<void> {
-  if (!UUID_RE.test(assignmentId)) throw new NotFoundError();
-  const [row] = await db
-    .select({ id: sceneAssignments.id })
-    .from(sceneAssignments)
-    .innerJoin(scenes, eq(scenes.id, sceneAssignments.sceneId))
-    .where(and(eq(sceneAssignments.id, assignmentId), eq(scenes.bookId, bookId)));
-  if (!row) throw new NotFoundError();
-}
-
 /** Registers the scene routes under /api/books/:bookId. */
 export async function sceneRoutes(app: FastifyInstance): Promise<void> {
   const guarded = { preHandler: [requireUser, bookGuard()] };
   const aiGuarded = { preHandler: [requireUser, bookGuard(), requireAi] };
   const base = '/api/books/:bookId';
   const invalid = (reply: FastifyReply, details: unknown) => reply.code(400).send({ error: 'invalid_body', details });
+  const tooLongBlock = { formErrors: [], fieldErrors: { description: [`a paragraph is longer than ${SCENE_BLOCK_LIMITS.text} characters`] } };
 
   // Raw image bodies for the upload route; the parser is scoped to this plugin.
   app.addContentTypeParser([...SCENE_IMAGE_TYPES], { parseAs: 'buffer', bodyLimit: SCENE_IMAGE_MAX_BYTES }, (_req, body, done) => done(null, body));
@@ -178,13 +170,20 @@ export async function sceneRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) return invalid(reply, parsed.error.flatten());
     const { bookId } = request.params as { bookId: string };
     const d = parsed.data;
+    const blocks = descriptionBlocks(d.description);
+    if (!blocks) return invalid(reply, tooLongBlock);
     await assertInBook(app.db, scenes, d.sceneId, bookId);
     await assertTarget(d, bookId);
     try {
       // The book row is locked by mutate, so the check and the insert cannot interleave with another assignment.
       const result = await app.mutate(bookId, async (tx) => {
         await assertFree(tx, d.sceneId, d);
-        await tx.insert(sceneAssignments).values({ sceneId: d.sceneId, sectionId: d.sectionId ?? null, storylineId: d.storylineId ?? null, description: d.description });
+        const [row] = await tx
+          .insert(sceneAssignments)
+          .values({ sceneId: d.sceneId, sectionId: d.sectionId ?? null, storylineId: d.storylineId ?? null, description: d.description })
+          .returning({ id: sceneAssignments.id });
+        // A new assignment starts with its description split into blocks (one per paragraph), at revision 0.
+        await tx.insert(sceneAssignmentBlocks).values(blocks.map((b, position) => ({ assignmentId: row!.id, position, text: b.text })));
       });
       return reply.code(201).send(result);
     } catch (error) {
@@ -198,7 +197,9 @@ export async function sceneRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) return invalid(reply, parsed.error.flatten());
     const { bookId, assignmentId } = request.params as { bookId: string; assignmentId: string };
     await assertAssignmentInBook(app.db, assignmentId, bookId);
-    const { description, sectionId, storylineId } = parsed.data;
+    const { description, sectionId, storylineId, revision } = parsed.data;
+    const blocks = description === undefined ? null : descriptionBlocks(description);
+    if (description !== undefined && !blocks) return invalid(reply, tooLongBlock);
     const moving = sectionId !== undefined || storylineId !== undefined;
     if (moving) await assertTarget({ sectionId, storylineId }, bookId);
     try {
@@ -208,17 +209,18 @@ export async function sceneRoutes(app: FastifyInstance): Promise<void> {
           const [current] = await tx.select({ sceneId: sceneAssignments.sceneId }).from(sceneAssignments).where(eq(sceneAssignments.id, assignmentId));
           await assertFree(tx, current!.sceneId, { sectionId, storylineId }, assignmentId);
         }
-        await tx
-          .update(sceneAssignments)
-          // updatedAt dates the description (it orders earlier descriptions, FR-005), so a pure move keeps it.
-          .set({
-            ...(description !== undefined ? { description, updatedAt: new Date() } : {}),
-            ...(moving ? { sectionId: sectionId ?? null, storylineId: storylineId ?? null } : {}),
-          })
-          .where(eq(sceneAssignments.id, assignmentId));
+        if (moving) {
+          await tx.update(sceneAssignments).set({ sectionId: sectionId ?? null, storylineId: storylineId ?? null }).where(eq(sceneAssignments.id, assignmentId));
+        }
+        // Replacing the description replaces all blocks by its paragraphs (and dates it, FR-005); a pure move keeps blocks, revision and updatedAt.
+        if (blocks) {
+          if (revision !== undefined) await assertRevision(tx, assignmentId, revision);
+          await writeBlocks(tx, assignmentId, blocks);
+        }
       });
     } catch (error) {
       if (error instanceof AlreadyAssigned) return reply.code(409).send({ error: 'already_assigned' });
+      if (error instanceof StaleRevision) return reply.code(409).send({ error: 'stale' });
       throw error;
     }
   });

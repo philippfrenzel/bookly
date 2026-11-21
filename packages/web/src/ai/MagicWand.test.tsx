@@ -2,7 +2,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import type { AiTextDraft, AiTextTarget } from '@bookly/shared';
+import type { AiTextDraft, AiTextTarget, LengthChoice } from '@bookly/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { server } from '../test/setup';
 import { MagicWand } from './MagicWand';
@@ -22,7 +22,7 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 /** Uncontrolled textarea with a wand, as the callers will place it. */
-function Harness({ value, draft = () => ({ title: 'Titel' }), enabled = true }: { value: string; draft?: () => AiTextDraft; enabled?: boolean }) {
+function Harness({ value, draft = () => ({ title: 'Titel' }), enabled = true, length }: { value: string; draft?: () => AiTextDraft; enabled?: boolean; length?: LengthChoice }) {
   return (
     <div className="wand-field">
       <textarea aria-label="Feld" defaultValue={value} />
@@ -33,6 +33,7 @@ function Harness({ value, draft = () => ({ title: 'Titel' }), enabled = true }: 
         draft={draft}
         enabled={enabled}
         fieldLabel="Beschreibung"
+        length={length}
       />
     </div>
   );
@@ -69,6 +70,12 @@ describe('MagicWand', () => {
     expect(field().value).toBe('A1');
     expect(bodies).toEqual([{ target, action: 'rephrase', text: 'Mira geht.', selection: null, draft: { title: 'Titel', description: 'Mira geht.' } }]);
     expect(screen.getByText('1/3')).toBeInTheDocument();
+  });
+
+  it('sends the length choice only when one is given', async () => {
+    render(<Harness value="Mira geht." length="short" />);
+    await choose('Umformulieren');
+    expect(bodies).toEqual([{ target, action: 'rephrase', text: 'Mira geht.', selection: null, draft: { title: 'Titel', description: 'Mira geht.' }, length: 'short' }]);
   });
 
   it('keeps the selection when the wand is clicked', async () => {
