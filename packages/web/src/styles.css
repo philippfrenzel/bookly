@@ -269,6 +269,26 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
 .suggestion-box p { margin: 0.125rem 0 0.375rem; white-space: pre-wrap; }
 .suggestion-box > button { align-self: flex-start; }
 
+/* AI magic wand: button inside the field, action menu popover, suggestion bar below the field */
+.wand-field { position: relative; display: flex; flex-direction: column; }
+.wand-field > textarea, .wand-field > input { padding-right: 2.5rem; }
+.wand-button { position: absolute; top: 3px; right: 3px; z-index: 1; width: 28px; height: 28px; color: var(--muted); background: var(--ground); }
+.wand-button:hover:not(:disabled) { color: var(--ink); }
+.wand-button.is-loading { animation: wand-pulse 900ms ease-in-out infinite alternate; }
+@keyframes wand-pulse { from { opacity: 1; } to { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .wand-button.is-loading { animation: none; opacity: 0.5; } }
+.wand-menu { position: absolute; top: 34px; right: 0; z-index: 4; min-width: 200px; max-width: 280px; padding: 0.375rem; background: var(--ground); border: 1px solid var(--rule); border-top: 3px solid var(--ink); box-shadow: var(--shadow); }
+.wand-menu [role='menu'] { display: flex; flex-direction: column; gap: 2px; outline: none; }
+.wand-menu [role='menuitem'] { justify-content: flex-start; text-align: left; width: 100%; padding: 0.4375rem 0.625rem; border-color: transparent; background: none; }
+.wand-menu [role='menuitem']:hover:not(:disabled), .wand-menu [role='menuitem']:focus-visible { background: var(--wash); }
+.wand-menu [role='menuitem']:disabled { background: none; border-color: transparent; }
+.wand-hint { margin: 0.25rem 0.625rem 0.375rem; font-size: 0.8125rem; color: var(--muted); }
+.wand-bar { display: flex; align-items: center; gap: 2px; align-self: flex-end; margin-top: 0.25rem; padding: 2px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--ground); }
+.wand-count { min-width: 2.5rem; text-align: center; font-size: 0.8125rem; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.wand-status { margin: 0; font-size: 0.8125rem; color: var(--muted); }
+.wand-status.is-error { color: var(--signal-ink); }
+.wand-status:not(:empty) { margin-top: 0.25rem; }
+
 /* Line colour swatches */
 .line-colors { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem; }
 .swatch { width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--rule-strong); }

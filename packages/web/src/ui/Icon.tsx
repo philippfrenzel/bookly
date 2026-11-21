@@ -7,6 +7,11 @@ const PATHS = {
   trash: 'M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5M7 7v4M9 7v4',
   minus: 'M3.5 8h9',
   fit: 'M3 6V3h3M10 3h3v3M13 10v3h-3M6 13H3v-3',
+  wand: 'M3 13l7.5-7.5M9 4l3 3M5 2.5v2.5M3.75 3.75h2.5M12.5 9.5v3M11 11h3',
+  prev: 'M10 3.5L5.5 8l4.5 4.5',
+  next: 'M6 3.5l4.5 4.5L6 12.5',
+  undo: 'M5.5 3.5L3 6l2.5 2.5M3 6h6.5a3.25 3.25 0 010 6.5H6',
+  close: 'M4 4l8 8M12 4l-8 8',
 } as const;
 
 export type IconName = keyof typeof PATHS;
